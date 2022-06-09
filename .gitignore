@@ -1,0 +1,3 @@
+/model/*.pkl
+/model/*.npy
+/model/*.ply
