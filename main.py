@@ -75,4 +75,11 @@ for i in range(nbFace):
     scene.add(joints_pcl)
     """
 
+    sm = trimesh.creation.uv_sphere(radius=0.002)
+    sm.visual.vertex_colors = [0.9, 0.1, 0.1, 1.0]
+    tfs = np.tile(np.eye(4), (len(vertices), 1, 1))
+    tfs[:, :3, 3] = vertices
+    vertices_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
+    scene.add(vertices_pcl)
+
     pyrender.Viewer(scene, use_raymond_lighting=True)
