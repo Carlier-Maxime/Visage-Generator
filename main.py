@@ -24,30 +24,23 @@ import torch
 from FLAME import FLAME
 import pyrender
 import trimesh
-from config import get_config
+from config import get_config,nbFace
 
 config = get_config()
 radian = np.pi/180.0
 flamelayer = FLAME(config)
 
 # Creating a batch of mean shapes
-shape_params = torch.zeros(8, 100).cpu()
+shape_params = torch.zeros(nbFace, 100).cpu()
 
 # Creating a batch of different global poses
 # pose_params_numpy[:, :3] : global rotaation
 # pose_params_numpy[:, 3:] : jaw rotaation
-pose_params_numpy = np.array([[0.0, 30.0*radian, 0.0, 0.0, 0.0, 0.0],
-                                [0.0, -30.0*radian, 0.0, 0.0, 0.0, 0.0],
-                                [0.0, 85.0*radian, 0.0, 0.0, 0.0, 0.0],
-                                [0.0, -48.0*radian, 0.0, 0.0, 0.0, 0.0],
-                                [0.0, 10.0*radian, 0.0, 0.0, 0.0, 0.0],
-                                [0.0, -15.0*radian, 0.0, 0.0, 0.0, 0.0],
-                                [0.0, 0.0*radian, 0.0, 0.0, 0.0, 0.0],
-                                [0.0, -0.0*radian, 0.0, 0.0, 0.0, 0.0]], dtype=np.float32)
+pose_params_numpy = np.array([[0.0, 30.0*radian, 0.0, 0.0, 0.0, 0.0]*nbFace], dtype=np.float32)
 pose_params = torch.tensor(pose_params_numpy, dtype=torch.float32).cpu()
 
 # Cerating a batch of neutral expressions
-expression_params = torch.zeros(8, 50, dtype=torch.float32).cpu()
+expression_params = torch.zeros(nbFace, 50, dtype=torch.float32).cpu()
 flamelayer.cpu()
 
 # Forward Pass of FLAME, one can easily use this as a layer in a Deep learning Framework 
@@ -55,14 +48,14 @@ vertice, landmark = flamelayer(shape_params, expression_params, pose_params) # F
 print(vertice.size(), landmark.size())
 
 if config.optimize_eyeballpose and config.optimize_neckpose:
-    neck_pose = torch.zeros(8, 3).cpu()
-    eye_pose = torch.zeros(8, 6).cpu()
+    neck_pose = torch.zeros(nbFace, 3).cpu()
+    eye_pose = torch.zeros(nbFace, 6).cpu()
     vertice, landmark = flamelayer(shape_params, expression_params, pose_params, neck_pose, eye_pose)
 
 # Visualize Landmarks
 # This visualises the static landmarks and the pose dependent dynamic landmarks used for RingNet project
 faces = flamelayer.faces
-for i in range(8):
+for i in range(nbFace):
     vertices = vertice[i].detach().cpu().numpy().squeeze()
     joints = landmark[i].detach().cpu().numpy().squeeze()
     vertex_colors = np.ones([vertices.shape[0], 4]) * [0.3, 0.3, 0.3, 0.8]

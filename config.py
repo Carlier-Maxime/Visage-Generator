@@ -2,6 +2,7 @@ import argparse
 import os
 
 parser = argparse.ArgumentParser(description = 'FLAME model')
+nbFace = 1
 
 parser.add_argument(
     '--flame_model_path',
@@ -87,7 +88,7 @@ parser.add_argument(
 parser.add_argument(
     '--batch_size',
     type = int,
-    default = 8,
+    default = nbFace,
     help = 'Training batch size.'
 )
 
