@@ -30,14 +30,14 @@ parser.add_argument(
 parser.add_argument(
     '--shape_params',
     type = int,
-    default = 100,
+    default = 300,
     help = 'the number of shape parameters'
 )
 
 parser.add_argument(
     '--expression_params',
     type = int,
-    default = 50,
+    default = 100,
     help = 'the number of expression parameters'
 )
 
