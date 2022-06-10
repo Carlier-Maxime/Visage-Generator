@@ -3,6 +3,7 @@ import os
 
 parser = argparse.ArgumentParser(description = 'FLAME model')
 nbFace = 1
+device = "cpu" # switch to cuda for use gc.
 
 parser.add_argument(
     '--flame_model_path',

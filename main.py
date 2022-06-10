@@ -24,40 +24,40 @@ import torch
 from FLAME import FLAME
 import pyrender
 import trimesh
-from config import get_config,nbFace
+from config import get_config,nbFace,device
 
 config = get_config()
 radian = np.pi/180.0
 flamelayer = FLAME(config)
 
 # Creating a batch of mean shapes
-shape_params = torch.tensor(np.random.uniform(-2,2,[nbFace,300]), dtype=torch.float32).cpu()
+shape_params = torch.tensor(np.random.uniform(-2,2,[nbFace,300]), dtype=torch.float32).to(device)
 
 # Creating a batch of different global poses
 # pose_params_numpy[:, :3] : global rotaation
 # pose_params_numpy[:, 3:] : jaw rotaation
 pose_params_numpy = np.array([[45.0*radian, 45.0*radian, 90.0*radian, 0.0, 0.0, 0.0]*nbFace], dtype=np.float32)
-pose_params = torch.tensor(pose_params_numpy, dtype=torch.float32).cpu()
+pose_params = torch.tensor(pose_params_numpy, dtype=torch.float32).to(device)
 
 # Cerating a batch of neutral expressions
-expression_params = torch.tensor(np.random.uniform(-2,2,[nbFace,100]), dtype=torch.float32).cpu()
-flamelayer.cpu()
+expression_params = torch.tensor(np.random.uniform(-2,2,[nbFace,100]), dtype=torch.float32).to(device)
+flamelayer.to(device)
 
 # Forward Pass of FLAME, one can easily use this as a layer in a Deep learning Framework 
 vertice, landmark = flamelayer(shape_params, expression_params, pose_params) # For RingNet project
 print(vertice.size(), landmark.size())
 
 if config.optimize_eyeballpose and config.optimize_neckpose:
-    neck_pose = torch.zeros(nbFace, 3).cpu()
-    eye_pose = torch.zeros(nbFace, 6).cpu()
+    neck_pose = torch.zeros(nbFace, 3).to(device)
+    eye_pose = torch.zeros(nbFace, 6).to(device)
     vertice, landmark = flamelayer(shape_params, expression_params, pose_params, neck_pose, eye_pose)
 
 # Visualize Landmarks
 # This visualises the static landmarks and the pose dependent dynamic landmarks used for RingNet project
 faces = flamelayer.faces
 for i in range(nbFace):
-    vertices = vertice[i].detach().cpu().numpy().squeeze()
-    joints = landmark[i].detach().cpu().numpy().squeeze()
+    vertices = vertice[i].detach().to(device).numpy().squeeze()
+    joints = landmark[i].detach().to(device).numpy().squeeze()
     vertex_colors = np.ones([vertices.shape[0], 4]) * [0.925, 0.72, 0.519, 1.0]
 
     tri_mesh = trimesh.Trimesh(vertices, faces,
