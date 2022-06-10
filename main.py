@@ -58,7 +58,7 @@ faces = flamelayer.faces
 for i in range(nbFace):
     vertices = vertice[i].detach().cpu().numpy().squeeze()
     joints = landmark[i].detach().cpu().numpy().squeeze()
-    vertex_colors = np.ones([vertices.shape[0], 4]) * [0.3, 0.3, 0.3, 0.8]
+    vertex_colors = np.ones([vertices.shape[0], 4]) * [0.925, 0.72, 0.519, 1.0]
 
     tri_mesh = trimesh.Trimesh(vertices, faces,
                                 vertex_colors=vertex_colors)
