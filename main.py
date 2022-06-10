@@ -31,7 +31,7 @@ radian = np.pi/180.0
 flamelayer = FLAME(config)
 
 # Creating a batch of mean shapes
-shape_params = torch.zeros(nbFace, 300).cpu()
+shape_params = torch.tensor(np.random.uniform(-2,2,[nbFace,300]), dtype=torch.float32).cpu()
 
 # Creating a batch of different global poses
 # pose_params_numpy[:, :3] : global rotaation
@@ -40,7 +40,7 @@ pose_params_numpy = np.array([[0.0, 30.0*radian, 0.0, 0.0, 0.0, 0.0]*nbFace], dt
 pose_params = torch.tensor(pose_params_numpy, dtype=torch.float32).cpu()
 
 # Cerating a batch of neutral expressions
-expression_params = torch.zeros(nbFace, 100, dtype=torch.float32).cpu()
+expression_params = torch.tensor(np.random.uniform(-2,2,[nbFace,100]), dtype=torch.float32).cpu()
 flamelayer.cpu()
 
 # Forward Pass of FLAME, one can easily use this as a layer in a Deep learning Framework 
