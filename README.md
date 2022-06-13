@@ -1,7 +1,17 @@
 # Visage Generator
 
-Ce programme utilise les resources suivantes :
-- [FLAME PyTorch](https://github.com/soubhiksanyal/FLAME_PyTorch)
+## Terms of use
 
-Avant toute utilisation de Visage Generator veuillez prendre connaissance
-des condition d'utilisation des resources.
+This program uses the following resources:
+- [FLAME PyTorch](https://github.com/soubhiksanyal/FLAME_PyTorch)
+- [FLAME PyTorch Texture Fitting](https://github.com/HavenFeng/photometric_optimization)
+
+Before any use of Visage Generator please read
+conditions of use of resources.
+
+## Keys
+
+- V : Show Vertices
+- B : Show Marker/Balises (Not marker yet)
+- J : Show Joints
+- E : Edit Marker/Balises (Alpha)

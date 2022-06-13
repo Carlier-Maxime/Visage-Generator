@@ -59,13 +59,13 @@ class Viewer(pyrender.Viewer):
 
     def on_key_press(self, symbol, modifiers):
         pyrender.Viewer.on_key_press(self,symbol,modifiers)
-        if symbol == 118: # show vertices
+        if symbol == 118: # show vertices (V)
             self.showVertices()
-        if symbol == 98: # show balises
+        if symbol == 98: # show balises (B)
             self.showBalises()
-        if symbol == 106: # show joints
+        if symbol == 106: # show joints (J)
             self.showJoints()
-        if symbol == 101: # edit balises
+        if symbol == 101: # edit balises (E)
             self.editBalises()
 
         if self._editBalises:
