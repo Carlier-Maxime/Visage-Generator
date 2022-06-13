@@ -132,6 +132,6 @@ class Viewer(pyrender.Viewer):
     def editBalises(self):
         if not self._editBalises:
             self._editBalises = True
-            tfs, self._tfs_vertices = self._tfs_vertices[-1], self._tfs_vertices[:-1]
+            tfs, self._tfs_vertices = self._tfs_vertices[0], self._tfs_vertices[1:]
             self._scene.add_node(self._selectNode)
             self._scene.set_pose(self._selectNode,tfs)
