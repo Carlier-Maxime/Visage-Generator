@@ -2,7 +2,7 @@ import argparse
 import os
 
 parser = argparse.ArgumentParser(description = 'FLAME model')
-nbFace = 1
+nbFace = 10
 device = "cpu" # switch to cuda for use gc.
 
 parser.add_argument(
