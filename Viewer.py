@@ -11,7 +11,7 @@ class Viewer(pyrender.Viewer):
         self._show_vertices = False
         self._show_joints = False
         self._scene = pyrender.Scene()
-        self._visage = self.setVisage(0)
+        self.setVisage(0)
         self._scene.add_node(self._visage)
         self._index = 0
 
@@ -86,7 +86,9 @@ class Viewer(pyrender.Viewer):
         if (self._index<nbFace-1):
             self._index = self._index+1
             self.render_lock.acquire()
-            self.
+            self._scene.remove_node(self._visage)
+            self.setVisage(self._index)
+            self._scene.add_node(self._visage)
             self.render_lock.release()
         else:
             pyrender.Viewer.on_close(self)
