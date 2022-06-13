@@ -55,4 +55,4 @@ if config.optimize_eyeballpose and config.optimize_neckpose:
 # Visualize Landmarks
 # This visualises the static landmarks and the pose dependent dynamic landmarks used for RingNet project
 faces = flamelayer.faces
-Viewer(vertice,landmark,faces)
+Viewer(vertice,landmark,faces,show_joints=True,show_vertices=True)

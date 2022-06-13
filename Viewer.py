@@ -17,8 +17,8 @@ class Viewer(pyrender.Viewer):
 
             if show_joints:
                 # Joints (landmarks)
-                sm = trimesh.creation.uv_sphere(radius=0.005)
-                sm.visual.vertex_colors = [0.9, 0.1, 0.1, 1.0]
+                sm = trimesh.creation.uv_sphere(radius=0.002)
+                sm.visual.vertex_colors = [0.0, 0.5, 0.0, 1.0]
                 tfs = np.tile(np.eye(4), (len(joints), 1, 1))
                 tfs[:, :3, 3] = joints
                 joints_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
