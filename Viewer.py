@@ -4,12 +4,13 @@ import trimesh
 from config import nbFace,device
 
 class Viewer(pyrender.Viewer):
-    def __init__(self, vertice, landmark, faces, show_joints=False, show_vertices=False):
+    def __init__(self, vertice, landmark, faces, show_joints=False, show_vertices=False, show_balises = True):
         self._vertice = vertice
         self._landmark = landmark
         self._faces = faces
         self._show_vertices = False
         self._show_joints = False
+        self._show_balises = False
         self._scene = pyrender.Scene()
         self.setVisage(0)
         self._scene.add_node(self._visage)
@@ -25,7 +26,7 @@ class Viewer(pyrender.Viewer):
         self._verticesNode = pyrender.Node("vertices",mesh=vertices_pcl)
         self._tfs_vertices = tfs
 
-        #joints (landmark)
+        #joints (landmark) node
         joints = self._landmark[self._index]
         sm = trimesh.creation.uv_sphere(radius=0.002)
         sm.visual.vertex_colors = [0.0, 0.5, 0.0, 1.0]
@@ -34,18 +35,29 @@ class Viewer(pyrender.Viewer):
         joints_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
         self._jointsNode = pyrender.Node("joints",mesh=joints_pcl)
 
+        #balises node
+        sm = trimesh.creation.uv_sphere(radius=0.002)
+        sm.visual.vertex_colors = [1.0, 0.0, 1.0, 1.0]
+        self._tfs_balises = []
+        balises_pcl = pyrender.Mesh.from_trimesh(sm)
+        self._balisesNode = pyrender.Node("balises",mesh=balises_pcl)
+
+        pyrender.Viewer.__init__(self, self._scene, use_raymond_lighting=True, run_in_thread=True)
+
         if show_joints:
             self.showJoints()
         if show_vertices:
             self.showVertices()
-
-        pyrender.Viewer.__init__(self, self._scene, use_raymond_lighting=True, run_in_thread=True)           
+        if show_balises:
+            self.showBalises()      
 
     def on_key_press(self, symbol, modifiers):
         pyrender.Viewer.on_key_press(self,symbol,modifiers)
         if symbol == 118: # show vertices
             self.showVertices()
-        if symbol == 98: # show joints
+        if symbol == 98: # show balises
+            self.showBalises()
+        if symbol == 106: # show joints
             self.showJoints()
         if symbol == 65362: # Up Arrow
             pass
@@ -74,6 +86,17 @@ class Viewer(pyrender.Viewer):
         else:
             self._scene.remove_node(self._jointsNode)
             self._show_joints = False
+        self.render_lock.release()
+
+    def showBalises(self):
+        self.render_lock.acquire()
+        if not self._show_balises:
+            if (len(self._tfs_balises)>0):
+                self._scene.add_node(self._balisesNode)
+            self._show_balises = True
+        elif len(self._tfs_balises)>0:
+            self._scene.remove_node(self._balisesNode)
+            self._show_balises = False
         self.render_lock.release()
 
     def setVisage(self,i):
