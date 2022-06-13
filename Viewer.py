@@ -23,20 +23,21 @@ class Viewer(pyrender.Viewer):
         vertices_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
         self._verticesNode = pyrender.Node("vertices",mesh=vertices_pcl)
 
-        pyrender.Viewer.__init__(self, self._scene, use_raymond_lighting=True, run_in_thread=True)
-        for i in range(nbFace):
-            self.render_lock.acquire()
-            if show_joints:
-                # Joints (landmarks)
-                sm = trimesh.creation.uv_sphere(radius=0.002)
-                sm.visual.vertex_colors = [0.0, 0.5, 0.0, 1.0]
-                tfs = np.tile(np.eye(4), (len(joints), 1, 1))
-                tfs[:, :3, 3] = joints
-                joints_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
-                self._scene.add(joints_pcl)     
-            self.render_lock.release()
-            if show_vertices:
-                self.showVertices()
+        #joints (landmark)
+        joints = self._landmark[self._index]
+        sm = trimesh.creation.uv_sphere(radius=0.002)
+        sm.visual.vertex_colors = [0.0, 0.5, 0.0, 1.0]
+        tfs = np.tile(np.eye(4), (len(joints), 1, 1))
+        tfs[:, :3, 3] = joints
+        joints_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
+        self._jointsNode = pyrender.Node("joints",mesh=joints_pcl)
+
+        if show_joints:
+            self.showJoints()
+        if show_vertices:
+            self.showVertices()
+
+        pyrender.Viewer.__init__(self, self._scene, use_raymond_lighting=True, run_in_thread=True)           
 
     def on_key_press(self, symbol, modifiers):
         pyrender.Viewer.on_key_press(self,symbol,modifiers)
@@ -60,6 +61,17 @@ class Viewer(pyrender.Viewer):
             self._scene.remove_node(self._verticesNode)
             self._scene.add_node(self.getVisage(self._index))
             self._show_vertices = False
+        self.render_lock.release()
+
+    def showJoints(self):
+        self.render_lock.acquire()
+        if not self._show_joints:
+            self._scene.add_node(self._jointsNode)
+            self._show_joints = True
+        else:
+            self._scene.remove_node(self._jointsNode)
+            self._scene.add_node(self.getVisage(self._index))
+            self._show_joints = False
         self.render_lock.release()
 
     def getVisage(self,i):
