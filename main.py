@@ -45,7 +45,6 @@ flamelayer.to(device)
 
 # Forward Pass of FLAME, one can easily use this as a layer in a Deep learning Framework 
 vertice, landmark = flamelayer(shape_params, expression_params, pose_params) # For RingNet project
-print(vertice.size(), landmark.size())
 
 if config.optimize_eyeballpose and config.optimize_neckpose:
     neck_pose = torch.zeros(nbFace, 3).to(device)
@@ -55,4 +54,4 @@ if config.optimize_eyeballpose and config.optimize_neckpose:
 # Visualize Landmarks
 # This visualises the static landmarks and the pose dependent dynamic landmarks used for RingNet project
 faces = flamelayer.faces
-Viewer(vertice,landmark,faces,show_joints=True,show_vertices=True)
+Viewer(vertice,landmark,faces)

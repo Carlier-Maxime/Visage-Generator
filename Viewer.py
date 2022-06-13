@@ -33,3 +33,14 @@ class Viewer(pyrender.Viewer):
                 scene.add(vertices_pcl)
             
             pyrender.Viewer.__init__(self, scene, use_raymond_lighting=True)
+
+    def on_key_press(self, symbol, modifiers):
+        pyrender.Viewer.on_key_press(self,symbol,modifiers)
+        if symbol == 65362: # Up Arrow
+            pass
+        if symbol == 65364: # Down Arrow
+            pass
+        if symbol == 65361: # Left Arrow
+            pass
+        if symbol == 65363: # Right Arrow
+            pass
