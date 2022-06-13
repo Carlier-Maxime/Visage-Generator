@@ -23,6 +23,7 @@ class Viewer(pyrender.Viewer):
         tfs[:, :3, 3] = vertices
         vertices_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
         self._verticesNode = pyrender.Node("vertices",mesh=vertices_pcl)
+        self._tfs_vertices = tfs
 
         #joints (landmark)
         joints = self._landmark[self._index]
@@ -44,6 +45,8 @@ class Viewer(pyrender.Viewer):
         pyrender.Viewer.on_key_press(self,symbol,modifiers)
         if symbol == 118: # show vertices
             self.showVertices()
+        if symbol == 98: # show joints
+            self.showJoints()
         if symbol == 65362: # Up Arrow
             pass
         if symbol == 65364: # Down Arrow
