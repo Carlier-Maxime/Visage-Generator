@@ -70,7 +70,7 @@ class Viewer(pyrender.Viewer):
 
         if self._editBalises:
             if symbol == 65362: # Up Arrow
-                pass
+                self.nextBalise()
             if symbol == 65364: # Down Arrow
                 pass
             if symbol == 65361: # Left Arrow
@@ -135,3 +135,7 @@ class Viewer(pyrender.Viewer):
             tfs, self._tfs_vertices = self._tfs_vertices[0], self._tfs_vertices[1:]
             self._scene.add_node(self._selectNode)
             self._scene.set_pose(self._selectNode,tfs)
+
+    def nextBalise(self):
+        tfs, self._tfs_vertices = self._tfs_vertices[0], self._tfs_vertices[1:]
+        self._scene.set_pose(self._selectNode,tfs)
