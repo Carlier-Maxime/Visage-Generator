@@ -11,6 +11,7 @@ class Viewer(pyrender.Viewer):
         self._show_vertices = False
         self._show_joints = False
         self._show_balises = False
+        self._editBalises = False
         self._scene = pyrender.Scene()
         self.setVisage(0)
         self._scene.add_node(self._visage)
@@ -42,6 +43,11 @@ class Viewer(pyrender.Viewer):
         balises_pcl = pyrender.Mesh.from_trimesh(sm)
         self._balisesNode = pyrender.Node("balises",mesh=balises_pcl)
 
+        #select balise node
+        sm = trimesh.creation.uv_sphere(radius=0.002)
+        sm.visual.vertex_colors = [1.0, 1.0, 0.0, 1.0]
+        self._selectNode = pyrender.Node("select",mesh=pyrender.Mesh.from_trimesh(sm))
+
         pyrender.Viewer.__init__(self, self._scene, use_raymond_lighting=True, run_in_thread=True)
 
         if show_joints:
@@ -59,14 +65,18 @@ class Viewer(pyrender.Viewer):
             self.showBalises()
         if symbol == 106: # show joints
             self.showJoints()
-        if symbol == 65362: # Up Arrow
-            pass
-        if symbol == 65364: # Down Arrow
-            pass
-        if symbol == 65361: # Left Arrow
-            pass
-        if symbol == 65363: # Right Arrow
-            pass
+        if symbol == 101: # edit balises
+            self.editBalises()
+
+        if self._editBalises:
+            if symbol == 65362: # Up Arrow
+                pass
+            if symbol == 65364: # Down Arrow
+                pass
+            if symbol == 65361: # Left Arrow
+                pass
+            if symbol == 65363: # Right Arrow
+                pass
 
     def showVertices(self):
         self.render_lock.acquire()
@@ -118,3 +128,10 @@ class Viewer(pyrender.Viewer):
             self.render_lock.release()
         else:
             pyrender.Viewer.on_close(self)
+    
+    def editBalises(self):
+        if not self._editBalises:
+            self._editBalises = True
+            tfs, self._tfs_vertices = self._tfs_vertices[-1], self._tfs_vertices[:-1]
+            self._scene.add_node(self._selectNode)
+            self._scene.set_pose(self._selectNode,tfs)
