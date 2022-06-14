@@ -50,6 +50,14 @@ print(len(albedos[0][0]))
 print(albedos[0][0][0])
 """
 
+"""
+    def on_mouse_press(self, x, y, buttons, modifiers):
+        pyrender.Viewer.on_mouse_press(self,x,y,buttons,modifiers)
+        camera = self._scene.main_camera_node.camera
+        size = self._viewport_size
+        print(camera.get_projection_matrix(640,280))
+"""
+
 while len(util.loadSommets())>=2000:
     util.deleteBalises(100)
 while len(util.loadSommets())>=1000:

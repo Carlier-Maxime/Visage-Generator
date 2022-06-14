@@ -13,28 +13,12 @@ class Viewer(pyrender.Viewer):
         self._show_balises = False
         self._editBalises = False
         self._scene = pyrender.Scene()
+        self._index = 0
         self.setVisage(0)
         self._scene.add_node(self._visage)
-        self._index = 0
 
-        #vertices node
-        vertices = self._vertice[self._index]
-        sm = trimesh.creation.uv_sphere(radius=0.002)
-        sm.visual.vertex_colors = [0.9, 0.1, 0.1, 1.0]
-        tfs = np.tile(np.eye(4), (len(vertices), 1, 1))
-        tfs[:, :3, 3] = vertices
-        vertices_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
-        self._verticesNode = pyrender.Node("vertices",mesh=vertices_pcl)
-        self._tfs_vertices = tfs
-
-        #joints (landmark) node
-        joints = self._landmark[self._index]
-        sm = trimesh.creation.uv_sphere(radius=0.002)
-        sm.visual.vertex_colors = [0.0, 0.5, 0.0, 1.0]
-        tfs = np.tile(np.eye(4), (len(joints), 1, 1))
-        tfs[:, :3, 3] = joints
-        joints_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
-        self._jointsNode = pyrender.Node("joints",mesh=joints_pcl)
+        self.genVerticesNode()
+        self.genJointsNode()
 
         #balises node
         sm = trimesh.creation.uv_sphere(radius=0.002)
@@ -125,6 +109,7 @@ class Viewer(pyrender.Viewer):
             self._scene.remove_node(self._visage)
             self.setVisage(self._index)
             self._scene.add_node(self._visage)
+            self.updateTfs()
             self.render_lock.release()
         else:
             pyrender.Viewer.on_close(self)
@@ -139,3 +124,39 @@ class Viewer(pyrender.Viewer):
     def nextBalise(self):
         tfs, self._tfs_vertices = self._tfs_vertices[0], self._tfs_vertices[1:]
         self._scene.set_pose(self._selectNode,tfs)
+
+    def updateTfs(self):
+        self._tfs_vertices[:, :3, 3] = self._vertice[self._index]
+        self._tfs_joints[:, :3, 3] = self._landmark[self._index]
+        if self._show_vertices:
+            self._scene.remove_node(self._verticesNode)
+            self.genVerticesNode()
+            self._scene.add_node(self._verticesNode)
+        else:
+            self.genVerticesNode()
+        if self._show_joints:
+            self._scene.remove_node(self._jointsNode)
+            self.genJointsNode()
+            self._scene.add_node(self._jointsNode)
+        else:
+            self.genJointsNode()
+
+    def genVerticesNode(self):
+        vertices = self._vertice[self._index]
+        sm = trimesh.creation.uv_sphere(radius=0.002)
+        sm.visual.vertex_colors = [0.9, 0.1, 0.1, 1.0]
+        tfs = np.tile(np.eye(4), (len(vertices), 1, 1))
+        tfs[:, :3, 3] = vertices
+        vertices_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
+        self._verticesNode = pyrender.Node("vertices",mesh=vertices_pcl)
+        self._tfs_vertices = tfs
+
+    def genJointsNode(self):
+        joints = self._landmark[self._index]
+        sm = trimesh.creation.uv_sphere(radius=0.002)
+        sm.visual.vertex_colors = [0.0, 0.5, 0.0, 1.0]
+        tfs = np.tile(np.eye(4), (len(joints), 1, 1))
+        tfs[:, :3, 3] = joints
+        joints_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
+        self._jointsNode = pyrender.Node("joints",mesh=joints_pcl)
+        self._tfs_joints = tfs
