@@ -94,7 +94,7 @@ def genDirectionnalMatrix(vertices):
         for j in range(len(vertices)):
             coo2 = vertices[j]
             dist = np.sqrt((coo2[0]-coo[0])**2+(coo2[1]-coo[1])**2+(coo2[2]-coo[2])**2)
-            ind = getIndexForD(indexD,distD,dist,coo,coo2)
+            ind = getIndexForD(indexD,distD,dist1D,dist,coo,coo2)
             if ind[0]!=-1:
                 indexD[ind[0]] = j
                 distD[ind[0]] = dist
@@ -107,10 +107,14 @@ def genDirectionnalMatrix(vertices):
 def getIndexForD(indexD,distD,dist1D,dist,coo,coo2):
     for i in range(len(indexD)):
         if indexD[i]==-1:
-            return i
+            n = coo2[int(i/2)]-coo[int(i/2)]
+            if i%2==0 and n<=0:
+                return [i,n]
+            elif i%2!=0 and n>=0:
+                return [i,n]
     best = [-1,-1]
     for i in range(len(distD)):
-        if dist<distD:
+        if dist<distD[i]:
             n = coo2[0]-coo[0]
             if i==0 and (n)>dist1D[i] and (n)<=0:
                 best = [i,n]

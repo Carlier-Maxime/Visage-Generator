@@ -25,22 +25,23 @@ from FLAME import FLAME
 import pyrender
 from config import get_config,nbFace,device
 from Viewer import Viewer
+import util
 
 config = get_config()
 radian = np.pi/180.0
 flamelayer = FLAME(config)
 
 # Creating a batch of mean shapes
-shape_params = torch.tensor(np.random.uniform(-2,2,[nbFace,300]), dtype=torch.float32).to(device)
+shape_params = torch.tensor(np.random.uniform(0,0,[nbFace,300]), dtype=torch.float32).to(device)
 
 # Creating a batch of different global poses
 # pose_params_numpy[:, :3] : global rotaation
 # pose_params_numpy[:, 3:] : jaw rotaation
-pose_params_numpy = np.array([[45.0*radian, 45.0*radian, 90.0*radian, 0.0, 0.0, 0.0]]*nbFace, dtype=np.float32)
+pose_params_numpy = np.array([[70.0*radian, 70.0*radian, 70.0*radian, 0.0, 0.0, 0.0]]*nbFace, dtype=np.float32)
 pose_params = torch.tensor(pose_params_numpy, dtype=torch.float32).to(device)
 
 # Cerating a batch of neutral expressions
-expression_params = torch.tensor(np.random.uniform(-2,2,[nbFace,100]), dtype=torch.float32).to(device)
+expression_params = torch.tensor(np.random.uniform(0,0,[nbFace,100]), dtype=torch.float32).to(device)
 flamelayer.to(device)
 
 # Forward Pass of FLAME, one can easily use this as a layer in a Deep learning Framework 
@@ -54,4 +55,7 @@ if config.optimize_eyeballpose and config.optimize_neckpose:
 # Visualize Landmarks
 # This visualises the static landmarks and the pose dependent dynamic landmarks used for RingNet project
 faces = flamelayer.faces
+util.genDirectionnalMatrix(vertice[0])
+print("Finish")
+exit(0)
 Viewer(vertice,landmark,faces)
