@@ -2,6 +2,7 @@ import pyrender
 import numpy as np
 import trimesh
 from config import nbFace,device
+from os.path import exists
 
 class Viewer(pyrender.Viewer):
     def __init__(self, vertice, landmark, faces, show_joints=False, show_vertices=False, show_balises = True):
@@ -12,10 +13,11 @@ class Viewer(pyrender.Viewer):
         self._show_joints = False
         self._show_balises = False
         self._editBalises = False
+        self._ctrl = False
         self._scene = pyrender.Scene()
         self._index = 0
         self._slcIndex = 0
-        self._balisesIndex = []
+        self.loadBalise()
         self.setVisage(0)
         self._scene.add_node(self._visage)
 
@@ -39,7 +41,14 @@ class Viewer(pyrender.Viewer):
             self.showBalises()      
 
     def on_key_press(self, symbol, modifiers):
-        pyrender.Viewer.on_key_press(self,symbol,modifiers)
+        if self._ctrl: # Ctrl On
+            if symbol == 115: # save balises (S)
+                self.saveBalise()
+            if symbol == 108: # load balises (L)
+                self.loadBalise()
+        else:
+            pyrender.Viewer.on_key_press(self,symbol,modifiers)
+
         if symbol == 118: # show vertices (V)
             self.showVertices()
         if symbol == 98: # show balises (B)
@@ -48,6 +57,12 @@ class Viewer(pyrender.Viewer):
             self.showJoints()
         if symbol == 101: # edit balises (E)
             self.editBalises()
+        if symbol == 65507: # Ctrl
+            self._ctrl = not self._ctrl
+            if self._ctrl:
+                self._message_text = "Ctrl On"
+            else:
+                self._message_text = "Ctrl Off"
 
         if self._editBalises:
             if symbol == 65293: # Enter
@@ -204,3 +219,20 @@ class Viewer(pyrender.Viewer):
             self.showBalises()
         else:
             self._scene.add_node(self._balisesNode)
+
+    def saveBalise(self):
+        with open("balises.txt","w") as f:
+            for i in self._balisesIndex:
+                f.write(str(i))
+                f.write("\n")
+
+    def loadBalise(self):
+        self._balisesIndex = []
+        if not exists("balises.txt"):
+            return
+        with open("balises.txt","r") as f:
+            while True:
+                s = f.readline()
+                if s=="":
+                    break
+                self._balisesIndex.append(int(s))

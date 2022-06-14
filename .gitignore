@@ -2,3 +2,4 @@
 /model/*.npy
 /model/*.ply
 __pycache__
+balises.txt
