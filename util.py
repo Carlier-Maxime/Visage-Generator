@@ -1,6 +1,9 @@
-def saveVertices(vertices,all=False,):
+import random
+import numpy as np
+
+def saveVertices(vertices,all=False, minX=0.05, minZ=-0.03, maxZ=0.15):
     t=[]
-    for i in range(len(vertices),minX=0.05,minZ=-0.03,maxZ=0.15):
+    for i in range(len(vertices)):
         if vertices[i][0]>minX and vertices[i][2]>minZ and vertices[i][2]<maxZ:
             t.append([i,vertices[i]])
     for i in range(len(t)):
@@ -19,12 +22,7 @@ def saveVertices(vertices,all=False,):
         t[i].append(distance)
         print(str(i+1)+"/"+str(len(t)))
     t.sort(key=lambda t:t[3])
-
-    with open("sommets.txt","w") as f:
-        f.write("[\n")
-        for e in t:
-            f.write("["+str(e[0])+", ["+str(e[1][0])+", "+str(e[1][1])+", "+str(e[1][2])+"], "+str(e[2])+", "+str(e[3])+"]\n")
-        f.write("]")
+    np.save("sommets.npy",t)
 
 def fullRandomBalises():
     t = []
@@ -35,13 +33,7 @@ def fullRandomBalises():
     for i in range(150):
         balises.append(t[i])
 
-    with open("balises.txt","w") as f:
-        f.write("[")
-        for i in range(len(balises)):
-            f.write(str(balises[i]))
-            if i<len(balises)-1:
-                f.write(", ")
-        f.write("]")
+    np.save("balises.npy",balises)
 
 def deleteBalises(n):
     t = loadSommets()
@@ -59,24 +51,7 @@ def deleteBalises(n):
 
 
 def loadSommets():
-    t = []
-    with open("sommets.txt","r") as f:
-        line = f.readline()
-        while True:
-            line = f.readline()
-            if line=="]":
-                break
-            line = line[1:len(line)-2]
-            line = line.split(", ")
-            e = [int(line[0])]
-            coo = [float(line[1][1:len(line[1])])]
-            coo.append(float(line[2]))
-            coo.append(float(line[3][0:len(line[3])-1]))
-            e.append(coo)
-            e.append(int(line[4]))
-            e.append(float(line[5]))
-            t.append(e)
-    return t
+    return np.load("sommets.npy")
 
 def calculDistanceSommets(t):
     for i in range(len(t)):
@@ -97,11 +72,7 @@ def calculDistanceSommets(t):
     return t
 
 def saveSommets(t):
-    with open("sommets.txt","w") as f:
-        f.write("[\n")
-        for e in t:
-            f.write("["+str(e[0])+", ["+str(e[1][0])+", "+str(e[1][1])+", "+str(e[1][2])+"], "+str(e[2])+", "+str(e[3])+"]\n")
-        f.write("]")
+    np.save("sommets.npy",t)
 
 def selectRandomBalises():
     t = loadSommets()
@@ -111,10 +82,4 @@ def selectRandomBalises():
     random.shuffle(balises)
     balises = balises[0:150]    
 
-    with open("balises.txt","w") as f:
-        f.write("[")
-        for i in range(len(balises)):
-            f.write(str(balises[i]))
-            if i<len(balises)-1:
-                f.write(", ")
-        f.write("]")
+    np.save('balises.npy',balises)
