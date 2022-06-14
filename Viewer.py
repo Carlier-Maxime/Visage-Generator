@@ -15,18 +15,14 @@ class Viewer(pyrender.Viewer):
         self._scene = pyrender.Scene()
         self._index = 0
         self._slcIndex = 0
+        self._balisesIndex = []
         self.setVisage(0)
         self._scene.add_node(self._visage)
 
         self.genVerticesNode()
         self.genJointsNode()
-
-        #balises node
-        sm = trimesh.creation.uv_sphere(radius=0.002)
-        sm.visual.vertex_colors = [1.0, 0.0, 1.0, 1.0]
-        self._tfs_balises = []
-        balises_pcl = pyrender.Mesh.from_trimesh(sm)
-        self._balisesNode = pyrender.Node("balises",mesh=balises_pcl)
+        self.genBalisesNode()
+        
 
         #select balise node
         sm = trimesh.creation.uv_sphere(radius=0.002)
@@ -54,6 +50,8 @@ class Viewer(pyrender.Viewer):
             self.editBalises()
 
         if self._editBalises:
+            if symbol == 65293: # Enter
+                self.addBalise()
             if symbol == 65362: # Up Arrow
                 self.nextBalise()
             if symbol == 65364: # Down Arrow
@@ -85,11 +83,14 @@ class Viewer(pyrender.Viewer):
 
     def showBalises(self):
         self.render_lock.acquire()
+        if len(self._tfs_balises)<=0:
+            self._show_balises = False
+            self.render_lock.release()
+            return
         if not self._show_balises:
-            if (len(self._tfs_balises)>0):
-                self._scene.add_node(self._balisesNode)
+            self._scene.add_node(self._balisesNode)
             self._show_balises = True
-        elif len(self._tfs_balises)>0:
+        else:
             self._scene.remove_node(self._balisesNode)
             self._show_balises = False
         self.render_lock.release()
@@ -120,6 +121,8 @@ class Viewer(pyrender.Viewer):
             tfs = self._tfs_vertices[self._slcIndex]
             self._scene.add_node(self._selectNode)
             self._scene.set_pose(self._selectNode,tfs)
+            if not self._show_balises:
+                self.showBalises()
             self._editBalises = True
             self._message_text = 'Enable edit balises'
         else:
@@ -145,6 +148,12 @@ class Viewer(pyrender.Viewer):
             self._scene.add_node(self._jointsNode)
         else:
             self.genJointsNode()
+        if self._show_balises and len(self._tfs_balises)>0:
+            self._scene.remove_node(self._balisesNode)
+            self.genBalisesNode()
+            self._scene.add_node(self._balisesNode)
+        else:
+            self.genBalisesNode()
         if self._editBalises:
             tfs = self._tfs_vertices[self._slcIndex]
             self._scene.set_pose(self._selectNode,tfs)
@@ -168,3 +177,30 @@ class Viewer(pyrender.Viewer):
         joints_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
         self._jointsNode = pyrender.Node("joints",mesh=joints_pcl)
         self._tfs_joints = tfs
+
+    def genBalisesNode(self):
+        sm = trimesh.creation.uv_sphere(radius=0.002)
+        sm.visual.vertex_colors = [1.0, 0.0, 1.0, 1.0]
+        t = []
+        vertices = self._vertice[self._index]
+        for i in self._balisesIndex:
+            t.append(vertices[i])
+        if len(t)>0:
+            self._tfs_balises = np.tile(np.eye(4), (len(t), 1, 1))
+            for i in range(len(t)):
+                self._tfs_balises[i, :3, 3] = t[i]
+            balises_pcl = pyrender.Mesh.from_trimesh(sm, poses=self._tfs_balises)
+        else:
+            self._tfs_balises = []
+            balises_pcl = pyrender.Mesh.from_trimesh(sm)
+        self._balisesNode = pyrender.Node("balises",mesh=balises_pcl)
+
+    def addBalise(self):
+        self._balisesIndex.append(self._slcIndex)
+        if self._show_balises:
+            self._scene.remove_node(self._balisesNode)
+        self.genBalisesNode()
+        if not self._show_balises:
+            self.showBalises()
+        else:
+            self._scene.add_node(self._balisesNode)
