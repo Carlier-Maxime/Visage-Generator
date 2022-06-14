@@ -121,9 +121,11 @@ class Viewer(pyrender.Viewer):
             self._scene.add_node(self._selectNode)
             self._scene.set_pose(self._selectNode,tfs)
             self._editBalises = True
+            self._message_text = 'Enable edit balises'
         else:
             self._scene.remove_node(self._selectNode)
             self._editBalises = False
+            self._message_text = 'Disable edit balises'
 
     def nextBalise(self):
         self._slcIndex+=1
