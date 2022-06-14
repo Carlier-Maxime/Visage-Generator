@@ -221,18 +221,10 @@ class Viewer(pyrender.Viewer):
             self._scene.add_node(self._balisesNode)
 
     def saveBalise(self):
-        with open("balises.txt","w") as f:
-            for i in self._balisesIndex:
-                f.write(str(i))
-                f.write("\n")
+        np.save("balises.npy",self._balisesIndex)
 
     def loadBalise(self):
         self._balisesIndex = []
-        if not exists("balises.txt"):
+        if not exists("balises.npy"):
             return
-        with open("balises.txt","r") as f:
-            while True:
-                s = f.readline()
-                if s=="":
-                    break
-                self._balisesIndex.append(int(s))
+        self._balisesIndex = np.load("balises.npy")
