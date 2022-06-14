@@ -14,6 +14,7 @@ class Viewer(pyrender.Viewer):
         self._editBalises = False
         self._scene = pyrender.Scene()
         self._index = 0
+        self._slcIndex = 0
         self.setVisage(0)
         self._scene.add_node(self._visage)
 
@@ -116,18 +117,20 @@ class Viewer(pyrender.Viewer):
     
     def editBalises(self):
         if not self._editBalises:
-            self._editBalises = True
-            tfs, self._tfs_vertices = self._tfs_vertices[0], self._tfs_vertices[1:]
+            tfs = self._tfs_vertices[self._slcIndex]
             self._scene.add_node(self._selectNode)
             self._scene.set_pose(self._selectNode,tfs)
+            self._editBalises = True
+        else:
+            self._scene.remove_node(self._selectNode)
+            self._editBalises = False
 
     def nextBalise(self):
-        tfs, self._tfs_vertices = self._tfs_vertices[0], self._tfs_vertices[1:]
+        self._slcIndex+=1
+        tfs = self._tfs_vertices[self._slcIndex]
         self._scene.set_pose(self._selectNode,tfs)
 
     def updateTfs(self):
-        self._tfs_vertices[:, :3, 3] = self._vertice[self._index]
-        self._tfs_joints[:, :3, 3] = self._landmark[self._index]
         if self._show_vertices:
             self._scene.remove_node(self._verticesNode)
             self.genVerticesNode()
@@ -140,6 +143,9 @@ class Viewer(pyrender.Viewer):
             self._scene.add_node(self._jointsNode)
         else:
             self.genJointsNode()
+        if self._editBalises:
+            tfs = self._tfs_vertices[self._slcIndex]
+            self._scene.set_pose(self._selectNode,tfs)
 
     def genVerticesNode(self):
         vertices = self._vertice[self._index]
