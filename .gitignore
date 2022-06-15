@@ -3,3 +3,4 @@
 /model/*.ply
 __pycache__
 *.npy
+!directionnalMatrix.npy

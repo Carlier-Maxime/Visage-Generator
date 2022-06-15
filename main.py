@@ -37,7 +37,7 @@ shape_params = torch.tensor(np.random.uniform(0,0,[nbFace,300]), dtype=torch.flo
 # Creating a batch of different global poses
 # pose_params_numpy[:, :3] : global rotaation
 # pose_params_numpy[:, 3:] : jaw rotaation
-pose_params_numpy = np.array([[70.0*radian, 70.0*radian, 70.0*radian, 0.0, 0.0, 0.0]]*nbFace, dtype=np.float32)
+pose_params_numpy = np.array([[0.0*radian, 0.0*radian, 0.0*radian, 0.0, 0.0, 0.0]]*nbFace, dtype=np.float32)
 pose_params = torch.tensor(pose_params_numpy, dtype=torch.float32).to(device)
 
 # Cerating a batch of neutral expressions
@@ -57,4 +57,6 @@ if config.optimize_eyeballpose and config.optimize_neckpose:
 faces = flamelayer.faces
 #util.genDirectionnalMatrix(vertice[0])
 #util.saveVertices(vertice[0])
+#print(vertice[0][25])
+#exit(0)
 Viewer(vertice,landmark,faces)

@@ -69,13 +69,17 @@ class Viewer(pyrender.Viewer):
             if symbol == 65293: # Enter
                 self.addBalise()
             if symbol == 65362: # Up Arrow
-                self.nextBalise(0)
-            if symbol == 65364: # Down Arrow
                 self.nextBalise(1)
+            if symbol == 65364: # Down Arrow
+                self.nextBalise(0)
             if symbol == 65361: # Left Arrow
-                self.nextBalise(2)
-            if symbol == 65363: # Right Arrow
                 self.nextBalise(3)
+            if symbol == 65363: # Right Arrow
+                self.nextBalise(2)
+            if symbol == 65365: # Up Page
+                self.nextBalise(5)
+            if symbol == 65366: # Down Page
+                self.nextBalise(4)
 
     def showVertices(self):
         self.render_lock.acquire()
@@ -149,9 +153,13 @@ class Viewer(pyrender.Viewer):
             self._message_text = 'Disable edit balises'
 
     def nextBalise(self,direction):
-        self._slcIndex = self._directionnalMatrix[self._slcIndex][direction]
+        i = self._directionnalMatrix[self._slcIndex][direction]
+        if i==-1:
+            return
+        self._slcIndex = i
         tfs = self._tfs_vertices[self._slcIndex]
         self._scene.set_pose(self._selectNode,tfs)
+        print(tfs[:3, 3])
 
     def updateTfs(self):
         if self._show_vertices:
@@ -178,7 +186,7 @@ class Viewer(pyrender.Viewer):
 
     def genVerticesNode(self):
         vertices = self._vertice[self._index]
-        sm = trimesh.creation.uv_sphere(radius=0.002)
+        sm = trimesh.creation.uv_sphere(radius=0.0019)
         sm.visual.vertex_colors = [0.9, 0.1, 0.1, 1.0]
         tfs = np.tile(np.eye(4), (len(vertices), 1, 1))
         tfs[:, :3, 3] = vertices
@@ -188,7 +196,7 @@ class Viewer(pyrender.Viewer):
 
     def genJointsNode(self):
         joints = self._landmark[self._index]
-        sm = trimesh.creation.uv_sphere(radius=0.002)
+        sm = trimesh.creation.uv_sphere(radius=0.0019)
         sm.visual.vertex_colors = [0.0, 0.5, 0.0, 1.0]
         tfs = np.tile(np.eye(4), (len(joints), 1, 1))
         tfs[:, :3, 3] = joints

@@ -67,3 +67,12 @@ while len(util.loadSommets())>=500:
 while len(util.loadSommets())>150:
     util.deleteBalises(1)
 """
+
+a = [0.456,0.345,0.008]
+b = [0.234,0.344,0.156]
+
+x = b[0]-a[0]
+y = b[1]-a[1]
+z = b[2]-a[2]
+
+print(x,y,z)
