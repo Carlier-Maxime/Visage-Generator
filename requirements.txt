@@ -1,8 +1,8 @@
-numpy==1.18.1
+numpy
 torch
 torchvision
-chumpy==0.69
-pyrender==0.1.39
-trimesh==3.6.18
+chumpy
+pyrender
+trimesh
 smplx
 pickle
