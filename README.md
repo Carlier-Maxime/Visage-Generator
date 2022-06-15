@@ -9,9 +9,26 @@ This program uses the following resources:
 Before any use of Visage Generator please read
 conditions of use of resources.
 
-## Keys
+***
+## Config
 
-- V : Show Vertices
-- B : Show Marker/Balises (Not marker yet)
-- J : Show Joints
-- E : Edit Marker/Balises (Alpha)
+to modify the config you must go to the config.py file
+- **parser**.. : config path for model and other setting for FLAME pytorch
+- **nbFace** : the number of face to generate. (default=1)
+- **device** : choice your device for generate face. (default="cpu")
+    - **cpu** : use processor
+    - **cuda** : use graphic card (not compatible with all GC)
+
+***
+## Keys
+- **V** : Show Vertices
+- **B** : Show Marker/Balises (Not default marker)
+- **J** : Show Joints
+- **E** : Edit Marker/Balises (Beta)
+- **Ctrl** : Switch Ctrl on/off
+- **Ctrl (On)** :
+    - **S** : Save balises
+    - **L** : Load balises
+- **Ctrl (Off)** :
+    - Use default pyrender action key
+    - Use action keys that are not in ctrl
