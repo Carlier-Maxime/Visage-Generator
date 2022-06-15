@@ -31,4 +31,11 @@ to modify the config you must go to the config.py file
     - **L** : Load balises
 - **Ctrl (Off)** :
     - Use default pyrender action key
-    - Use action keys that are not in ctrl
+- **Edit marker (enable)** :
+    - :arrow_left: (**Left arrow**) : direction in negatif X axis
+    - :arrow_right: (**Right arrow**) : direction in positif X axis
+    - :arrow_down: (**Down arrow**) : direction in negatif Y axis
+    - :arrow_up: (**Up arrow**) : direction in positif Y axis
+    - :arrow_double_down: (**Down Page**) : direction in negatif Z axis
+    - :arrow_double_up: (**Up Page**) : direction in positif Z axis
+    - **Enter** : add marker
