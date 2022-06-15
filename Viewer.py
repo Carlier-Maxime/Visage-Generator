@@ -14,6 +14,7 @@ class Viewer(pyrender.Viewer):
         self._show_balises = False
         self._editBalises = False
         self._ctrl = False
+        self._directionnalMatrix = []
         self._scene = pyrender.Scene()
         self._index = 0
         self._slcIndex = 0
@@ -68,13 +69,13 @@ class Viewer(pyrender.Viewer):
             if symbol == 65293: # Enter
                 self.addBalise()
             if symbol == 65362: # Up Arrow
-                self.nextBalise()
+                self.nextBalise(0)
             if symbol == 65364: # Down Arrow
-                pass
+                self.nextBalise(1)
             if symbol == 65361: # Left Arrow
-                pass
+                self.nextBalise(2)
             if symbol == 65363: # Right Arrow
-                pass
+                self.nextBalise(3)
 
     def showVertices(self):
         self.render_lock.acquire()
@@ -133,6 +134,8 @@ class Viewer(pyrender.Viewer):
     
     def editBalises(self):
         if not self._editBalises:
+            if self._directionnalMatrix == []:
+                self._directionnalMatrix = np.load("directionnalMatrix.npy")
             tfs = self._tfs_vertices[self._slcIndex]
             self._scene.add_node(self._selectNode)
             self._scene.set_pose(self._selectNode,tfs)
@@ -145,8 +148,8 @@ class Viewer(pyrender.Viewer):
             self._editBalises = False
             self._message_text = 'Disable edit balises'
 
-    def nextBalise(self):
-        self._slcIndex+=1
+    def nextBalise(self,direction):
+        self._slcIndex = self._directionnalMatrix[self._slcIndex][direction]
         tfs = self._tfs_vertices[self._slcIndex]
         self._scene.set_pose(self._selectNode,tfs)
 
@@ -199,7 +202,7 @@ class Viewer(pyrender.Viewer):
         t = []
         vertices = self._vertice[self._index]
         for i in self._balisesIndex:
-            t.append(vertices[i])
+            t.append(vertices[int(i)])
         if len(t)>0:
             self._tfs_balises = np.tile(np.eye(4), (len(t), 1, 1))
             for i in range(len(t)):

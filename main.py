@@ -55,7 +55,6 @@ if config.optimize_eyeballpose and config.optimize_neckpose:
 # Visualize Landmarks
 # This visualises the static landmarks and the pose dependent dynamic landmarks used for RingNet project
 faces = flamelayer.faces
-util.genDirectionnalMatrix(vertice[0])
-print("Finish")
-exit(0)
+#util.genDirectionnalMatrix(vertice[0])
+#util.saveVertices(vertice[0])
 Viewer(vertice,landmark,faces)

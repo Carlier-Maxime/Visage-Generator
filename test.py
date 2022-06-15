@@ -57,12 +57,13 @@ print(albedos[0][0][0])
         size = self._viewport_size
         print(camera.get_projection_matrix(640,280))
 """
-
+"""
 while len(util.loadSommets())>=2000:
     util.deleteBalises(100)
 while len(util.loadSommets())>=1000:
     util.deleteBalises(25)
 while len(util.loadSommets())>=500:
     util.deleteBalises(10)
-while len(sm.loadSommets())>150:
+while len(util.loadSommets())>150:
     util.deleteBalises(1)
+"""

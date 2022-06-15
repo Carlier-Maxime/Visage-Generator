@@ -5,23 +5,8 @@ def saveVertices(vertices,all=False, minX=0.05, minZ=-0.03, maxZ=0.15):
     t=[]
     for i in range(len(vertices)):
         if vertices[i][0]>minX and vertices[i][2]>minZ and vertices[i][2]<maxZ:
-            t.append([i,vertices[i]])
-    for i in range(len(t)):
-        point = t[i][1]
-        distance = 0
-        index = -1
-        for j in range(len(t)):
-            if i==j:
-                continue
-            p = t[j][1]
-            dist = np.sqrt((p[0]-point[0])**2+(p[1]-point[1])**2+(p[2]-point[2])**2)
-            if index==-1 or dist<distance:
-                distance = dist
-                index = t[j][0]
-        t[i].append(index)
-        t[i].append(distance)
-        print(str(i+1)+"/"+str(len(t)))
-    t.sort(key=lambda t:t[3])
+            t.append([i,float(vertices[i][0]),float(vertices[i][1]),float(vertices[i][2]),-1,-1])
+    t = calculDistanceSommets(t,display=True)
     np.save("sommets.npy",t)
 
 def fullRandomBalises():
@@ -40,7 +25,7 @@ def deleteBalises(n):
     l = []
     t2 = []
     for i in range(n):
-        if t[i][2] not in l:
+        if t[i][4] not in l:
             l.append(i)
         else:
             t2.append(t[i])
@@ -53,22 +38,22 @@ def deleteBalises(n):
 def loadSommets():
     return np.load("sommets.npy")
 
-def calculDistanceSommets(t):
+def calculDistanceSommets(t,display=False):
     for i in range(len(t)):
-        point = t[i][1]
         distance = 0
         index = -1
         for j in range(len(t)):
             if i==j:
                 continue
-            p = t[j][1]
-            dist = np.sqrt((p[0]-point[0])**2+(p[1]-point[1])**2+(p[2]-point[2])**2)
+            dist = np.sqrt((t[j][1]-t[i][1])**2+(t[j][2]-t[i][2])**2+(t[j][3]-t[i][3])**2)
             if index==-1 or dist<distance:
                 distance = dist
                 index = t[j][0]
-        t[i][2]=index
-        t[i][3]=distance
-    t.sort(key=lambda t:t[3])
+        t[i][4] = index
+        t[i][5] = distance
+        if display:
+            print(str(i+1)+"/"+str(len(t)))
+    t.sort(key=lambda t:t[5])
     return t
 
 def saveSommets(t):
@@ -92,6 +77,8 @@ def genDirectionnalMatrix(vertices):
         dist1D = [-1,-1,-1,-1,-1,-1]
         coo = vertices[i]
         for j in range(len(vertices)):
+            if i==j:
+                continue
             coo2 = vertices[j]
             dist = np.sqrt((coo2[0]-coo[0])**2+(coo2[1]-coo[1])**2+(coo2[2]-coo[2])**2)
             ind = getIndexForD(indexD,distD,dist1D,dist,coo,coo2)
