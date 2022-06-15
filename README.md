@@ -39,3 +39,27 @@ to modify the config you must go to the config.py file
     - :arrow_double_down: (**Down Page**) : direction in negatif Z axis
     - :arrow_double_up: (**Up Page**) : direction in positif Z axis
     - **Enter** : add marker
+
+
+***
+## Installation
+
+The code uses **Python 3.10**
+### Clone the project and install requirements
+
+```
+git clone https://github.com/Carlier-Maxime/Visage-Generator
+cd Visage-Generator
+pip install -r requirements.txt
+```
+
+### Download Models
+
+The information necessary for the download is indecate in the readme.md of the model folder or in the [link](https://github.com/Carlier-Maxime/Visage-Generator/blob/master/model/readme.md).
+
+### Execute **main.py**
+
+```
+python main.py
+```
+they are advised to go into the **config.py** file and **set** the **device** variable to "**cuda**" if you have a **graphics card**.
