@@ -143,7 +143,9 @@ class Viewer(pyrender.Viewer):
         if not self._editBalises:
             if self._directionnalMatrix == []:
                 self._directionnalMatrix = np.load("directionnalMatrix.npy")
-            tfs = self._tfs_vertices[self._slcIndex]
+            vert = self._verticeBalise[self._index][self._slcIndex]
+            tfs = np.tile(np.eye(4), (1, 1, 1))[0]
+            tfs[:3,3] = vert
             self._scene.add_node(self._selectNode)
             self._scene.set_pose(self._selectNode,tfs)
             if not self._show_balises:
