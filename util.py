@@ -1,17 +1,47 @@
 import random
 import numpy as np
 
-def saveVertices(vertices,all=False, minX=0.05, minZ=-0.03, maxZ=0.15):
+def getVerticeBalises(vertice, minX=0.05, minZ=-0.03, maxZ=0.15, minEyeDistance=0.0139):
+    """
+    This function allows to remove the vertices present in the eyes and 
+    what are not included in the default zone of the markers.
+    Input:
+        - vertice : array of all vertices for all face
+        - minX : minimum value for X coordinates of vertices
+        - minZ : minimum value for Z coordinates of vertices
+        - maxZ : maximum value for Z coordinates of vertices
+        - minEyeDistance : minimum eye distance
+    Return:
+        vertice array respecting the conditions
+    """
+    eyeL = [0.108, -0.178, 0.085]
+    eyeR = [0.108, -0.1155, 0.085]
+    
     t=[]
+    for vertices in vertice:
+        l = []
+        for i in range(len(vertices)):
+            p = vertices[i]
+            inZone = vertices[i][0]>minX and vertices[i][2]>minZ and vertices[i][2]<maxZ
+            distEyeL = np.sqrt((p[0]-eyeL[0])**2+(p[1]-eyeL[1])**2+(p[2]-eyeL[2])**2)
+            distEyeR = np.sqrt((p[0]-eyeR[0])**2+(p[1]-eyeR[1])**2+(p[2]-eyeR[2])**2)
+            if inZone and distEyeL>minEyeDistance and distEyeR>minEyeDistance:
+                l.append(vertices[i])
+        t.append(l)
+    return t
+
+def genSommetsFile(vertices):
+    t = []
     for i in range(len(vertices)):
-        if vertices[i][0]>minX and vertices[i][2]>minZ and vertices[i][2]<maxZ:
-            t.append([i,float(vertices[i][0]),float(vertices[i][1]),float(vertices[i][2]),-1,-1])
-    t = calculDistanceSommets(t,display=True)
+        t.append([i,float(vertices[i][0]),float(vertices[i][1]),float(vertices[i][2]),-1,-1])
+    t = calculDistanceSommets(t,True)
     np.save("sommets.npy",t)
 
 def fullRandomBalises():
     """
-    generate numpy array content 150 random index balises and save in numpy file.
+    generate a numpy array containing 150 random marker indexes and save it to a numpy file.
+    Input: None
+    Return: None
     """
     t = []
     for i in range(5023):
