@@ -69,6 +69,8 @@ class Viewer(pyrender.Viewer):
                 self._message_text = "Ctrl Off"
 
         if self._editBalises:
+            if symbol == 65535: # Suppr
+                self.removeBalise()
             if symbol == 65293: # Enter
                 self.addBalise()
             if symbol == 65362: # Up Arrow
@@ -141,7 +143,7 @@ class Viewer(pyrender.Viewer):
     
     def editBalises(self):
         if not self._editBalises:
-            if self._directionnalMatrix == []:
+            if len(self._directionnalMatrix)==0:
                 self._directionnalMatrix = np.load("directionnalMatrix.npy")
             vert = self._verticeBalise[self._index][self._slcIndex]
             tfs = np.tile(np.eye(4), (1, 1, 1))[0]
@@ -228,7 +230,27 @@ class Viewer(pyrender.Viewer):
         self._balisesNode = pyrender.Node("balises",mesh=balises_pcl)
 
     def addBalise(self):
-        self._balisesIndex.append(self._directionnalMatrix[self._slcIndex][0])
+        self._balisesIndex = np.append(self._balisesIndex,self._directionnalMatrix[self._slcIndex][0])
+        self.updateBalise()
+
+    def saveBalise(self):
+        np.save("balises.npy",self._balisesIndex)
+
+    def loadBalise(self):
+        self._balisesIndex = np.array([],int)
+        if not exists("balises.npy"):
+            return
+        self._balisesIndex = np.load("balises.npy")
+
+    def removeBalise(self):
+        ind=self._directionnalMatrix[self._slcIndex][0]
+        for i in range(len(self._balisesIndex)) :
+            if self._balisesIndex[i] == ind:
+                self._balisesIndex = np.delete(self._balisesIndex,i)
+                break
+        self.updateBalise()
+
+    def updateBalise(self):
         if self._show_balises:
             self._scene.remove_node(self._balisesNode)
         self.genBalisesNode()
@@ -237,12 +259,3 @@ class Viewer(pyrender.Viewer):
         else:
             self._scene.add_node(self._balisesNode)
         self._message_text = "NbBalises = "+str(len(self._balisesIndex))
-
-    def saveBalise(self):
-        np.save("balises.npy",self._balisesIndex)
-
-    def loadBalise(self):
-        self._balisesIndex = []
-        if not exists("balises.npy"):
-            return
-        self._balisesIndex = np.load("balises.npy")
