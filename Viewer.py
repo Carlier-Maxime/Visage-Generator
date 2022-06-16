@@ -5,7 +5,7 @@ from config import nbFace,device
 from os.path import exists
 
 class Viewer(pyrender.Viewer):
-    def __init__(self, vertice, landmark, faces, show_joints=False, show_vertices=False, show_balises = True):
+    def __init__(self, vertice, landmark, faces, verticeBalise=None, show_joints=False, show_vertices=False, show_balises = True):
         self._vertice = vertice
         self._landmark = landmark
         self._faces = faces
@@ -14,6 +14,9 @@ class Viewer(pyrender.Viewer):
         self._show_balises = False
         self._editBalises = False
         self._ctrl = False
+        self._verticeBalise = verticeBalise
+        if verticeBalise == None:
+            self._verticeBalise = self._vertice
         self._directionnalMatrix = []
         self._scene = pyrender.Scene()
         self._index = 0
@@ -69,17 +72,17 @@ class Viewer(pyrender.Viewer):
             if symbol == 65293: # Enter
                 self.addBalise()
             if symbol == 65362: # Up Arrow
-                self.nextBalise(1)
-            if symbol == 65364: # Down Arrow
-                self.nextBalise(0)
-            if symbol == 65361: # Left Arrow
-                self.nextBalise(3)
-            if symbol == 65363: # Right Arrow
-                self.nextBalise(2)
-            if symbol == 65365: # Up Page
                 self.nextBalise(5)
-            if symbol == 65366: # Down Page
+            if symbol == 65364: # Down Arrow
                 self.nextBalise(4)
+            if symbol == 65361: # Left Arrow
+                self.nextBalise(2)
+            if symbol == 65363: # Right Arrow
+                self.nextBalise(3)
+            if symbol == 65365: # Up Page
+                self.nextBalise(1)
+            if symbol == 65366: # Down Page
+                self.nextBalise(0)
 
     def showVertices(self):
         self.render_lock.acquire()
@@ -157,9 +160,10 @@ class Viewer(pyrender.Viewer):
         if i==-1:
             return
         self._slcIndex = i
-        tfs = self._tfs_vertices[self._slcIndex]
+        vert = self._verticeBalise[self._index][self._slcIndex]
+        tfs = np.tile(np.eye(4), (1, 1, 1))[0]
+        tfs[:3,3] = vert
         self._scene.set_pose(self._selectNode,tfs)
-        print(tfs[:3, 3])
 
     def updateTfs(self):
         if self._show_vertices:

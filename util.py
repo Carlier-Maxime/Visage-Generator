@@ -10,6 +10,9 @@ def saveVertices(vertices,all=False, minX=0.05, minZ=-0.03, maxZ=0.15):
     np.save("sommets.npy",t)
 
 def fullRandomBalises():
+    """
+    generate numpy array content 150 random index balises and save in numpy file.
+    """
     t = []
     for i in range(5023):
         t.append(i)

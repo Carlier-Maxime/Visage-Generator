@@ -1,22 +1,9 @@
 """
-Demo code to load the FLAME Layer and visualise the 3D landmarks on the Face 
-
 Author: Soubhik Sanyal
 Copyright (c) 2019, Soubhik Sanyal
 All rights reserved.
 
-Max-Planck-Gesellschaft zur Foerderung der Wissenschaften e.V. (MPG) is holder of all proprietary rights on this
-computer program.
-You can only use this computer program if you have closed a license agreement with MPG or you get the right to use
-the computer program from someone who is authorized to grant you that right.
-Any use of the computer program without a valid license is prohibited and liable to prosecution.
-Copyright 2019 Max-Planck-Gesellschaft zur Foerderung der Wissenschaften e.V. (MPG). acting on behalf of its
-Max Planck Institute for Intelligent Systems and the Max Planck Institute for Biological Cybernetics.
-All rights reserved.
-
-More information about FLAME is available at http://flame.is.tue.mpg.de.
-
-For questions regarding the PyTorch implementation please contact soubhik.sanyal@tuebingen.mpg.de
+Edited by M_EtOuais for Visage-Generator
 """
 
 import numpy as np
@@ -35,12 +22,12 @@ flamelayer = FLAME(config)
 shape_params = torch.tensor(np.random.uniform(0,0,[nbFace,300]), dtype=torch.float32).to(device)
 
 # Creating a batch of different global poses
-# pose_params_numpy[:, :3] : global rotaation
-# pose_params_numpy[:, 3:] : jaw rotaation
-pose_params_numpy = np.array([[0.0*radian, 0.0*radian, 0.0*radian, 0.0, 0.0, 0.0]]*nbFace, dtype=np.float32)
+# pose_params_numpy[:, :3] : global rotation
+# pose_params_numpy[:, 3:] : jaw rotation
+pose_params_numpy = np.array([[70.0*radian, 70.0*radian, 70.0*radian, 0.0, 0.0, 0.0]]*nbFace, dtype=np.float32)
 pose_params = torch.tensor(pose_params_numpy, dtype=torch.float32).to(device)
 
-# Cerating a batch of neutral expressions
+# Creating a batch of expressions
 expression_params = torch.tensor(np.random.uniform(0,0,[nbFace,100]), dtype=torch.float32).to(device)
 flamelayer.to(device)
 
@@ -52,11 +39,23 @@ if config.optimize_eyeballpose and config.optimize_neckpose:
     eye_pose = torch.zeros(nbFace, 6).to(device)
     vertice, landmark = flamelayer(shape_params, expression_params, pose_params, neck_pose, eye_pose)
 
-# Visualize Landmarks
-# This visualises the static landmarks and the pose dependent dynamic landmarks used for RingNet project
-faces = flamelayer.faces
-#util.genDirectionnalMatrix(vertice[0])
-#util.saveVertices(vertice[0])
-#print(vertice[0][25])
+t=[]
+minX=0.05
+minZ=-0.03
+maxZ=0.15
+for vertices in vertice:
+    l = []
+    for i in range(len(vertices)):
+        inZone = vertices[i][0]>minX and vertices[i][2]>minZ and vertices[i][2]<maxZ
+        eyeL = [0.108, -0.178, 0.085]
+        eyeR = [0.108, -0.1155, 0.085]
+        p = vertices[i]
+        distEyeL = np.sqrt((p[0]-eyeL[0])**2+(p[1]-eyeL[1])**2+(p[2]-eyeL[2])**2)
+        distEyeR = np.sqrt((p[0]-eyeR[0])**2+(p[1]-eyeR[1])**2+(p[2]-eyeR[2])**2)
+        if inZone and distEyeL>0.0139 and distEyeR>0.0139:
+            l.append(vertices[i])
+    t.append(l)
+#util.genDirectionnalMatrix(t)
 #exit(0)
-Viewer(vertice,landmark,faces)
+
+Viewer(vertice, landmark, flamelayer.faces, t)

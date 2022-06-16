@@ -3,33 +3,6 @@ import numpy as np
 import torch.nn.functional as F
 import util
 
-""" generate sommets.txt
-t=[]
-for i in range(len(vertices)):
-    t.append([i,vertices[i]])
-for i in range(len(t)):
-    point = t[i][1]
-    distance = 0
-    index = -1
-    for j in range(len(t)):
-        if i==j:
-            continue
-        p = t[j][1]
-        dist = np.sqrt((p[0]-point[0])**2+(p[1]-point[1])**2+(p[2]-point[2])**2)
-        if index==-1 or dist<distance:
-            distance = dist
-            index = t[j][0]
-    t[i].append(index)
-    t[i].append(distance)
-    print(str(i+1)+"/"+str(len(t)))
-t.sort(key=lambda t:t[3])
-
-with open("sommets.txt","w") as f:
-    f.write("[\n")
-    for e in t:
-        f.write("["+str(e[0])+", ["+str(e[1][0])+", "+str(e[1][1])+", "+str(e[1][2])+"], "+str(e[2])+", "+str(e[3])+"]\n")
-    f.write("]")
-"""
 """
 tex_space = np.load("model/FLAME_texture.npz")
 texture_mean = tex_space['mean'].reshape(1, -1)
@@ -68,11 +41,15 @@ while len(util.loadSommets())>150:
     util.deleteBalises(1)
 """
 
-a = [0.456,0.345,0.008]
-b = [0.234,0.344,0.156]
+"""
+sm = trimesh.creation.uv_sphere(radius=0.013)
+sm.visual.vertex_colors = [1.0, 1.0, 0.0, 1.0]
+eye = pyrender.Node("eye",mesh=pyrender.Mesh.from_trimesh(sm))
+self._scene.add_node(eye)
+tfs = np.tile(np.eye(4), (1, 1, 1))[0]
+tfs[:3,3] = [0.108, -0.178, 0.085]
+self._scene.set_pose(eye,tfs)
+"""
 
-x = b[0]-a[0]
-y = b[1]-a[1]
-z = b[2]-a[2]
-
-print(x,y,z)
+#[0.108, -0.1155, 0.085] eye right
+#[0.108, -0.178, 0.085] eye left
