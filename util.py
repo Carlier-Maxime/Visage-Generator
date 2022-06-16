@@ -12,14 +12,16 @@ def getVerticeBalises(vertice, minX=0.05, minZ=-0.03, maxZ=0.15, minEyeDistance=
         - maxZ : maximum value for Z coordinates of vertices
         - minEyeDistance : minimum eye distance
     Return:
-        vertice array respecting the conditions
+        vertice array respecting the conditions, index correpondance
     """
     eyeL = [0.108, -0.178, 0.085]
     eyeR = [0.108, -0.1155, 0.085]
     
     t=[]
+    m=[]
     for vertices in vertice:
         l = []
+        li = []
         for i in range(len(vertices)):
             p = vertices[i]
             inZone = vertices[i][0]>minX and vertices[i][2]>minZ and vertices[i][2]<maxZ
@@ -27,8 +29,10 @@ def getVerticeBalises(vertice, minX=0.05, minZ=-0.03, maxZ=0.15, minEyeDistance=
             distEyeR = np.sqrt((p[0]-eyeR[0])**2+(p[1]-eyeR[1])**2+(p[2]-eyeR[2])**2)
             if inZone and distEyeL>minEyeDistance and distEyeR>minEyeDistance:
                 l.append(vertices[i])
+                li.append(i)
         t.append(l)
-    return t
+        m.append(li)
+    return t,m
 
 def genSommetsFile(vertices):
     t = []
@@ -102,7 +106,7 @@ def selectRandomBalises():
 
     np.save('balises.npy',balises)
 
-def genDirectionnalMatrix(vertices):
+def genDirectionnalMatrix(vertices,indexList):
     m = []
     for i in range(len(vertices)):
         indexD = [-1,-1,-1,-1,-1,-1]
@@ -117,6 +121,7 @@ def genDirectionnalMatrix(vertices):
             if ind!=-1:
                 indexD[ind] = j
                 distD[ind] = dist
+        indexD.insert(0,indexList[i])
         m.append(indexD)
         print(str(i)+"/"+str(len(vertices)-1))
     np.save("directionnalMatrix.npy",m)

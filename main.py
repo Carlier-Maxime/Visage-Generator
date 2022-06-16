@@ -39,4 +39,5 @@ if config.optimize_eyeballpose and config.optimize_neckpose:
     eye_pose = torch.zeros(nbFace, 6).to(device)
     vertice, landmark = flamelayer(shape_params, expression_params, pose_params, neck_pose, eye_pose)
 
-Viewer(vertice, landmark, flamelayer.faces, util.getVerticeBalises(vertice))
+t,m = util.getVerticeBalises(vertice)
+Viewer(vertice, landmark, flamelayer.faces, t)

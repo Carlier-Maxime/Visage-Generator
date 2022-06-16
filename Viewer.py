@@ -72,17 +72,17 @@ class Viewer(pyrender.Viewer):
             if symbol == 65293: # Enter
                 self.addBalise()
             if symbol == 65362: # Up Arrow
-                self.nextBalise(5)
+                self.nextBalise(6)
             if symbol == 65364: # Down Arrow
-                self.nextBalise(4)
+                self.nextBalise(5)
             if symbol == 65361: # Left Arrow
-                self.nextBalise(2)
-            if symbol == 65363: # Right Arrow
                 self.nextBalise(3)
+            if symbol == 65363: # Right Arrow
+                self.nextBalise(4)
             if symbol == 65365: # Up Page
-                self.nextBalise(1)
+                self.nextBalise(2)
             if symbol == 65366: # Down Page
-                self.nextBalise(0)
+                self.nextBalise(1)
 
     def showVertices(self):
         self.render_lock.acquire()
@@ -228,7 +228,7 @@ class Viewer(pyrender.Viewer):
         self._balisesNode = pyrender.Node("balises",mesh=balises_pcl)
 
     def addBalise(self):
-        self._balisesIndex.append(self._slcIndex)
+        self._balisesIndex.append(self._directionnalMatrix[self._slcIndex][0])
         if self._show_balises:
             self._scene.remove_node(self._balisesNode)
         self.genBalisesNode()
@@ -236,6 +236,7 @@ class Viewer(pyrender.Viewer):
             self.showBalises()
         else:
             self._scene.add_node(self._balisesNode)
+        self._message_text = "NbBalises = "+str(len(self._balisesIndex))
 
     def saveBalise(self):
         np.save("balises.npy",self._balisesIndex)
