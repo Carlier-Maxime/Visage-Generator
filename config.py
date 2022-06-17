@@ -2,8 +2,69 @@ import argparse
 import os
 
 parser = argparse.ArgumentParser(description = 'FLAME model')
-nbFace = 1
-device = "cpu" # switch to cuda for use gc.
+
+parser.add_argument(
+    '--min_shape_param',
+    type = float,
+    default = -2,
+    help = 'minimum value for shape param'
+)
+
+parser.add_argument(
+    '--max_shape_param',
+    type = float,
+    default = 2,
+    help = 'maximum value for shape param'
+)
+
+parser.add_argument(
+    '--min_expression_param',
+    type = float,
+    default = -2,
+    help = 'minimum value for expression param'
+)
+
+parser.add_argument(
+    '--max_expression_param',
+    type = float,
+    default = 2,
+    help = 'maximum value for expression param'
+)
+
+parser.add_argument(
+    '--global_pose_param_1',
+    type = float,
+    default = 45,
+    help = 'value of first global pose param'
+)
+
+parser.add_argument(
+    '--global_pose_param_2',
+    type = float,
+    default = 45,
+    help = 'value of second global pose param'
+)
+
+parser.add_argument(
+    '--global_pose_param_3',
+    type = float,
+    default = 90,
+    help = 'value of third global pose param'
+)
+
+parser.add_argument(
+    '--device',
+    type = str,
+    default = "cpu",
+    help = 'choice your device for generate face. ("cpu" or "cuda")'
+)
+
+parser.add_argument(
+    '--number_faces',
+    type = int,
+    default = 1,
+    help = 'number of faces to generate'
+)
 
 parser.add_argument(
     '--flame_model_path',
@@ -84,13 +145,6 @@ parser.add_argument(
     type = int,
     default = 4,
     help = 'pytorch number worker.'
-)
-
-parser.add_argument(
-    '--batch_size',
-    type = int,
-    default = nbFace,
-    help = 'Training batch size.'
 )
 
 parser.add_argument(

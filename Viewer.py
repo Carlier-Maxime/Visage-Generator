@@ -1,11 +1,15 @@
 import pyrender
 import numpy as np
 import trimesh
-from config import nbFace,device
+from config import get_config
 from os.path import exists
 
 class Viewer(pyrender.Viewer):
     def __init__(self, vertice, landmark, faces, verticeBalise=None, show_joints=False, show_vertices=False, show_balises = True):
+        config = get_config()
+        self._nbFace = config.number_faces
+        self._device = config.device
+        
         self._vertice = vertice
         self._landmark = landmark
         self._faces = faces
@@ -121,8 +125,8 @@ class Viewer(pyrender.Viewer):
         self.render_lock.release()
 
     def setVisage(self,i):
-        vertices = self._vertice[i].detach().to(device).numpy().squeeze()
-        joints = self._landmark[i].detach().to(device).numpy().squeeze()
+        vertices = self._vertice[i].detach().to(self._device).numpy().squeeze()
+        joints = self._landmark[i].detach().to(self._device).numpy().squeeze()
         vertex_colors = np.ones([vertices.shape[0], 4]) * [0.925, 0.72, 0.519, 1.0]
 
         tri_mesh = trimesh.Trimesh(vertices, self._faces, vertex_colors=vertex_colors)
@@ -130,7 +134,7 @@ class Viewer(pyrender.Viewer):
         self._visage = pyrender.Node("Visage",mesh=mesh)
 
     def on_close(self):
-        if (self._index<nbFace-1):
+        if (self._index<self._nbFace-1):
             self._index = self._index+1
             self.render_lock.acquire()
             self._scene.remove_node(self._visage)

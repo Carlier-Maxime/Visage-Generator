@@ -9,17 +9,28 @@ Edited by M_EtOuais for Visage-Generator
 import numpy as np
 import torch
 from FLAME import FLAME
-import pyrender
-from config import get_config,nbFace,device
+from config import get_config
 from Viewer import Viewer
 import util
+import sys
 
 class VisageGenerator():
     def __init__(self, minShapeParam=-2, maxShapeParam=2,
                 minExpressionParam=-2, maxExpressionParam=2,
-                globalPoseParam1=45, globalPoseParam2=45, globalPoseParam3=90
+                globalPoseParam1=45, globalPoseParam2=45, globalPoseParam3=90,
+                mainLaunch = False
                 ) -> None:
         config = get_config()
+        nbFace = config.number_faces
+        device = config.device
+        if mainLaunch:
+            minShapeParam = config.min_shape_param
+            maxShapeParam = config.max_shape_param
+            minExpressionParam = config.min_expression_param
+            maxExpressionParam = config.max_expression_param
+            globalPoseParam1 = config.global_pose_param_1
+            globalPoseParam2 = config.global_pose_param_2
+            globalPoseParam3 = config.global_pose_param_3
         radian = np.pi/180.0
         flamelayer = FLAME(config)
 
@@ -49,4 +60,4 @@ class VisageGenerator():
 
 
 if __name__ == "__main__":
-    VisageGenerator(0,0,0,0,70,70,70).view()
+    VisageGenerator(mainLaunch=True).view()

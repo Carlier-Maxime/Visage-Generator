@@ -44,7 +44,7 @@ class FLAME(nn.Module):
         with open(config.flame_model_path, 'rb') as f:
             self.flame_model = Struct(**pickle.load(f, encoding='latin1'))
         self.NECK_IDX = 1
-        self.batch_size = config.batch_size
+        self.batch_size = config.number_faces
         self.dtype = torch.float32
         self.use_face_contour = config.use_face_contour
         self.faces = self.flame_model.f

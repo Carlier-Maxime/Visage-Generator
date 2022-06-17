@@ -12,12 +12,29 @@ conditions of use of resources.
 ***
 ## Config
 
-to modify the config you must go to the config.py file
-- **parser**.. : config path for model and other setting for FLAME pytorch
-- **nbFace** : the number of face to generate. (default=1)
-- **device** : choice your device for generate face. (default="cpu")
-    - **cpu** : use processor
-    - **cuda** : use graphic card (not compatible with all GC)
+Here are the different settings you can change:
+- ```--min_shape_param``` : minimum value of shape param.
+- ```--max_shape_param``` : maximum value of shape param.
+- ```--min_expression_param``` : minimum value of expression param.
+- ```--max_expression_param``` : maximum value of expression param.
+- ```--global_pose_param_1``` : value of first global pose param.
+- ```--global_pose_param_2``` : value of second global pose param.
+- ```--global_pose_param_3``` : value of third global pose param.
+- ```--device``` : choice your device for generate face.
+- ```--number_faces``` : the number of face to generate.
+- ```--flame_model_path``` : path to model flame.
+- ```--static_landmark_embedding_path``` : path to static landmark embedding for FLAME.
+- ```--dynamic_landmark_embedding_path``` : path to dynamic landmark embedding for FLAME.
+- ```--shape_params``` : the number of shape parameters.
+- ```--expression_params``` : the number of expression parameters.
+...
+
+For more information check config.py
+You can define the parameters either by modifying the default values ​​in my config.py file 
+or by launching the program, for example:
+```
+python ./VisageGenerator.py --device=cuda --number_faces=10
+```
 
 ***
 ## Keys
