@@ -141,3 +141,11 @@ def getIndexForD(indexD,distD,dist,coo,coo2):
             elif i%2!=0 and n>0:
                 return i
     return -1
+
+def saveFaces(vertice):
+    balises = np.load("balises.npy")
+    data = np.zeros([len(vertice),len(balises),3])
+    for i in range(len(vertice)):
+        for j in range(len(balises)):
+            data[i,j,:] = vertice[i][balises[j]]
+    np.save("data.npy",data)
