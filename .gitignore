@@ -1,6 +1,7 @@
 /model/*.pkl
 /model/*.npy
 /model/*.ply
+/model/*.npz
 __pycache__
 *.npy
 !directionnalMatrix.npy
