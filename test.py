@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import torch.nn.functional as F
+from VisageGenerator import VisageGenerator
 import util
 from readSTL import read
 
@@ -56,3 +57,9 @@ self._scene.set_pose(eye,tfs)
 #[0.108, -0.178, 0.085] eye left
 #[0.143, -0.1464, 0.055] noise
 
+vg = VisageGenerator(0,0,0,0,0,0,0)
+obj = np.load("masque.npy", allow_pickle=True)
+obj[0] = np.array(obj[0])/1000
+obj[0][:,2] = obj[0][:,2]+0.1
+obj[0][:,1] = obj[0][:,1]-0.05
+vg.view([obj])
