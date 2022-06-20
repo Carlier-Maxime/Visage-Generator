@@ -53,3 +53,4 @@ self._scene.set_pose(eye,tfs)
 
 #[0.108, -0.1155, 0.085] eye right
 #[0.108, -0.178, 0.085] eye left
+#[0.143, -0.1464, 0.055] noise
