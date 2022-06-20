@@ -3,9 +3,10 @@ import numpy as np
 import trimesh
 from config import get_config
 from os.path import exists
+import torch
 
 class Viewer(pyrender.Viewer):
-    def __init__(self, vertice, landmark, faces, verticeBalise=None, show_joints=False, show_vertices=False, show_balises = True):
+    def __init__(self, vertice, landmark, faces, verticeBalise=None, show_joints=False, show_vertices=False, show_balises = True, otherObjects = None):
         config = get_config()
         self._nbFace = config.number_faces
         self._device = config.device
@@ -23,6 +24,18 @@ class Viewer(pyrender.Viewer):
             self._verticeBalise = self._vertice
         self._directionnalMatrix = []
         self._scene = pyrender.Scene()
+
+        if otherObjects!=None:
+            for obj in otherObjects:
+                vertices = obj[0]
+                triangles = obj[1]
+                vertices = torch.tensor(vertices).detach().cpu().numpy().squeeze()
+                triangles = np.array(triangles)
+                tri_mesh = trimesh.Trimesh(vertices,faces=triangles)
+                mesh = pyrender.Mesh.from_trimesh(tri_mesh)
+                self._scene.add(mesh)
+
+
         self._index = 0
         self._slcIndex = 0
         self.loadBalise()
