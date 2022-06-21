@@ -52,8 +52,7 @@ class VisageGenerator():
         self._faces = flamelayer.faces
 
     def view(self,otherObjetcs=None):
-        t,m = util.getVerticeBalises(self._vertice)
-        Viewer(self._vertice, self._landmark, self._faces, t, otherObjects=otherObjetcs)
+        Viewer(self._vertice, self._landmark, self._faces, otherObjects=otherObjetcs)
 
     def save(self):
         util.saveFaces(self._vertice)

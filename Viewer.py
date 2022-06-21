@@ -6,7 +6,7 @@ from os.path import exists
 import torch
 
 class Viewer(pyrender.Viewer):
-    def __init__(self, vertice, landmark, faces, verticeBalise=None, show_joints=False, show_vertices=False, show_balises = True, otherObjects = None):
+    def __init__(self, vertice, landmark, faces, show_joints=False, show_vertices=False, show_balises = True, otherObjects = None):
         config = get_config()
         self._nbFace = config.number_faces
         self._device = config.device
@@ -19,9 +19,6 @@ class Viewer(pyrender.Viewer):
         self._show_balises = False
         self._editBalises = False
         self._ctrl = False
-        self._verticeBalise = verticeBalise
-        if verticeBalise == None:
-            self._verticeBalise = self._vertice
         self._directionnalMatrix = []
         self._scene = pyrender.Scene()
 
@@ -170,7 +167,7 @@ class Viewer(pyrender.Viewer):
         if not self._editBalises:
             if len(self._directionnalMatrix)==0:
                 self._directionnalMatrix = np.load("directionnalMatrix.npy")
-            vert = self._verticeBalise[self._index][self._slcIndex]
+            vert = self._vertice[self._index][self._directionnalMatrix[self._slcIndex][0]]
             tfs = np.tile(np.eye(4), (1, 1, 1))[0]
             tfs[:3,3] = vert
             self._scene.add_node(self._selectNode)
@@ -189,7 +186,7 @@ class Viewer(pyrender.Viewer):
         if i==-1:
             return
         self._slcIndex = i
-        vert = self._verticeBalise[self._index][self._slcIndex]
+        vert = self._vertice[self._index][self._directionnalMatrix[self._slcIndex][0]]
         tfs = np.tile(np.eye(4), (1, 1, 1))[0]
         tfs[:3,3] = vert
         self._scene.set_pose(self._selectNode,tfs)
