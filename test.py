@@ -78,4 +78,4 @@ points = points/1000
 points[:,2] = points[:,2]+0.1
 points[:,1] = points[:,1]-0.05
 
-vg.view([obj,[points,[]]])
+vg.view()

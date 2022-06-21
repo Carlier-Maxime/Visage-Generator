@@ -1,9 +1,9 @@
 import random
 import numpy as np
 
-def getVerticeBalises(vertice, minX=0.05, minZ=-0.03, maxZ=0.15, minEyeDistance=0.0139):
+def getVerticeBalises(vertice, minX=0.05, minZ=-0.03, maxZ=0.15, minEyeDistance=0.0139, minNoiseDistance=0.0130):
     """
-    This function allows to remove the vertices present in the eyes and 
+    This function allows to remove the vertices present in the eyes and noise and 
     what are not included in the default zone of the markers.
     Input:
         - vertice : array of all vertices for all face
@@ -11,11 +11,13 @@ def getVerticeBalises(vertice, minX=0.05, minZ=-0.03, maxZ=0.15, minEyeDistance=
         - minZ : minimum value for Z coordinates of vertices
         - maxZ : maximum value for Z coordinates of vertices
         - minEyeDistance : minimum eye distance
+        - minNoiseDistance : minimum noise distance
     Return:
         vertice array respecting the conditions, index correpondance
     """
     eyeL = [0.108, -0.178, 0.085]
     eyeR = [0.108, -0.1155, 0.085]
+    noise = [0.143, -0.1464, 0.055]
     
     t=[]
     m=[]
@@ -27,7 +29,8 @@ def getVerticeBalises(vertice, minX=0.05, minZ=-0.03, maxZ=0.15, minEyeDistance=
             inZone = vertices[i][0]>minX and vertices[i][2]>minZ and vertices[i][2]<maxZ
             distEyeL = np.sqrt((p[0]-eyeL[0])**2+(p[1]-eyeL[1])**2+(p[2]-eyeL[2])**2)
             distEyeR = np.sqrt((p[0]-eyeR[0])**2+(p[1]-eyeR[1])**2+(p[2]-eyeR[2])**2)
-            if inZone and distEyeL>minEyeDistance and distEyeR>minEyeDistance:
+            distNoise = np.sqrt((p[0]-noise[0])**2+(p[1]-noise[1])**2+(p[2]-noise[2])**2)
+            if inZone and distEyeL>minEyeDistance and distEyeR>minEyeDistance and distNoise>minNoiseDistance:
                 l.append(vertices[i])
                 li.append(i)
         t.append(l)
