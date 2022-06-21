@@ -25,22 +25,23 @@ class Viewer(pyrender.Viewer):
         self._directionnalMatrix = []
         self._scene = pyrender.Scene()
 
-        for obj in otherObjects:
-            vertices = obj[0]
-            triangles = obj[1]
-            vertices = torch.tensor(vertices).detach().cpu().numpy().squeeze()
-            triangles = np.array(triangles)
-            if len(triangles)==0:
-                sm = trimesh.creation.uv_sphere(radius=0.013)
-                sm.visual.vertex_colors = [1.0, 0.0, 0.0, 1.0]
-                tfs = np.tile(np.eye(4), (len(vertices), 1, 1))
-                tfs[:, :3, 3] = vertices
-                mesh = pyrender.Mesh.from_trimesh(sm, poses=tfs)
-                self._scene.add(mesh)
-            else:
-                tri_mesh = trimesh.Trimesh(vertices,faces=triangles)
-                mesh = pyrender.Mesh.from_trimesh(tri_mesh)
-                self._scene.add(mesh)
+        if otherObjects != None:
+            for obj in otherObjects:
+                vertices = obj[0]
+                triangles = obj[1]
+                vertices = torch.tensor(vertices).detach().cpu().numpy().squeeze()
+                triangles = np.array(triangles)
+                if len(triangles)==0:
+                    sm = trimesh.creation.uv_sphere(radius=0.001)
+                    sm.visual.vertex_colors = [1.0, 0.0, 0.0, 1.0]
+                    tfs = np.tile(np.eye(4), (len(vertices), 1, 1))
+                    tfs[:, :3, 3] = vertices
+                    mesh = pyrender.Mesh.from_trimesh(sm, poses=tfs)
+                    self._scene.add(mesh)
+                else:
+                    tri_mesh = trimesh.Trimesh(vertices,faces=triangles)
+                    mesh = pyrender.Mesh.from_trimesh(tri_mesh)
+                    self._scene.add(mesh)
 
 
         self._index = 0

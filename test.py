@@ -62,4 +62,20 @@ obj = np.load("masque.npy", allow_pickle=True)
 obj[0] = np.array(obj[0])/1000
 obj[0][:,2] = obj[0][:,2]+0.1
 obj[0][:,1] = obj[0][:,1]-0.05
-vg.view([obj])
+
+with open("../test2.txt","r") as f:
+    points = []
+    while True:
+        p = f.readline().split(",")
+        if p == ['']:
+            break
+        for i in range(len(p)):
+            p[i] = float(p[i])
+        points.append(p)
+
+points = np.array(points)
+points = points/1000
+points[:,2] = points[:,2]+0.1
+points[:,1] = points[:,1]-0.05
+
+vg.view([obj,[points,[]]])
