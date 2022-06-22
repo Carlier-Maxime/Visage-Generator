@@ -89,6 +89,15 @@ vg.view([obj,[points,[]]])
 
 import read3D
 from Viewer import Viewer
-visageVertices, visageFaces = read3D.readOBJ("nogit/fit_scan_result.obj")
-masqueVertices, masqueFaces = read3D.readOBJ("nogit/scan_scaled.obj")
-viewer = Viewer(torch.tensor([visageVertices]),None,visageFaces,otherObjects=[[masqueVertices,masqueFaces]])
+masqueOV, masqueOF = read3D.readOBJ("nogit/masqueOriginelle.obj")
+points = []
+with open('nogit/marqueursMasqueOriginelle.txt',"r") as f:
+    while True:
+        line = f.readline()
+        if line == "":
+            break
+        line = line.split(",")
+        points.append([float(line[i]) for i in range(3)])
+#visageVertices, visageFaces = read3D.readOBJ("nogit/fit_scan_result.obj")
+#masqueVertices, masqueFaces = read3D.readOBJ("nogit/scan_scaled.obj")
+#viewer = Viewer(torch.tensor([visageVertices]),None,visageFaces,otherObjects=[[masqueVertices,masqueFaces]])

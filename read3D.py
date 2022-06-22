@@ -70,7 +70,7 @@ def readOBJ(file=""):
                 vertices.append(v)
             elif line.startswith("f "):
                 line = line.split(" ")
-                face = [int(line[i]) for i in range(1,4)]
+                face = [int(line[i].split("/")[0]) for i in range(1,4)]
                 if min(face)<minFace:
                     minFace=min(face)
                 faces.append(face)
