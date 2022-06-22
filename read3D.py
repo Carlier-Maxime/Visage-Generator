@@ -5,7 +5,7 @@ import trimesh
 import torch
 from datetime import datetime,timedelta
 
-def read(file=""):
+def readSTL(file=""):
     if file == "":
         file = input("Path file : ")
     with open(file,"rb") as f:
@@ -48,3 +48,40 @@ def readAndView(file=""):
 
     scene.add(mesh)
     pyrender.Viewer(scene, use_raymond_lighting=True, run_in_thread=True)
+
+def readOBJ(file=""):
+    """
+    read file obj, no suppport texture and normal.
+    """
+    if file == "":
+        file = input("Path file : ")
+    with open(file,"r") as f:
+        vertices = []
+        faces = []
+        while True:
+            line = f.readline()
+            if "#" in line:
+                continue
+            if line.startswith("v "):
+                line = line.split(" ")
+                v = [float(line[i]) for i in range(1,4)]
+                vertices.append(v)
+            elif line.startswith("f "):
+                line = line.split(" ")
+                f = [int(line[i]) for i in range(1,4)]
+                faces.append(f)
+            elif line=="":
+                break
+    return vertices,faces
+
+def read(file=""):
+    if file == "":
+        file = input("Path file : ")
+    if file.endswith('.stl'):
+        vertices, triangles = readSTL(file)
+    elif file.endswith('.obj'):
+        vertices, triangles = readOBJ(file)
+    else:
+        print("format unknow !")
+        exit(1)
+    return vertices, triangles
