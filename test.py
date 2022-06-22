@@ -6,41 +6,32 @@ import util
 from readSTL import read
 
 """
-tex_space = np.load("model/FLAME_texture.npz")
-texture_mean = tex_space['mean'].reshape(1, -1)
-texture_basis = tex_space['tex_dir'].reshape(-1, 200)
-num_components = texture_basis.shape[1]
-texture_mean = torch.from_numpy(texture_mean).float()[None,...]
-texture_basis = torch.from_numpy(texture_basis[:,:50]).float()[None,...]
+        from renderer import Renderer
+        import torch.nn.functional as F
+        import torch.nn as nn
+        import util2
+        render = Renderer(224,"visage.obj").cpu()
 
-texcode = torch.zeros(1, 50).float().cpu()
-texture = texture_mean + (texture_basis*texcode[:,None,:]).sum(-1)
-texture = texture.reshape(texcode.shape[0], 512, 512, 3).permute(0,3,1,2)
-texture = F.interpolate(texture, [256, 256])
-texture = texture[:,[2,1,0], :,:]
+        tex_space = np.load("model/FLAME_texture.npz")
+        texture_mean = tex_space['mean'].reshape(1, -1)
+        texture_basis = tex_space['tex_dir'].reshape(-1, 200)
+        num_components = texture_basis.shape[1]
+        texture_mean = torch.from_numpy(texture_mean).float()[None,...]
+        texture_basis = torch.from_numpy(texture_basis[:,:50]).float()[None,...]
 
-albedos = texture / 255
-print(len(albedos[0]))
-print(len(albedos[0][0]))
-print(albedos[0][0][0])
-"""
+        texcode = torch.zeros(1, 50).float().cpu()
+        texture = texture_mean + (texture_basis*texcode[:,None,:]).sum(-1)
+        texture = texture.reshape(texcode.shape[0], 512, 512, 3).permute(0,3,1,2)
+        texture = F.interpolate(texture, [256, 256])
+        texture = texture[:,[2,1,0], :,:]
 
-"""
-    def on_mouse_press(self, x, y, buttons, modifiers):
-        pyrender.Viewer.on_mouse_press(self,x,y,buttons,modifiers)
-        camera = self._scene.main_camera_node.camera
-        size = self._viewport_size
-        print(camera.get_projection_matrix(640,280))
-"""
-"""
-while len(util.loadSommets())>=2000:
-    util.deleteBalises(100)
-while len(util.loadSommets())>=1000:
-    util.deleteBalises(25)
-while len(util.loadSommets())>=500:
-    util.deleteBalises(10)
-while len(util.loadSommets())>150:
-    util.deleteBalises(1)
+        albedos = texture / 255
+
+        cam = torch.zeros(224, 3); cam[:, 0] = 5.
+        cam = nn.Parameter(cam.float().cpu())
+        trans_vertices = util2.batch_orth_proj(self._vertice[0], cam)
+        trans_vertices[..., 1:] = - trans_vertices[..., 1:]
+        render(self._vertice[0], trans_vertices, albedos)
 """
 
 """
@@ -57,11 +48,22 @@ self._scene.set_pose(eye,tfs)
 #[0.108, -0.178, 0.085] eye left
 #[0.143, -0.1464, 0.055] noise
 
+def meanPos(vertices):
+    mean = [0,0,0]
+    for v in vertices:
+        mean[0] = mean[0]+v[0]
+        mean[1] = mean[1]+v[1]
+        mean[2] = mean[2]+v[2]
+    mean[0] = mean[0]/len(vertices)
+    mean[1] = mean[1]/len(vertices)
+    mean[2] = mean[2]/len(vertices)
+    return mean
+
 vg = VisageGenerator(0,0,0,0,0,0,0)
+vert = vg.getVertices(0)[np.load("directionnalMatrix.npy")[:,0]]
+visagePos = meanPos(vert)
 obj = np.load("masque.npy", allow_pickle=True)
 obj[0] = np.array(obj[0])/1000
-obj[0][:,2] = obj[0][:,2]+0.1
-obj[0][:,1] = obj[0][:,1]-0.05
 
 with open("../test2.txt","r") as f:
     points = []
@@ -75,7 +77,10 @@ with open("../test2.txt","r") as f:
 
 points = np.array(points)
 points = points/1000
-points[:,2] = points[:,2]+0.1
-points[:,1] = points[:,1]-0.05
 
-vg.view()
+pointsPos = meanPos(points)
+ecart = [visagePos[i].item()-pointsPos[i] for i in range(3)]
+for i in range(3): points[:,i] = points[:,i]+ecart[i]
+for i in range(3): obj[0][:,i] = obj[0][:,i]+ecart[i]
+
+vg.view([obj,[points,[]]])

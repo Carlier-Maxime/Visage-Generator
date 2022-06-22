@@ -57,6 +57,11 @@ class VisageGenerator():
     def save(self):
         util.saveFaces(self._vertice)
         
+    def getVertices(self,i):
+        return self._vertice[i]
+
+    def getFaces(self):
+        return self._faces
 
 
 if __name__ == "__main__":
