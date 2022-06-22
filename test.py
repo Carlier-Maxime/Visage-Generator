@@ -3,7 +3,7 @@ import numpy as np
 import torch.nn.functional as F
 from VisageGenerator import VisageGenerator
 import util
-from readSTL import read
+from read3D import read
 
 """
         from renderer import Renderer
@@ -48,6 +48,7 @@ self._scene.set_pose(eye,tfs)
 #[0.108, -0.178, 0.085] eye left
 #[0.143, -0.1464, 0.055] noise
 
+"""
 def meanPos(vertices):
     mean = [0,0,0]
     for v in vertices:
@@ -84,3 +85,10 @@ for i in range(3): points[:,i] = points[:,i]+ecart[i]
 for i in range(3): obj[0][:,i] = obj[0][:,i]+ecart[i]
 
 vg.view([obj,[points,[]]])
+"""
+
+import read3D
+from Viewer import Viewer
+visageVertices, visageFaces = read3D.readOBJ("nogit/fit_scan_result.obj")
+masqueVertices, masqueFaces = read3D.readOBJ("nogit/scan_scaled.obj")
+viewer = Viewer(torch.tensor([visageVertices]),None,visageFaces,otherObjects=[[masqueVertices,masqueFaces]])

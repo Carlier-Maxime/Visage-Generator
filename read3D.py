@@ -42,6 +42,7 @@ def readAndView(file=""):
     vertices, triangles = read(file)
     vertices = torch.tensor(vertices).detach().cpu().numpy().squeeze()
     triangles = np.array(triangles)
+    print(triangles)
     scene = pyrender.Scene()
     tri_mesh = trimesh.Trimesh(vertices,faces=triangles)
     mesh = pyrender.Mesh.from_trimesh(tri_mesh)
@@ -58,6 +59,7 @@ def readOBJ(file=""):
     with open(file,"r") as f:
         vertices = []
         faces = []
+        minFace = 1000
         while True:
             line = f.readline()
             if "#" in line:
@@ -68,10 +70,16 @@ def readOBJ(file=""):
                 vertices.append(v)
             elif line.startswith("f "):
                 line = line.split(" ")
-                f = [int(line[i]) for i in range(1,4)]
-                faces.append(f)
+                face = [int(line[i]) for i in range(1,4)]
+                if min(face)<minFace:
+                    minFace=min(face)
+                faces.append(face)
             elif line=="":
                 break
+    if minFace>0:
+        for face in faces:
+            for i in range(len(face)):
+                face[i]-=1
     return vertices,faces
 
 def read(file=""):

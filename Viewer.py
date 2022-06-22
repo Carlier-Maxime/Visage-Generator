@@ -48,7 +48,7 @@ class Viewer(pyrender.Viewer):
         self._scene.add_node(self._visage)
 
         self.genVerticesNode()
-        self.genJointsNode()
+        if landmark != None : self.genJointsNode()
         self.genBalisesNode()
         
 
@@ -144,7 +144,6 @@ class Viewer(pyrender.Viewer):
 
     def setVisage(self,i):
         vertices = self._vertice[i].detach().to(self._device).numpy().squeeze()
-        joints = self._landmark[i].detach().to(self._device).numpy().squeeze()
         vertex_colors = np.ones([vertices.shape[0], 4]) * [0.925, 0.72, 0.519, 1.0]
 
         tri_mesh = trimesh.Trimesh(vertices, self._faces, vertex_colors=vertex_colors)
