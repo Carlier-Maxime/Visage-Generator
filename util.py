@@ -152,3 +152,22 @@ def saveFaces(vertice):
         for j in range(len(balises)):
             data[i,j,:] = vertice[i][balises[j]]
     np.save("data.npy",data)
+
+def getIndexForMatchPoints(vertices,points,verbose=True):
+    """
+    return: list of index matching points.
+    """
+    l = []
+    for ind in range(len(points)):
+        if verbose: print(ind,"/",len(points)-1,"points")
+        p = points[ind]
+        index = -1
+        dist = -1
+        for i in range(len(vertices)):
+            v = vertices[i]
+            d = np.sqrt((v[0]-p[0])**2+(v[1]-p[1])**2+(v[2]-p[2])**2)
+            if dist==-1 or d<dist:
+                index=i
+                dist = d
+        l.append(index)
+    return l
