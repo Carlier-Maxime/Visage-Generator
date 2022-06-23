@@ -153,11 +153,12 @@ def saveFaces(vertice):
             data[i,j,:] = vertice[i][balises[j]]
     np.save("data.npy",data)
 
-def getIndexForMatchPoints(vertices,faces,points,verbose=False,triangleOptimize=True, pasTri=1000):
+def getIndexForMatchPoints(vertices,faces,points,verbose=False,triangleOptimize=True,pasTri=1000):
     """
     return: list of index matching points.
     """
     l = []
+    noTri = 0
     for ind in range(len(points)):
         if verbose: print(ind,"/",len(points)-1,"points")
         p = points[ind]
@@ -198,10 +199,13 @@ def getIndexForMatchPoints(vertices,faces,points,verbose=False,triangleOptimize=
                     dist2 = distance
                     indVect = i
                     percentage = perc
-            if indVect==-1: indTri=-1
+            if indVect==-1: 
+                indTri=-1
+                noTri+=1
             else: indTri = indexTriangles[indVect]
             l.append([index,indTri,percentage[0],percentage[1]])
         else: l.append(index)
+    print(noTri,"/",len(points)," points non pas eu besoin de triangles !")
     return l
 
 def getIndexTrianglesMatchVertice(vertices,triangles,indexPoint):
@@ -227,7 +231,7 @@ def getVectorForPoint(triangles,p):
             else:
                 ind.append(i)
         if len(ind)>2:
-            print("Error")
+            print("Error in getVectoForPoint in util.py ! (verify your point is vertice of triangles)")
             exit(1)
         t[1] = triangle[ind[0]]
         t[2] = triangle[ind[1]]
@@ -238,3 +242,17 @@ def getVectorForPoint(triangles,p):
         vectors.append(v)
     return vectors
         
+def readIndexOptiTri(vertices,faces,indexOptiTri):
+    p = vertices[indexOptiTri[0]]
+    if indexOptiTri[1]!=-1:
+        tri = np.array(vertices)[faces[indexOptiTri[1]]]
+        vectors = np.array(getVectorForPoint([tri],p)[0])
+        p = p+vectors[0]*indexOptiTri[2]
+        p = p+vectors[1]*indexOptiTri[3]
+    return p
+
+def readAllIndexOptiTri(vertices,faces,indexsOptiTri):
+    points = []
+    for indexOptiTri in indexsOptiTri:
+        points.append(readIndexOptiTri(vertices,faces,indexOptiTri))
+    return points

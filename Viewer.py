@@ -186,7 +186,6 @@ class Viewer(pyrender.Viewer):
             return
         self._slcIndex = i
         vert = self._vertice[self._index][self._directionnalMatrix[self._slcIndex][0]]
-        print(vert)
         tfs = np.tile(np.eye(4), (1, 1, 1))[0]
         tfs[:3,3] = vert
         self._scene.set_pose(self._selectNode,tfs)
