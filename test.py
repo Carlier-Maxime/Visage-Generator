@@ -98,11 +98,13 @@ with open('nogit/marqueursMasqueOriginelle.txt',"r") as f:
             break
         line = line.split(",")
         points.append([float(line[i]) for i in range(3)])
-indexs = util.getIndexForMatchPoints(masqueOV,points,verbose=False)
-masqueVertices, masqueFaces = read3D.readOBJ("nogit/scan_scaled.obj")
-points = np.array(masqueVertices)[indexs]
+indexs = util.getIndexForMatchPoints(masqueOV,masqueOF,points)
+#masqueVertices, masqueFaces = read3D.readOBJ("nogit/scan_scaled.obj")
+#points = np.array(masqueVertices)[indexs]
 visageVertices, visageFaces = read3D.readOBJ("nogit/fit_scan_result.obj")
-indexs = util.getIndexForMatchPoints(visageVertices,points,verbose=False)
+#indexs = util.getIndexForMatchPoints(visageVertices,points)
 #np.save("balises.npy",indexs)
-points = np.array(visageVertices)[indexs]
+#points = np.array(visageVertices)[indexs]
 viewer = Viewer(torch.tensor([visageVertices]),None,visageFaces)
+#[0.023051, -0.003374, -0.011894]
+#[-0.024288, -0.005205, -0.00865]

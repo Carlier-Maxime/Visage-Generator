@@ -153,7 +153,7 @@ def saveFaces(vertice):
             data[i,j,:] = vertice[i][balises[j]]
     np.save("data.npy",data)
 
-def getIndexForMatchPoints(vertices,points,verbose=True):
+def getIndexForMatchPoints(vertices,faces,points,verbose=False,triangleOptimize=True, pasTri=1000):
     """
     return: list of index matching points.
     """
@@ -169,5 +169,72 @@ def getIndexForMatchPoints(vertices,points,verbose=True):
             if dist==-1 or d<dist:
                 index=i
                 dist = d
-        l.append(index)
+        if triangleOptimize:
+            indexTriangles = getIndexTrianglesMatchVertice(vertices,faces,index)
+            triangles = np.array(faces)[indexTriangles]
+            triangles = np.array(vertices)[triangles]
+            vectors = getVectorForPoint(triangles,vertices[index])
+            indVect = -1
+            percentage = [0,0]
+            dist2 = dist
+            for i in range(len(vectors)):
+                vect = np.array(vectors[i])/pasTri
+                perc = []
+                distance = dist
+                vert = vertices[index]
+                for j in range(len(vect)):
+                    pas = 0
+                    for k in range(1,pasTri):
+                        v = vert+vect[j]*k
+                        d = np.sqrt((v[0]-p[0])**2+(v[1]-p[1])**2+(v[2]-p[2])**2)
+                        if d<=distance:
+                            pas=k
+                            distance = d
+                        else:
+                            break
+                    perc.append(pas/pasTri)
+                    vert = v
+                if distance < dist2:
+                    dist2 = distance
+                    indVect = i
+                    percentage = perc
+            if indVect==-1: indTri=-1
+            else: indTri = indexTriangles[indVect]
+            l.append([index,indTri,percentage[0],percentage[1]])
+        else: l.append(index)
     return l
+
+def getIndexTrianglesMatchVertice(vertices,triangles,indexPoint):
+    faces = []
+    for i in range(len(triangles)):
+        if indexPoint in triangles[i]:
+            faces.append(i)
+    return faces
+
+def getVectorForPoint(triangles,p):
+    """
+    input:
+        - triangles : triangle array => triangle = coo triangle [x,y,z]
+        - p : coo point
+    """
+    vectors = []
+    for triangle in triangles:
+        t = [0,0,0]
+        ind = []
+        for i in range(3):
+            if p[0] == triangle[i][0] and p[1] == triangle[i][1] and p[2] == triangle[i][2]:
+                t[0]=triangle[i]
+            else:
+                ind.append(i)
+        if len(ind)>2:
+            print("Error")
+            exit(1)
+        t[1] = triangle[ind[0]]
+        t[2] = triangle[ind[1]]
+
+        v = []
+        for i in range(1,3):
+            v.append([t[i][0]-p[0],t[i][1]-p[1],t[i][2]-p[2]])
+        vectors.append(v)
+    return vectors
+        
