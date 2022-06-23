@@ -4,6 +4,7 @@ import trimesh
 from config import get_config
 from os.path import exists
 import torch
+from util import readIndexOptiTri
 
 class Viewer(pyrender.Viewer):
     def __init__(self, vertice, landmark, faces, show_joints=False, show_vertices=False, show_balises = True, otherObjects = None):
@@ -238,8 +239,8 @@ class Viewer(pyrender.Viewer):
         sm.visual.vertex_colors = [1.0, 0.0, 1.0, 1.0]
         t = []
         vertices = self._vertice[self._index]
-        for i in self._balisesIndex:
-            t.append(vertices[int(i)])
+        for balise in self._balisesIndex:
+            t.append(readIndexOptiTri(self._vertice[self._index],self._faces,balise))
         if len(t)>0:
             self._tfs_balises = np.tile(np.eye(4), (len(t), 1, 1))
             for i in range(len(t)):
@@ -251,6 +252,9 @@ class Viewer(pyrender.Viewer):
         self._balisesNode = pyrender.Node("balises",mesh=balises_pcl)
 
     def addBalise(self):
+        print("Temporary not work ! Wait future update.")
+        self._message_text = "Temporary not work ! Wait future update."
+        return
         self._balisesIndex = np.append(self._balisesIndex,self._directionnalMatrix[self._slcIndex][0])
         self.updateBalise()
 
@@ -264,6 +268,9 @@ class Viewer(pyrender.Viewer):
         self._balisesIndex = np.load("balises.npy")
 
     def removeBalise(self):
+        print("Temporary not work ! Wait future update.")
+        self._message_text = "Temporary not work ! Wait future update."
+        return
         ind=self._directionnalMatrix[self._slcIndex][0]
         for i in range(len(self._balisesIndex)) :
             if self._balisesIndex[i] == ind:

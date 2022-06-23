@@ -243,9 +243,9 @@ def getVectorForPoint(triangles,p):
     return vectors
         
 def readIndexOptiTri(vertices,faces,indexOptiTri):
-    p = vertices[indexOptiTri[0]]
+    p = vertices[int(indexOptiTri[0])]
     if indexOptiTri[1]!=-1:
-        tri = np.array(vertices)[faces[indexOptiTri[1]]]
+        tri = np.array(vertices)[faces[int(indexOptiTri[1])]]
         vectors = np.array(getVectorForPoint([tri],p)[0])
         p = p+vectors[0]*indexOptiTri[2]
         p = p+vectors[1]*indexOptiTri[3]
