@@ -117,24 +117,6 @@ np.save("balises.npy",indexs)
 """
 
 """
-        from renderer import Renderer
-        import torch.nn.functional as F
-        import trimesh
-        import pyrender
-        nbFace = get_config().number_faces
-        render = Renderer(512,"visage.obj",512).cpu()
-
-        tex_space = np.load("model/FLAME_texture.npz")
-        texture_mean = tex_space['mean'].reshape(1, -1)
-        texture_basis = tex_space['tex_dir'].reshape(-1, 200)
-        texture_mean = torch.from_numpy(texture_mean).float()[None,...]
-        texture_basis = torch.from_numpy(texture_basis[:,:50]).float()[None,...]
-
-        texcode = torch.tensor(np.random.uniform(-2,2,[nbFace, 50])).float().cpu()
-        texture = texture_mean + (texture_basis*texcode[:,None,:]).sum(-1)
-        texture = texture.reshape(texcode.shape[0], 512, 512, 3).permute(0,3,1,2)
-        texture = texture[:,[2,1,0], :,:]
-        albedos = texture / 255
         render.save_obj('nogit/testTexture.obj',self._vertice[0],albedos[0])
 
         mesh = pyrender.Mesh.from_trimesh(trimesh.load('nogit/testTexture.obj'))

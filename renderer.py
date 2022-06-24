@@ -87,6 +87,7 @@ class Pytorch3dRasterizer(nn.Module):
 class Renderer(nn.Module):
     def __init__(self, image_size, obj_filename, uv_size=256):
         super(Renderer, self).__init__()
+        print('Create Renderer')
         self.image_size = image_size
         self.uv_size = uv_size
 
