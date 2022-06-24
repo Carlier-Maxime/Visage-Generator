@@ -11,7 +11,7 @@ from skimage.io import imread
 from pytorch3d.structures import Meshes
 from pytorch3d.io import load_obj
 from pytorch3d.renderer.mesh import rasterize_meshes
-import util2
+import util
 import warnings
 
 
@@ -41,7 +41,7 @@ class Pytorch3dRasterizer(nn.Module):
             'max_faces_per_bin': None,
             'perspective_correct': False,
         }
-        raster_settings = util2.dict2obj(raster_settings)
+        raster_settings = util.dict2obj(raster_settings)
         self.raster_settings = raster_settings
 
     def forward(self, vertices, faces, attributes=None):
@@ -108,14 +108,14 @@ class Renderer(nn.Module):
         uvcoords = torch.cat([uvcoords, uvcoords[:, :, 0:1] * 0. + 1.], -1)  # [bz, ntv, 3]
         uvcoords = uvcoords * 2 - 1
         uvcoords[..., 1] = -uvcoords[..., 1]
-        face_uvcoords = util2.face_vertices(uvcoords, uvfaces)
+        face_uvcoords = util.face_vertices(uvcoords, uvfaces)
         self.register_buffer('uvcoords', uvcoords)
         self.register_buffer('uvfaces', uvfaces)
         self.register_buffer('face_uvcoords', face_uvcoords)
 
         # shape colors
         colors = torch.tensor([74, 120, 168])[None, None, :].repeat(1, faces.max() + 1, 1).float() / 255.
-        face_colors = util2.face_vertices(colors, faces)
+        face_colors = util.face_vertices(colors, faces)
         self.register_buffer('face_colors', face_colors)
 
         ## lighting
@@ -142,11 +142,11 @@ class Renderer(nn.Module):
         transformed_vertices[:, :, 2] = transformed_vertices[:, :, 2] + 10
 
         # Attributes
-        face_vertices = util2.face_vertices(vertices, self.faces.expand(batch_size, -1, -1))
-        normals = util2.vertex_normals(vertices, self.faces.expand(batch_size, -1, -1))
-        face_normals = util2.face_vertices(normals, self.faces.expand(batch_size, -1, -1))
-        transformed_normals = util2.vertex_normals(transformed_vertices, self.faces.expand(batch_size, -1, -1))
-        transformed_face_normals = util2.face_vertices(transformed_normals, self.faces.expand(batch_size, -1, -1))
+        face_vertices = util.face_vertices(vertices, self.faces.expand(batch_size, -1, -1))
+        normals = util.vertex_normals(vertices, self.faces.expand(batch_size, -1, -1))
+        face_normals = util.face_vertices(normals, self.faces.expand(batch_size, -1, -1))
+        transformed_normals = util.vertex_normals(transformed_vertices, self.faces.expand(batch_size, -1, -1))
+        transformed_face_normals = util.face_vertices(transformed_normals, self.faces.expand(batch_size, -1, -1))
 
         # render
         attributes = torch.cat([self.face_uvcoords.expand(batch_size, -1, -1, -1), transformed_face_normals.detach(),
@@ -186,5 +186,5 @@ class Renderer(nn.Module):
         vertices: [nv, 3], tensor
         texture: [3, h, w], tensor
         '''
-        util2.save_obj(filename, vertices, self.faces[0], textures=textures, uvcoords=self.raw_uvcoords[0],
+        util.save_obj(filename, vertices, self.faces[0], textures=textures, uvcoords=self.raw_uvcoords[0],
                           uvfaces=self.uvfaces[0])
