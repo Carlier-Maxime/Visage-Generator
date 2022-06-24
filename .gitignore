@@ -6,5 +6,5 @@
 __pycache__
 *.npy
 !directionnalMatrix.npy
-!masque.npy
+!balises.npy
 /output
