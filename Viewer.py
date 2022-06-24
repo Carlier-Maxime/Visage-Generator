@@ -241,7 +241,6 @@ class Viewer(pyrender.Viewer):
         sm = trimesh.creation.uv_sphere(radius=0.002)
         sm.visual.vertex_colors = [0.8, 0.0, 0.5, 1.0]
         t = []
-        vertices = self._vertice[self._index]
         for balise in self._balisesIndex:
             t.append(readIndexOptiTri(self._vertice[self._index],self._faces,balise))
         if len(t)>0:
@@ -255,10 +254,7 @@ class Viewer(pyrender.Viewer):
         self._balisesNode = pyrender.Node("balises",mesh=balises_pcl)
 
     def addBalise(self):
-        print("Temporary not work ! Wait future update.")
-        self._message_text = "Temporary not work ! Wait future update."
-        return
-        self._balisesIndex = np.append(self._balisesIndex,self._directionnalMatrix[self._slcIndex][0])
+        self._balisesIndex = np.append(self._balisesIndex,[[self._directionnalMatrix[self._slcIndex][0],-1,0,0]],axis=0)
         self.updateBalise()
 
     def saveBalise(self):
@@ -271,13 +267,11 @@ class Viewer(pyrender.Viewer):
         self._balisesIndex = np.load("balises.npy")
 
     def removeBalise(self):
-        print("Temporary not work ! Wait future update.")
-        self._message_text = "Temporary not work ! Wait future update."
-        return
         ind=self._directionnalMatrix[self._slcIndex][0]
         for i in range(len(self._balisesIndex)) :
-            if self._balisesIndex[i] == ind:
-                self._balisesIndex = np.delete(self._balisesIndex,i)
+            if self._balisesIndex[i][0] == ind:
+                self._balisesIndex = np.delete(self._balisesIndex,[i*4+j for j in range(4)])
+                self._balisesIndex = self._balisesIndex.reshape(int(len(self._balisesIndex)/4),4)
                 break
         self.updateBalise()
 
