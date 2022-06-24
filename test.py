@@ -117,8 +117,6 @@ np.save("balises.npy",indexs)
 """
 
 """
-        render.save_obj('nogit/testTexture.obj',self._vertice[0],albedos[0])
-
         mesh = pyrender.Mesh.from_trimesh(trimesh.load('nogit/testTexture.obj'))
         scene = pyrender.Scene(ambient_light=[1., 1., 1.])
         scene.add(mesh)

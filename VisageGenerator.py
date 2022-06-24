@@ -11,9 +11,9 @@ import torch
 from FLAME import FLAME
 from config import get_config
 from Viewer import Viewer
-import util
 from renderer import Renderer
 import torch.nn.functional as F
+import os
 
 class VisageGenerator():
     def __init__(self, minShapeParam=-2, maxShapeParam=2,
@@ -24,6 +24,7 @@ class VisageGenerator():
         print("Load config")
         config = get_config()
         nbFace = config.number_faces
+        self._nbFace = nbFace
         device = config.device
         if mainLaunch:
             minShapeParam = config.min_shape_param
@@ -65,12 +66,20 @@ class VisageGenerator():
         albedos = texture / 255
 
         print("Save")
+        if not os.path.isdir('output'):
+            os.mkdir('output')
         for i in range(nbFace):
             render.save_obj('output/visage'+str(i)+'.obj',vertice[i],albedos[i])
+        
+        self._landmark = landmark
+        self._vertice = vertice
+        self._faces = flamelayer.faces
 
     def view(self,otherObjetcs=None):
-        print("View is temporary disable. (wait update)")
-        #Viewer(self._vertice, self._landmark, self._faces, otherObjects=otherObjetcs)
+        fileObj = []
+        for i in range(self._nbFace):
+            fileObj.append('output/visage'+str(i)+'.obj')
+        Viewer(self._vertice, self._landmark, self._faces, fileObj, otherObjects=otherObjetcs)
         
     def getVertices(self,i):
         return self._vertice[i]

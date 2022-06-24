@@ -7,7 +7,7 @@ import torch
 from util import readIndexOptiTri
 
 class Viewer(pyrender.Viewer):
-    def __init__(self, vertice, landmark, faces, show_joints=False, show_vertices=False, show_balises = True, otherObjects = None):
+    def __init__(self, vertice, landmark, faces, fileObjForColor=None, show_joints=False, show_vertices=False, show_balises = True, otherObjects = None):
         config = get_config()
         self._nbFace = config.number_faces
         self._device = config.device
@@ -15,13 +15,14 @@ class Viewer(pyrender.Viewer):
         self._vertice = vertice
         self._landmark = landmark
         self._faces = faces
+        self._fileObjForColor = fileObjForColor
         self._show_vertices = False
         self._show_joints = False
         self._show_balises = False
         self._editBalises = False
         self._ctrl = False
         self._directionnalMatrix = []
-        self._scene = pyrender.Scene()
+        self._scene = pyrender.Scene(ambient_light=[1.0,1.0,1.0,1.0])
 
         if otherObjects != None:
             for obj in otherObjects:
@@ -144,11 +145,13 @@ class Viewer(pyrender.Viewer):
         self.render_lock.release()
 
     def setVisage(self,i):
-        vertices = self._vertice[i].detach().to(self._device).numpy().squeeze()
-        vertex_colors = np.ones([vertices.shape[0], 4]) * [0.925, 0.72, 0.519, 1.0]
-
-        tri_mesh = trimesh.Trimesh(vertices, self._faces, vertex_colors=vertex_colors)
-        mesh = pyrender.Mesh.from_trimesh(tri_mesh)
+        if self._fileObjForColor != None:
+            mesh = pyrender.Mesh.from_trimesh(trimesh.load(self._fileObjForColor[self._index]))
+        else:
+            vertices = self._vertice[i].detach().to(self._device).numpy().squeeze()
+            vertex_colors = np.ones([vertices.shape[0], 4]) * [0.925, 0.72, 0.519, 1.0]
+            tri_mesh = trimesh.Trimesh(vertices, self._faces, vertex_colors=vertex_colors)
+            mesh = pyrender.Mesh.from_trimesh(tri_mesh)
         self._visage = pyrender.Node("Visage",mesh=mesh)
 
     def on_close(self):
@@ -217,7 +220,7 @@ class Viewer(pyrender.Viewer):
     def genVerticesNode(self):
         vertices = self._vertice[self._index]
         sm = trimesh.creation.uv_sphere(radius=0.0019)
-        sm.visual.vertex_colors = [0.9, 0.1, 0.1, 1.0]
+        sm.visual.vertex_colors = [0.7, 0.1, 0.1, 1.0]
         tfs = np.tile(np.eye(4), (len(vertices), 1, 1))
         tfs[:, :3, 3] = vertices
         vertices_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
@@ -236,7 +239,7 @@ class Viewer(pyrender.Viewer):
 
     def genBalisesNode(self):
         sm = trimesh.creation.uv_sphere(radius=0.002)
-        sm.visual.vertex_colors = [1.0, 0.0, 1.0, 1.0]
+        sm.visual.vertex_colors = [0.8, 0.0, 0.5, 1.0]
         t = []
         vertices = self._vertice[self._index]
         for balise in self._balisesIndex:
