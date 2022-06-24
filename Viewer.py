@@ -238,7 +238,7 @@ class Viewer(pyrender.Viewer):
         self._tfs_joints = tfs
 
     def genBalisesNode(self):
-        sm = trimesh.creation.uv_sphere(radius=0.002)
+        sm = trimesh.creation.uv_sphere(radius=0.0005)
         sm.visual.vertex_colors = [0.8, 0.0, 0.5, 1.0]
         t = []
         for balise in self._balisesIndex:
