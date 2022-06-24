@@ -12,6 +12,7 @@ from pytorch3d.structures import Meshes
 from pytorch3d.io import load_obj
 from pytorch3d.renderer.mesh import rasterize_meshes
 import util2
+import warnings
 
 
 class Pytorch3dRasterizer(nn.Module):
@@ -91,6 +92,7 @@ class Renderer(nn.Module):
         self.image_size = image_size
         self.uv_size = uv_size
 
+        warnings.filterwarnings("ignore",'No mtl file provided')
         verts, faces, aux = load_obj(obj_filename)
         uvcoords = aux.verts_uvs[None, ...]  # (N, V, 2)
         uvfaces = faces.textures_idx[None, ...]  # (N, F, 3)
