@@ -27,13 +27,17 @@ from read3D import read
 
         albedos = texture / 255
 
-        cam = torch.zeros(224, 3); cam[:, 0] = 5.
+        cam = torch.zeros(1, 3); cam[:, 0] = 5.
         cam = nn.Parameter(cam.float().cpu())
         trans_vertices = util2.batch_orth_proj(self._vertice[0], cam)
         trans_vertices[..., 1:] = - trans_vertices[..., 1:]
         render(self._vertice[0], trans_vertices, albedos)
+        ops = render(self._vertice, trans_vertices, albedos)
+        images = ops['images'].permute(0,2,3,1).detach().numpy()*255
+        images = images.astype(np.uint8)
+        for i in range(len(images)):
+            Image.fromarray(images[i]).convert('RGB').save('nogit/test'+str(i)+'.jpg')
 """
-
 """
 sm = trimesh.creation.uv_sphere(radius=0.013)
 sm.visual.vertex_colors = [1.0, 1.0, 0.0, 1.0]
@@ -87,6 +91,7 @@ for i in range(3): obj[0][:,i] = obj[0][:,i]+ecart[i]
 vg.view([obj,[points,[]]])
 """
 
+"""
 import read3D
 from Viewer import Viewer
 masqueOV, masqueOF = read3D.readOBJ("nogit/masqueOriginelle.obj")
@@ -109,3 +114,31 @@ np.save("balises.npy",indexs)
 #viewer = Viewer(torch.tensor([visageVertices]),None,visageFaces,otherObjects=[[points,[]],[points2,[]]])
 #[0.023051, -0.003374, -0.011894]
 #[-0.024288, -0.005205, -0.00865]
+"""
+
+"""
+        from renderer import Renderer
+        import torch.nn.functional as F
+        import trimesh
+        import pyrender
+        nbFace = get_config().number_faces
+        render = Renderer(512,"visage.obj",512).cpu()
+
+        tex_space = np.load("model/FLAME_texture.npz")
+        texture_mean = tex_space['mean'].reshape(1, -1)
+        texture_basis = tex_space['tex_dir'].reshape(-1, 200)
+        texture_mean = torch.from_numpy(texture_mean).float()[None,...]
+        texture_basis = torch.from_numpy(texture_basis[:,:50]).float()[None,...]
+
+        texcode = torch.tensor(np.random.uniform(-2,2,[nbFace, 50])).float().cpu()
+        texture = texture_mean + (texture_basis*texcode[:,None,:]).sum(-1)
+        texture = texture.reshape(texcode.shape[0], 512, 512, 3).permute(0,3,1,2)
+        texture = texture[:,[2,1,0], :,:]
+        albedos = texture / 255
+        render.save_obj('nogit/testTexture.obj',self._vertice[0],albedos[0])
+
+        mesh = pyrender.Mesh.from_trimesh(trimesh.load('nogit/testTexture.obj'))
+        scene = pyrender.Scene(ambient_light=[1., 1., 1.])
+        scene.add(mesh)
+        pyrender.Viewer(scene, use_raymond_lighting=True)
+"""
