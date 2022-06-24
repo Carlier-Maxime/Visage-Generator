@@ -6,3 +6,5 @@ pyrender
 trimesh
 smplx
 pickle
+git+https://github.com/facebookresearch/pytorch3d@master#egg=pytorch3d
+scikit-image
