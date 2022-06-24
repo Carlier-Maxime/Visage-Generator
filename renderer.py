@@ -166,34 +166,8 @@ class Renderer(nn.Module):
         transformed_normal_map = rendering[:, 3:6, :, :].detach()
         pos_mask = (transformed_normal_map[:, 2:, :, :] < -0.05).float()
 
-        # shading
-        if lights is not None:
-            normal_images = rendering[:, 9:12, :, :].detach()
-            if lights.shape[1] == 9:
-                shading_images = self.add_SHlight(normal_images, lights)
-            else:
-                if light_type == 'point':
-                    vertice_images = rendering[:, 6:9, :, :].detach()
-                    shading = self.add_pointlight(vertice_images.permute(0, 2, 3, 1).reshape([batch_size, -1, 3]),
-                                                  normal_images.permute(0, 2, 3, 1).reshape([batch_size, -1, 3]),
-                                                  lights)
-                    shading_images = shading.reshape(
-                        [batch_size, lights.shape[1], albedo_images.shape[2], albedo_images.shape[3], 3]).permute(0, 1,
-                                                                                                                  4, 2,
-                                                                                                                  3)
-                    shading_images = shading_images.mean(1)
-                else:
-                    shading = self.add_directionlight(normal_images.permute(0, 2, 3, 1).reshape([batch_size, -1, 3]),
-                                                      lights)
-                    shading_images = shading.reshape(
-                        [batch_size, lights.shape[1], albedo_images.shape[2], albedo_images.shape[3], 3]).permute(0, 1,
-                                                                                                                  4, 2,
-                                                                                                                  3)
-                    shading_images = shading_images.mean(1)
-            images = albedo_images * shading_images
-        else:
-            images = albedo_images
-            shading_images = images.detach() * 0.
+        images = albedo_images
+        shading_images = images.detach() * 0.
 
         outputs = {
             'images': images * alpha_images,
@@ -206,118 +180,6 @@ class Renderer(nn.Module):
         }
 
         return outputs
-
-    def add_SHlight(self, normal_images, sh_coeff):
-        '''
-            sh_coeff: [bz, 9, 3]
-        '''
-        N = normal_images
-        sh = torch.stack([
-            N[:, 0] * 0. + 1., N[:, 0], N[:, 1], \
-            N[:, 2], N[:, 0] * N[:, 1], N[:, 0] * N[:, 2],
-            N[:, 1] * N[:, 2], N[:, 0] ** 2 - N[:, 1] ** 2, 3 * (N[:, 2] ** 2) - 1
-        ],
-            1)  # [bz, 9, h, w]
-        sh = sh * self.constant_factor[None, :, None, None]
-        # import ipdb; ipdb.set_trace()
-        shading = torch.sum(sh_coeff[:, :, :, None, None] * sh[:, :, None, :, :], 1)  # [bz, 9, 3, h, w]
-        return shading
-
-    def add_pointlight(self, vertices, normals, lights):
-        '''
-            vertices: [bz, nv, 3]
-            lights: [bz, nlight, 6]
-        returns:
-            shading: [bz, nv, 3]
-        '''
-        light_positions = lights[:,:,:3]; light_intensities = lights[:,:,3:]
-        directions_to_lights = F.normalize(light_positions[:,:,None,:] - vertices[:,None,:,:], dim=3)
-        # normals_dot_lights = torch.clamp((normals[:,None,:,:]*directions_to_lights).sum(dim=3), 0., 1.)
-        normals_dot_lights = (normals[:,None,:,:]*directions_to_lights).sum(dim=3)
-        shading = normals_dot_lights[:,:,:,None]*light_intensities[:,:,None,:]
-        return shading.mean(1)
-
-    def add_directionlight(self, normals, lights):
-        '''
-            normals: [bz, nv, 3]
-            lights: [bz, nlight, 6]
-        returns:
-            shading: [bz, nlgiht, nv, 3]
-        '''
-        light_direction = lights[:, :, :3];
-        light_intensities = lights[:, :, 3:]
-        directions_to_lights = F.normalize(light_direction[:, :, None, :].expand(-1, -1, normals.shape[1], -1), dim=3)
-        normals_dot_lights = (normals[:,None,:,:]*directions_to_lights).sum(dim=3)
-        shading = normals_dot_lights[:, :, :, None] * light_intensities[:, :, None, :]
-        return shading
-
-    def render_shape(self, vertices, transformed_vertices, images=None, lights=None):
-        batch_size = vertices.shape[0]
-        if lights is None:
-            light_positions = torch.tensor([[-0.1, -0.1, 0.2],
-                                            [0, 0, 1]]
-                                           )[None, :, :].expand(batch_size, -1, -1).float()
-            light_intensities = torch.ones_like(light_positions).float()
-            lights = torch.cat((light_positions, light_intensities), 2).to(vertices.device)
-
-        ## rasterizer near 0 far 100. move mesh so minz larger than 0
-        transformed_vertices[:, :, 2] = transformed_vertices[:, :, 2] + 10
-
-        # Attributes
-        face_vertices = util2.face_vertices(vertices, self.faces.expand(batch_size, -1, -1))
-        normals = util2.vertex_normals(vertices, self.faces.expand(batch_size, -1, -1));
-        face_normals = util2.face_vertices(normals, self.faces.expand(batch_size, -1, -1))
-        transformed_normals = util2.vertex_normals(transformed_vertices, self.faces.expand(batch_size, -1, -1));
-        transformed_face_normals = util2.face_vertices(transformed_normals, self.faces.expand(batch_size, -1, -1))
-        # render
-        attributes = torch.cat(
-            [self.face_colors.expand(batch_size, -1, -1, -1), transformed_face_normals.detach(), face_vertices.detach(),
-             face_normals.detach()], -1)
-        rendering = self.rasterizer(transformed_vertices, self.faces.expand(batch_size, -1, -1), attributes)
-        # albedo
-        albedo_images = rendering[:, :3, :, :]
-        # shading
-        normal_images = rendering[:, 9:12, :, :].detach()
-        if lights.shape[1] == 9:
-            shading_images = self.add_SHlight(normal_images, lights)
-        else:
-            print('directional')
-            shading = self.add_directionlight(normal_images.permute(0, 2, 3, 1).reshape([batch_size, -1, 3]), lights)
-
-            shading_images = shading.reshape(
-                [batch_size, lights.shape[1], albedo_images.shape[2], albedo_images.shape[3], 3]).permute(0, 1, 4, 2, 3)
-            shading_images = shading_images.mean(1)
-        images = albedo_images * shading_images
-
-        return images
-
-    def render_normal(self, transformed_vertices, normals):
-        '''
-        -- rendering normal
-        '''
-        batch_size = normals.shape[0]
-
-        # Attributes
-        attributes = util2.face_vertices(normals, self.faces.expand(batch_size, -1, -1))
-        # rasterize
-        rendering = self.rasterizer(transformed_vertices, self.faces.expand(batch_size, -1, -1), attributes)
-
-        ####
-        alpha_images = rendering[:, -1, :, :][:, None, :, :].detach()
-        normal_images = rendering[:, :3, :, :]
-        return normal_images
-
-    def world2uv(self, vertices):
-        '''
-        sample vertices from world space to uv space
-        uv_vertices: [bz, 3, h, w]
-        '''
-        batch_size = vertices.shape[0]
-        face_vertices = util2.face_vertices(vertices, self.faces.expand(batch_size, -1, -1)).clone().detach()
-        uv_vertices = self.uv_rasterizer(self.uvcoords.expand(batch_size, -1, -1),
-                                         self.uvfaces.expand(batch_size, -1, -1), face_vertices)[:, :3]
-
-        return uv_vertices
 
     def save_obj(self, filename, vertices, textures):
         '''
