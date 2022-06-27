@@ -11,7 +11,7 @@ def meanPos(vertices):
     return mean
 
 vg = VisageGenerator(0,0,0,0,0,0,0)
-vert = vg.get_vertices(0)[np.load("directionnalMatrix.npy")[:,0]]
+vert = vg.get_vertices(0)[np.load("directionalMatrix.npy")[:,0]]
 visagePos = meanPos(vert)
 obj = np.load("masque.npy", allow_pickle=True)
 obj[0] = np.array(obj[0])/1000
@@ -54,9 +54,9 @@ masqueVertices, masqueFaces = read3D.read_obj("nogit/scan_scaled.obj")
 points = util.read_all_index_opti_tri(masqueVertices,masqueFaces,indexs)
 visageVertices, visageFaces = read3D.read_obj("nogit/fit_scan_result.obj")
 indexs = util.get_index_for_match_points(visageVertices,visageFaces,points)
-#np.save("balises.npy",indexs)
+#np.save("markers.npy",indexs)
 points2 = util.read_all_index_opti_tri(visageVertices,visageFaces,indexs)
-np.save("balises.npy",indexs)
+np.save("markers.npy",indexs)
 #viewer = Viewer(torch.tensor([visageVertices]),None,visageFaces,other_objects=[[points,[]],[points2,[]]])
 #[0.023051, -0.003374, -0.011894]
 #[-0.024288, -0.005205, -0.00865]

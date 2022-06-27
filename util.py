@@ -17,7 +17,7 @@ def get_vertex_markers(vertex, min_x=0.05, min_z=-0.03, max_z=0.15, min_eye_dist
         - min_eye_distance : minimum eye distance
         - min_noise_distance : minimum noise distance
     Return:
-        vertex array respecting the conditions, index correpondance
+        vertex array respecting the conditions, index correspondence
     """
     eye_l = [0.108, -0.178, 0.085]
     eye_r = [0.108, -0.1155, 0.085]
@@ -48,7 +48,7 @@ def gen_vertices_file(vertices):
     for i in range(len(vertices)):
         t.append([i, float(vertices[i][0]), float(vertices[i][1]), float(vertices[i][2]), -1, -1])
     t = calc_distance_vertices(t, True)
-    np.save("sommets.npy", t)
+    np.save("vertices.npy", t)
 
 
 def full_random_markers():
@@ -61,11 +61,11 @@ def full_random_markers():
     for i in range(5023):
         t.append(i)
     random.shuffle(t)
-    balises = []
+    markers = []
     for i in range(150):
-        balises.append(t[i])
+        markers.append(t[i])
 
-    np.save("balises.npy", balises)
+    np.save("markers.npy", markers)
 
 
 def delete_markers(n):
@@ -84,7 +84,7 @@ def delete_markers(n):
 
 
 def load_vertices():
-    return np.load("sommets.npy")
+    return np.load("vertices.npy")
 
 
 def calc_distance_vertices(t, display=False):
@@ -107,18 +107,18 @@ def calc_distance_vertices(t, display=False):
 
 
 def save_vertices(t):
-    np.save("sommets.npy", t)
+    np.save("vertices.npy", t)
 
 
 def select_random_markers():
     t = load_vertices()
-    balises = []
+    markers = []
     for e in t:
-        balises.append(e[0])
-    random.shuffle(balises)
-    balises = balises[0:150]
+        markers.append(e[0])
+    random.shuffle(markers)
+    markers = markers[0:150]
 
-    np.save('balises.npy', balises)
+    np.save('markers.npy', markers)
 
 
 def gen_directional_matrix(vertices, index_list):
@@ -139,7 +139,7 @@ def gen_directional_matrix(vertices, index_list):
         index_d.insert(0, index_list[i])
         m.append(index_d)
         print(str(i) + "/" + str(len(vertices) - 1))
-    np.save("directionnalMatrix.npy", m)
+    np.save("directionalMatrix.npy", m)
 
 
 def get_index_for_d(index_d, dist_d, dist, coo, coo2):
@@ -158,12 +158,12 @@ def get_index_for_d(index_d, dist_d, dist, coo, coo2):
     return -1
 
 
-def save_faces(vertice):
-    balises = np.load("balises.npy")
-    data = np.zeros([len(vertice), len(balises), 3])
-    for i in range(len(vertice)):
-        for j in range(len(balises)):
-            data[i, j, :] = vertice[i][balises[j]]
+def save_faces(vertex):
+    markers = np.load("markers.npy")
+    data = np.zeros([len(vertex), len(markers), 3])
+    for i in range(len(vertex)):
+        for j in range(len(markers)):
+            data[i, j, :] = vertex[i][markers[j]]
     np.save("data.npy", data)
 
 
@@ -225,7 +225,7 @@ def get_index_for_match_points(vertices, faces, points, verbose=False, triangle_
             list_index.append([index, ind_tri, percentage[0], percentage[1]])
         else:
             list_index.append(index)
-    print(no_tri, "/", len(points), " points non pas eu besoin de triangles !")
+    print(no_tri, "/", len(points), " points no need triangles !")
     return list_index
 
 

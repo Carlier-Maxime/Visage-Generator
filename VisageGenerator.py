@@ -38,7 +38,7 @@ class VisageGenerator:
             global_pose_param_3 = config.global_pose_param_3
         radian = np.pi / 180.0
 
-        flamelayer = FLAME(config)
+        flame_layer = FLAME(config)
         render = Renderer(512, "visage.obj", 512).to(device)
 
         print('Generate random parameters')
@@ -54,12 +54,12 @@ class VisageGenerator:
         texture_params = torch.tensor(np.random.uniform(-2, 2, [nb_face, 50])).float().to(device)
 
         print("Create Visage")
-        flamelayer.to(device)
-        vertice, landmark = flamelayer(shape_params, expression_params, pose_params)
+        flame_layer.to(device)
+        vertex, landmark = flame_layer(shape_params, expression_params, pose_params)
         if config.optimize_eyeballpose and config.optimize_neckpose:
             neck_pose = torch.zeros(nb_face, 3).to(device)
             eye_pose = torch.zeros(nb_face, 6).to(device)
-            vertice, landmark = flamelayer(shape_params, expression_params, pose_params, neck_pose, eye_pose)
+            vertex, landmark = flame_layer(shape_params, expression_params, pose_params, neck_pose, eye_pose)
 
         print('Texturing')
         tex_space = np.load("model/FLAME_texture.npz")
@@ -70,26 +70,26 @@ class VisageGenerator:
         texture = texture_mean + (texture_basis * texture_params[:, None, :]).sum(-1)
         texture = texture.reshape(texture_params.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
         texture = texture[:, [2, 1, 0], :, :]
-        albedos = texture / 255
+        texture = texture / 255
 
         print("Save")
         if not os.path.isdir('output'):
             os.mkdir('output')
         for i in range(nb_face):
-            render.save_obj('output/visage' + str(i) + '.obj', vertice[i], albedos[i])
+            render.save_obj('output/visage' + str(i) + '.obj', vertex[i], texture[i])
 
         self._landmark = landmark
-        self._vertice = vertice
-        self._faces = flamelayer.faces
+        self._vertex = vertex
+        self._faces = flame_layer.faces
 
     def view(self, other_objects=None):
         file_obj = []
         for i in range(self._nbFace):
             file_obj.append('output/visage' + str(i) + '.obj')
-        Viewer(self._vertice, self._landmark, self._faces, file_obj, other_objects=other_objects)
+        Viewer(self._vertex, self._landmark, self._faces, file_obj, other_objects=other_objects)
 
     def get_vertices(self, i):
-        return self._vertice[i]
+        return self._vertex[i]
 
     def get_faces(self):
         return self._faces

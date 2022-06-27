@@ -5,8 +5,8 @@
 /model/*.npz
 __pycache__
 *.npy
-!directionnalMatrix.npy
-!balises.npy
+!directionalMatrix.npy
+!markers.npy
 /output
 /venv
 /.idea

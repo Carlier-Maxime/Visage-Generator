@@ -10,7 +10,7 @@ def read_stl(file=""):
     if file == "":
         file = input("Path file : ")
     with open(file, "rb") as f:
-        print("Lecture du fichier..")
+        print("Read file..")
         print(f.read(80).decode("utf-8"))  # Header
         nb_triangles = int.from_bytes(f.read(4), "little")
 
@@ -36,7 +36,7 @@ def read_stl(file=""):
             if datetime.now() > time + att:
                 print(str((i / nb_triangles) * 100) + " % (" + str(i) + "/" + str(nb_triangles - 1) + ")")
                 time = datetime.now()
-        print("Lecture terminee.")
+        print("Reading finish.")
     return vertices, triangles
 
 
@@ -55,7 +55,7 @@ def read_and_view(file=""):
 
 def read_obj(file=""):
     """
-    read file obj, no suppport texture and normal.
+    read file obj, no support texture and normal.
     """
     if file == "":
         file = input("Path file : ")
@@ -94,7 +94,7 @@ def read(file=""):
     elif file.endswith('.obj'):
         vertices, triangles = read_obj(file)
     else:
-        print("format unknow !")
+        print("format unknown !")
         exit(1)
         vertices, triangles = None, None  # remove warning
     return vertices, triangles

@@ -11,7 +11,7 @@ from util import read_index_opti_tri
 
 class Viewer(pyrender.Viewer):
     def __init__(self, vertex, landmark, faces, file_obj_for_color=None, show_joints=False, show_vertices=False,
-                 show_balises=True, other_objects=None):
+                 show_markers=True, other_objects=None):
         config = get_config()
         self._nbFace = config.number_faces
         self._device = config.device
@@ -22,10 +22,10 @@ class Viewer(pyrender.Viewer):
         self._fileObjForColor = file_obj_for_color
         self._show_vertices = False
         self._show_joints = False
-        self._show_balises = False
-        self._editBalises = False
+        self._show_markers = False
+        self._edit_markers = False
         self._ctrl = False
-        self._directionnalMatrix = []
+        self._directionalMatrix = []
         self._scene = pyrender.Scene(ambient_light=[1.0, 1.0, 1.0, 1.0])
 
         if other_objects is not None:
@@ -48,7 +48,7 @@ class Viewer(pyrender.Viewer):
 
         self._index = 0
         self._slcIndex = 0
-        self._balisesIndex = self.load_balise()
+        self._markersIndex = self.load_marker()
         self._visage = pyrender.Node()
         self.set_visage(0)
         self._scene.add_node(self._visage)
@@ -56,9 +56,9 @@ class Viewer(pyrender.Viewer):
         self._verticesNode, self._tfs_vertices = self.gen_vertices_node()
         if landmark is not None:
             self._jointsNode, self._tfs_joints = self.gen_joints_node()
-        self._balisesNode, self._tfs_balises = self.gen_balises_node()
+        self._markersNode, self._tfs_markers = self.gen_markers_node()
 
-        # select balise node
+        # select marker node
         sm = trimesh.creation.uv_sphere(radius=0.002)
         sm.visual.vertex_colors = [1.0, 1.0, 0.0, 1.0]
         self._selectNode = pyrender.Node("select", mesh=pyrender.Mesh.from_trimesh(sm))
@@ -69,26 +69,26 @@ class Viewer(pyrender.Viewer):
             self.show_joints()
         if show_vertices:
             self.show_vertices()
-        if show_balises:
-            self.show_balises()
+        if show_markers:
+            self.show_markers()
 
     def on_key_press(self, symbol, modifiers):
         if self._ctrl:  # Ctrl On
-            if symbol == 115:  # save balises (S)
-                self.save_balise()
-            if symbol == 108:  # load balises (L)
-                self.load_balise()
+            if symbol == 115:  # save markers (S)
+                self.save_marker()
+            if symbol == 108:  # load markers (L)
+                self.load_marker()
         else:
             pyrender.Viewer.on_key_press(self, symbol, modifiers)
 
         if symbol == 118:  # show vertices (V)
             self.show_vertices()
-        if symbol == 98:  # show balises (B)
-            self.show_balises()
+        if symbol == 98:  # show markers (B)
+            self.show_markers()
         if symbol == 106:  # show joints (J)
             self.show_joints()
-        if symbol == 101:  # edit balises (E)
-            self.edit_balises()
+        if symbol == 101:  # edit markers (E)
+            self.edit_markers()
         if symbol == 65507:  # Ctrl
             self._ctrl = not self._ctrl
             if self._ctrl:
@@ -96,23 +96,23 @@ class Viewer(pyrender.Viewer):
             else:
                 self._message_text = "Ctrl Off"
 
-        if self._editBalises:
-            if symbol == 65535:  # Suppr
-                self.remove_balise()
+        if self._edit_markers:
+            if symbol == 65535:  # Delete
+                self.remove_marker()
             if symbol == 65293:  # Enter
-                self.add_balise()
+                self.add_marker()
             if symbol == 65362:  # Up Arrow
-                self.next_balise(6)
+                self.next_marker(6)
             if symbol == 65364:  # Down Arrow
-                self.next_balise(5)
+                self.next_marker(5)
             if symbol == 65361:  # Left Arrow
-                self.next_balise(3)
+                self.next_marker(3)
             if symbol == 65363:  # Right Arrow
-                self.next_balise(4)
+                self.next_marker(4)
             if symbol == 65365:  # Up Page
-                self.next_balise(2)
+                self.next_marker(2)
             if symbol == 65366:  # Down Page
-                self.next_balise(1)
+                self.next_marker(1)
 
     def show_vertices(self):
         self.render_lock.acquire()
@@ -134,18 +134,18 @@ class Viewer(pyrender.Viewer):
             self._show_joints = False
         self.render_lock.release()
 
-    def show_balises(self):
+    def show_markers(self):
         self.render_lock.acquire()
-        if len(self._tfs_balises) <= 0:
-            self._show_balises = False
+        if len(self._tfs_markers) <= 0:
+            self._show_markers = False
             self.render_lock.release()
             return
-        if not self._show_balises:
-            self._scene.add_node(self._balisesNode)
-            self._show_balises = True
+        if not self._show_markers:
+            self._scene.add_node(self._markersNode)
+            self._show_markers = True
         else:
-            self._scene.remove_node(self._balisesNode)
-            self._show_balises = False
+            self._scene.remove_node(self._markersNode)
+            self._show_markers = False
         self.render_lock.release()
 
     def set_visage(self, i):
@@ -170,30 +170,30 @@ class Viewer(pyrender.Viewer):
         else:
             pyrender.Viewer.on_close(self)
 
-    def edit_balises(self):
-        if not self._editBalises:
-            if len(self._directionnalMatrix) == 0:
-                self._directionnalMatrix = np.load("directionnalMatrix.npy")
-            vert = self._vertex[self._index][self._directionnalMatrix[self._slcIndex][0]]
+    def edit_markers(self):
+        if not self._edit_markers:
+            if len(self._directionalMatrix) == 0:
+                self._directionalMatrix = np.load("directionalMatrix.npy")
+            vert = self._vertex[self._index][self._directionalMatrix[self._slcIndex][0]]
             tfs = np.tile(np.eye(4), (1, 1, 1))[0]
             tfs[:3, 3] = vert
             self._scene.add_node(self._selectNode)
             self._scene.set_pose(self._selectNode, tfs)
-            if not self._show_balises:
-                self.show_balises()
-            self._editBalises = True
-            self._message_text = 'Enable edit balises'
+            if not self._show_markers:
+                self.show_markers()
+            self._edit_markers = True
+            self._message_text = 'Enable edit markers'
         else:
             self._scene.remove_node(self._selectNode)
-            self._editBalises = False
-            self._message_text = 'Disable edit balises'
+            self._edit_markers = False
+            self._message_text = 'Disable edit markers'
 
-    def next_balise(self, direction):
-        i = self._directionnalMatrix[self._slcIndex][direction]
+    def next_marker(self, direction):
+        i = self._directionalMatrix[self._slcIndex][direction]
         if i == -1:
             return
         self._slcIndex = i
-        vert = self._vertex[self._index][self._directionnalMatrix[self._slcIndex][0]]
+        vert = self._vertex[self._index][self._directionalMatrix[self._slcIndex][0]]
         tfs = np.tile(np.eye(4), (1, 1, 1))[0]
         tfs[:3, 3] = vert
         self._scene.set_pose(self._selectNode, tfs)
@@ -211,13 +211,13 @@ class Viewer(pyrender.Viewer):
             self._scene.add_node(self._jointsNode)
         else:
             self._jointsNode, self._tfs_joints = self.gen_joints_node()
-        if self._show_balises and len(self._tfs_balises) > 0:
-            self._scene.remove_node(self._balisesNode)
-            self.gen_balises_node()
-            self._scene.add_node(self._balisesNode)
+        if self._show_markers and len(self._tfs_markers) > 0:
+            self._scene.remove_node(self._markersNode)
+            self.gen_markers_node()
+            self._scene.add_node(self._markersNode)
         else:
-            self.gen_balises_node()
-        if self._editBalises:
+            self.gen_markers_node()
+        if self._edit_markers:
             tfs = self._tfs_vertices[self._slcIndex]
             self._scene.set_pose(self._selectNode, tfs)
 
@@ -239,51 +239,51 @@ class Viewer(pyrender.Viewer):
         joints_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
         return pyrender.Node("joints", mesh=joints_pcl), tfs
 
-    def gen_balises_node(self):
+    def gen_markers_node(self):
         sm = trimesh.creation.uv_sphere(radius=0.0005)
         sm.visual.vertex_colors = [0.8, 0.0, 0.5, 1.0]
         t = []
-        for balise in self._balisesIndex:
-            t.append(read_index_opti_tri(self._vertex[self._index], self._faces, balise))
+        for marker in self._markersIndex:
+            t.append(read_index_opti_tri(self._vertex[self._index], self._faces, marker))
         if len(t) > 0:
-            tfs_balises = np.tile(np.eye(4), (len(t), 1, 1))
+            tfs_markers = np.tile(np.eye(4), (len(t), 1, 1))
             for i in range(len(t)):
-                tfs_balises[i, :3, 3] = t[i]
-            balises_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs_balises)
+                tfs_markers[i, :3, 3] = t[i]
+            markers_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs_markers)
         else:
-            tfs_balises = []
-            balises_pcl = pyrender.Mesh.from_trimesh(sm)
-        return pyrender.Node("balises", mesh=balises_pcl), tfs_balises
+            tfs_markers = []
+            markers_pcl = pyrender.Mesh.from_trimesh(sm)
+        return pyrender.Node("markers", mesh=markers_pcl), tfs_markers
 
-    def add_balise(self):
-        self._balisesIndex = np.append(self._balisesIndex, [[self._directionnalMatrix[self._slcIndex][0], -1, 0, 0]],
+    def add_marker(self):
+        self._markersIndex = np.append(self._markersIndex, [[self._directionalMatrix[self._slcIndex][0], -1, 0, 0]],
                                        axis=0)
-        self.update_balise()
+        self.update_marker()
 
-    def save_balise(self):
-        np.save("balises.npy", self._balisesIndex)
+    def save_marker(self):
+        np.save("markers.npy", self._markersIndex)
 
-    def load_balise(self):
-        self._balisesIndex = np.array([], int)
-        if not exists("balises.npy"):
+    def load_marker(self):
+        self._markersIndex = np.array([], int)
+        if not exists("markers.npy"):
             return
-        return np.load("balises.npy")
+        return np.load("markers.npy")
 
-    def remove_balise(self):
-        ind = self._directionnalMatrix[self._slcIndex][0]
-        for i in range(len(self._balisesIndex)):
-            if self._balisesIndex[i][0] == ind:
-                self._balisesIndex = np.delete(self._balisesIndex, [i * 4 + j for j in range(4)])
-                self._balisesIndex = self._balisesIndex.reshape(int(len(self._balisesIndex) / 4), 4)
+    def remove_marker(self):
+        ind = self._directionalMatrix[self._slcIndex][0]
+        for i in range(len(self._markersIndex)):
+            if self._markersIndex[i][0] == ind:
+                self._markersIndex = np.delete(self._markersIndex, [i * 4 + j for j in range(4)])
+                self._markersIndex = self._markersIndex.reshape(int(len(self._markersIndex) / 4), 4)
                 break
-        self.update_balise()
+        self.update_marker()
 
-    def update_balise(self):
-        if self._show_balises:
-            self._scene.remove_node(self._balisesNode)
-        self.gen_balises_node()
-        if not self._show_balises:
-            self.show_balises()
+    def update_marker(self):
+        if self._show_markers:
+            self._scene.remove_node(self._markersNode)
+        self.gen_markers_node()
+        if not self._show_markers:
+            self.show_markers()
         else:
-            self._scene.add_node(self._balisesNode)
-        self._message_text = "NbBalises = " + str(len(self._balisesIndex))
+            self._scene.add_node(self._markersNode)
+        self._message_text = "Nb markers = " + str(len(self._markersIndex))
