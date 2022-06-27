@@ -3,60 +3,63 @@ import numpy as np
 import pyrender
 import trimesh
 import torch
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
 
-def readSTL(file=""):
+
+def read_stl(file=""):
     if file == "":
         file = input("Path file : ")
-    with open(file,"rb") as f:
+    with open(file, "rb") as f:
         print("Lecture du fichier..")
-        print(f.read(80).decode("utf-8")) # Header
-        nbTriangles = int.from_bytes(f.read(4),"little")
+        print(f.read(80).decode("utf-8"))  # Header
+        nb_triangles = int.from_bytes(f.read(4), "little")
 
         triangles = []
         vertices = []
-        perc = 0
         time = datetime.now()
         att = timedelta(seconds=5)
-        for i in range(nbTriangles):
-            #triangle
+        for i in range(nb_triangles):
+            # triangle
             triangle = []
-            normalVector = [struct.unpack("f",f.read(4)),struct.unpack("f",f.read(4)),struct.unpack("f",f.read(4))]  
+            normal_vector = [struct.unpack("f", f.read(4)), struct.unpack("f", f.read(4)),
+                             struct.unpack("f", f.read(4))]
             for j in range(3):
-                v = [struct.unpack("f",f.read(4)),struct.unpack("f",f.read(4)),struct.unpack("f",f.read(4))]
+                v = [struct.unpack("f", f.read(4)), struct.unpack("f", f.read(4)), struct.unpack("f", f.read(4))]
                 if v in vertices:
                     triangle.append(vertices.index(v))
                 else:
                     vertices.append(v)
-                    triangle.append(len(vertices)-1)
-            controle = f.read(2)
+                    triangle.append(len(vertices) - 1)
+            f.read(2)  # control
             triangles.append(triangle)
 
-            if datetime.now()>time+att:
-                print(str((i/nbTriangles)*100)+" % ("+str(i)+"/"+str(nbTriangles-1)+")")
+            if datetime.now() > time + att:
+                print(str((i / nb_triangles) * 100) + " % (" + str(i) + "/" + str(nb_triangles - 1) + ")")
                 time = datetime.now()
         print("Lecture terminee.")
     return vertices, triangles
 
-def readAndView(file=""):
+
+def read_and_view(file=""):
     vertices, triangles = read(file)
     vertices = torch.tensor(vertices).detach().cpu().numpy().squeeze()
     triangles = np.array(triangles)
     print(triangles)
-    scene = pyrender.Scene()
-    tri_mesh = trimesh.Trimesh(vertices,faces=triangles)
+    scene = pyrender.Scene(ambient_light=[1.0, 1.0, 1.0, 1.0])
+    tri_mesh = trimesh.Trimesh(vertices, faces=triangles)
     mesh = pyrender.Mesh.from_trimesh(tri_mesh)
 
     scene.add(mesh)
-    pyrender.Viewer(scene, use_raymond_lighting=True, run_in_thread=True)
+    pyrender.Viewer(scene, run_in_thread=True)
 
-def readOBJ(file=""):
+
+def read_obj(file=""):
     """
     read file obj, no suppport texture and normal.
     """
     if file == "":
         file = input("Path file : ")
-    with open(file,"r") as f:
+    with open(file, "r") as f:
         vertices = []
         faces = []
         minFace = 1000
@@ -66,30 +69,32 @@ def readOBJ(file=""):
                 continue
             if line.startswith("v "):
                 line = line.split(" ")
-                v = [float(line[i]) for i in range(1,4)]
+                v = [float(line[i]) for i in range(1, 4)]
                 vertices.append(v)
             elif line.startswith("f "):
                 line = line.split(" ")
-                face = [int(line[i].split("/")[0]) for i in range(1,4)]
-                if min(face)<minFace:
-                    minFace=min(face)
+                face = [int(line[i].split("/")[0]) for i in range(1, 4)]
+                if min(face) < minFace:
+                    minFace = min(face)
                 faces.append(face)
-            elif line=="":
+            elif line == "":
                 break
-    if minFace>0:
+    if minFace > 0:
         for face in faces:
             for i in range(len(face)):
-                face[i]-=1
-    return vertices,faces
+                face[i] -= 1
+    return vertices, faces
+
 
 def read(file=""):
     if file == "":
         file = input("Path file : ")
     if file.endswith('.stl'):
-        vertices, triangles = readSTL(file)
+        vertices, triangles = read_stl(file)
     elif file.endswith('.obj'):
-        vertices, triangles = readOBJ(file)
+        vertices, triangles = read_obj(file)
     else:
         print("format unknow !")
         exit(1)
+        vertices, triangles = None, None  # remove warning
     return vertices, triangles

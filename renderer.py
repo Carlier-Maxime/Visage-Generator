@@ -3,16 +3,17 @@ Author: Yao Feng
 Copyright (c) 2020, Yao Feng
 All rights reserved.
 """
+import warnings
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from skimage.io import imread
-from pytorch3d.structures import Meshes
 from pytorch3d.io import load_obj
 from pytorch3d.renderer.mesh import rasterize_meshes
+from pytorch3d.structures import Meshes
+
 import util
-import warnings
 
 
 class Pytorch3dRasterizer(nn.Module):

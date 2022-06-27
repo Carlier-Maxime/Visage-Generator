@@ -19,17 +19,18 @@ Copyright 2019 Max-Planck-Gesellschaft zur Foerderung der Wissenschaften e.V. (M
 Max Planck Institute for Intelligent Systems and the Max Planck Institute for Biological Cybernetics.
 All rights reserved.
 
-More information about FLAME is available at http://flame.is.tue.mpg.de.
+More information about FLAME is available at https://flame.is.tue.mpg.de.
 
 For questions regarding the PyTorch implementation please contact soubhik.sanyal@tuebingen.mpg.de
 """
 # Modified from smplx code [https://github.com/vchoutas/smplx] for FLAME
 
+import pickle
+
 import numpy as np
 import torch
 import torch.nn as nn
-import pickle
-from smplx.lbs import lbs, batch_rodrigues, vertices2landmarks, find_dynamic_lmk_idx_and_bcoords
+from smplx.lbs import lbs, batch_rodrigues, vertices2landmarks
 from smplx.utils import Struct, to_tensor, to_np, rot_mat_to_euler
 
 
@@ -38,6 +39,7 @@ class FLAME(nn.Module):
     Given flame parameters this class generates a differentiable FLAME function
     which outputs the a mesh and 3D facial landmarks
     """
+
     def __init__(self, config):
         super(FLAME, self).__init__()
         print("creating the FLAME Decoder")
@@ -55,29 +57,29 @@ class FLAME(nn.Module):
         # Fixing remaining Shape betas
         # There are total 300 shape parameters to control FLAME; But one can use the first few parameters to express
         # the shape. For example 100 shape parameters are used for RingNet project 
-        default_shape = torch.zeros([self.batch_size, 300-config.shape_params],
-                                            dtype=self.dtype, requires_grad=False)
-        self.register_parameter('shape_betas', nn.Parameter(default_shape,
-                                                      requires_grad=False))
-
-        # Fixing remaining expression betas
-        # There are total 100 shape expression parameters to control FLAME; But one can use the first few parameters to express
-        # the expression. For example 50 expression parameters are used for RingNet project 
-        default_exp = torch.zeros([self.batch_size, 100 - config.expression_params],
+        default_shape = torch.zeros([self.batch_size, 300 - config.shape_params],
                                     dtype=self.dtype, requires_grad=False)
-        self.register_parameter('expression_betas', nn.Parameter(default_exp,
+        self.register_parameter('shape_betas', nn.Parameter(default_shape,
                                                             requires_grad=False))
+
+        # Fixing remaining expression betas There are total 100 shape expression parameters to control FLAME; But one
+        # can use the first few parameters to express the expression. For example 50 expression parameters are used
+        # for RingNet project
+        default_exp = torch.zeros([self.batch_size, 100 - config.expression_params],
+                                  dtype=self.dtype, requires_grad=False)
+        self.register_parameter('expression_betas', nn.Parameter(default_exp,
+                                                                 requires_grad=False))
 
         # Eyeball and neck rotation
         default_eyball_pose = torch.zeros([self.batch_size, 6],
-                                    dtype=self.dtype, requires_grad=False)
+                                          dtype=self.dtype, requires_grad=False)
         self.register_parameter('eye_pose', nn.Parameter(default_eyball_pose,
-                                                            requires_grad=False))
+                                                         requires_grad=False))
 
         default_neck_pose = torch.zeros([self.batch_size, 3],
-                                    dtype=self.dtype, requires_grad=False)
+                                        dtype=self.dtype, requires_grad=False)
         self.register_parameter('neck_pose', nn.Parameter(default_neck_pose,
-                                                            requires_grad=False))
+                                                          requires_grad=False))
 
         # Fixing 3D translation since we use translation in the image plane
 
@@ -124,7 +126,7 @@ class FLAME(nn.Module):
         with open(config.static_landmark_embedding_path, 'rb') as f:
             static_embeddings = Struct(**pickle.load(f, encoding='latin1'))
 
-        lmk_faces_idx = (static_embeddings.lmk_face_idx).astype(np.int64)
+        lmk_faces_idx = static_embeddings.lmk_face_idx.astype(np.int64)
         self.register_buffer('lmk_faces_idx',
                              torch.tensor(lmk_faces_idx, dtype=torch.long))
         lmk_bary_coords = static_embeddings.lmk_b_coords
@@ -133,7 +135,7 @@ class FLAME(nn.Module):
 
         if self.use_face_contour:
             conture_embeddings = np.load(config.dynamic_landmark_embedding_path,
-                allow_pickle=True, encoding='latin1')
+                                         allow_pickle=True, encoding='latin1')
             conture_embeddings = conture_embeddings[()]
             dynamic_lmk_faces_idx = np.array(conture_embeddings['lmk_face_idx']).astype(np.int64)
             dynamic_lmk_faces_idx = torch.tensor(
@@ -156,9 +158,10 @@ class FLAME(nn.Module):
             self.register_buffer('neck_kin_chain',
                                  torch.stack(neck_kin_chain))
 
-    def _find_dynamic_lmk_idx_and_bcoords(self, vertices, pose, dynamic_lmk_faces_idx,
-                                         dynamic_lmk_b_coords,
-                                         neck_kin_chain, dtype=torch.float32):
+    @staticmethod
+    def _find_dynamic_lmk_idx_and_bcoords(vertices, pose, dynamic_lmk_faces_idx,
+                                          dynamic_lmk_b_coords,
+                                          neck_kin_chain, dtype=torch.float32):
         """
             Selects the face contour depending on the reletive position of the head
             Input:
@@ -201,7 +204,8 @@ class FLAME(nn.Module):
 
         return dyn_lmk_faces_idx, dyn_lmk_b_coords
 
-    def forward(self, shape_params=None, expression_params=None, pose_params=None, neck_pose=None, eye_pose=None, transl=None):
+    def forward(self, shape_params=None, expression_params=None, pose_params=None, neck_pose=None, eye_pose=None,
+                transl=None):
         """
             Input:
                 shape_params: N X number of shape parameters
@@ -211,24 +215,23 @@ class FLAME(nn.Module):
                 vertices: N X V X 3
                 landmarks: N X number of landmarks X 3
         """
-        betas = torch.cat([shape_params,self.shape_betas, expression_params, self.expression_betas], dim=1)
+        betas = torch.cat([shape_params, self.shape_betas, expression_params, self.expression_betas], dim=1)
         neck_pose = (neck_pose if neck_pose is not None else self.neck_pose)
         eye_pose = (eye_pose if eye_pose is not None else self.eye_pose)
         transl = (transl if transl is not None else self.transl)
-        full_pose = torch.cat([pose_params[:,:3], neck_pose, pose_params[:,3:], eye_pose], dim=1)
+        full_pose = torch.cat([pose_params[:, :3], neck_pose, pose_params[:, 3:], eye_pose], dim=1)
         template_vertices = self.v_template.unsqueeze(0).repeat(self.batch_size, 1, 1)
 
         vertices, _ = lbs(betas, full_pose, template_vertices,
-                               self.shapedirs, self.posedirs,
-                               self.J_regressor, self.parents,
-                               self.lbs_weights)
+                          self.shapedirs, self.posedirs,
+                          self.J_regressor, self.parents,
+                          self.lbs_weights)
 
         lmk_faces_idx = self.lmk_faces_idx.unsqueeze(dim=0).repeat(
             self.batch_size, 1)
         lmk_bary_coords = self.lmk_bary_coords.unsqueeze(dim=0).repeat(
             self.batch_size, 1, 1)
         if self.use_face_contour:
-
             dyn_lmk_faces_idx, dyn_lmk_bary_coords = self._find_dynamic_lmk_idx_and_bcoords(
                 vertices, full_pose, self.dynamic_lmk_faces_idx,
                 self.dynamic_lmk_bary_coords,
@@ -239,8 +242,8 @@ class FLAME(nn.Module):
                 [dyn_lmk_bary_coords, lmk_bary_coords], 1)
 
         landmarks = vertices2landmarks(vertices, self.faces_tensor,
-                                             lmk_faces_idx,
-                                             lmk_bary_coords)
+                                       lmk_faces_idx,
+                                       lmk_bary_coords)
 
         if self.use_3D_translation:
             landmarks += transl.unsqueeze(dim=1)
