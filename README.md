@@ -74,9 +74,13 @@ pip install -r requirements.txt
 
 The information necessary for the download is indecate in the readme.md of the model folder or in the [link](https://github.com/Carlier-Maxime/Visage-Generator/blob/master/model/readme.md).
 
-### Execute **main.py**
+### Execute **VisageGenerator.py**
 
 ```
-python main.py
+python VisageGenerator.py
 ```
-they are advised to go into the **config.py** file and **set** the **device** variable to "**cuda**" if you have a **graphics card**.
+they are advised to go into the **config.py** file and **set** the **device** variable to "**cuda**" if you have a **graphics card**,
+or specify the device used for the launch :
+```
+python VisageGenerator.py --device=cuda
+```
