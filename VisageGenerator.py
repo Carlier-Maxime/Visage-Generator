@@ -101,7 +101,7 @@ class VisageGenerator:
                     with open(f'tmp/visage.obj', 'w') as f:
                         f.write(trimesh.exchange.obj.export_obj(mesh, True, False, False))
                     visage_path = f'tmp/visage.obj'
-                os.system(f'python getLandmark2D.py {visage_path} {lmks_path}')
+                os.system(f'python getLandmark2D.py {visage_path} {lmks_path} output/visage{str(i)}_lmks2d.npy')
             elif config.save_png:
                 pass
 
@@ -120,6 +120,7 @@ class VisageGenerator:
 
     def get_faces(self):
         return self._faces
+
 
 if __name__ == "__main__":
     VisageGenerator(main_launch=True).view()

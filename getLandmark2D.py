@@ -5,18 +5,21 @@ import sys
 import cv2
 import numpy as np
 from direct.showbase.ShowBase import ShowBase
+from direct.showbase.ShowBaseGlobal import render2d, aspect2d
 from panda3d.core import DirectionalLight, CollisionTraverser, \
-    CollisionHandlerQueue, CollisionNode, CollisionRay, GeomNode, loadPrcFile
+    CollisionHandlerQueue, CollisionNode, CollisionRay, GeomNode, loadPrcFile, Point3, Point2
 
 import util
 
 
 class MyApp(ShowBase):
 
-    def __init__(self, file_path, lmks3D_path, pyv):
+    def __init__(self, file_path, lmks3D_path, save_path="tmp/lmks2d.npy", pyv=""):
         ShowBase.__init__(self)
         print("préparation de la scéne")
         self.file_path = file_path
+        self.lmk3d_path = lmks3D_path
+        self.save_path = save_path
         self.pyv = pyv
         model = self.loader.load_model(file_path)
         model.reparentTo(render)
@@ -49,10 +52,15 @@ class MyApp(ShowBase):
         base.screenshot(f"{base_name}.png", False)
 
         print("Transformation des landmark 3D en landmark 2D..")
-        # A FAIRE !!!
+        lmks3d = np.load(self.lmk3d_path)
+        lmks2d = []
+        for lmk3d in lmks3d:
+            lmk2d = self.Coord3dIn2d(Point3(lmk3d[0], lmk3d[1], lmk3d[2]))
+            lmk2d = [lmk2d[0], lmk2d[1]]
+            lmks2d.append(lmk2d)
 
         print("Sauvegarde des landmarks")
-        # A FAIRE !!!
+        np.save(self.save_path, lmks2d)
         self.finalizeExit()
         return task.done
 
@@ -69,7 +77,9 @@ if __name__ == '__main__':
     print("Configuration de panda3d")
     loadPrcFile("etc/Config.prc")
     args = sys.argv[1:]
-    if len(args) < 3:
+    if len(args) < 4:
+        if len(args) < 3:
+            args.append("")
         args.append("")
-    app = MyApp(str(args[0]), str(args[1]), str(args[2]))
+    app = MyApp(str(args[0]), str(args[1]), str(args[2]), str(args[3]))
     app.run()
