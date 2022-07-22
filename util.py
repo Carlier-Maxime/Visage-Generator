@@ -360,7 +360,7 @@ def save_obj(filename, vertices, faces, textures=None, uvcoords=None, uvfaces=No
     if textures is not None and texture_type == 'surface':
         textures = textures.detach().cpu().numpy().transpose(1, 2, 0)
         filename_mtl = filename[:-4] + '.mtl'
-        filename_texture = filename[:-4] + '.png'
+        filename_texture = filename[:-4] + '_texture.png'
         material_name = 'material_1'
         # texture_image, vertices_textures = create_texture_image(textures, texture_res)
         texture_image = textures

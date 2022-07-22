@@ -40,7 +40,7 @@ class VisageGenerator:
         radian = np.pi / 180.0
 
         flame_layer = FLAME(config)
-        render = Renderer(512, "visage.obj", 512).to(device)
+        self.render = Renderer(512, "visage.obj", 512).to(device)
 
         print('Generate random parameters')
         shape_params = torch.tensor(np.random.uniform(min_shape_param, max_shape_param, [nb_face, 300]),
@@ -83,13 +83,7 @@ class VisageGenerator:
         save_paths = ""
         for i in range(nb_face):
             if config.save_obj:
-                if config.texturing:
-                    render.save_obj(f'output/visage{str(i)}.obj', vertex[i], texture[i])
-                else:
-                    mesh = trimesh.Trimesh(vertices=vertex[i], faces=flame_layer.faces)
-                    normals = mesh.vertex_normals
-                    with open(f'output/visage{str(i)}.obj', 'w') as f:
-                        f.write(trimesh.exchange.obj.export_obj(mesh, True, False, False))
+                self.save_obj(f'output/visage{str(i)}.obj', vertex[i], flame_layer.faces, texture[i])
             if config.save_lmks3D:
                 np.save(f'output/visage{str(i)}.npy', landmark[i])
             if config.save_lmks2D:
@@ -98,12 +92,9 @@ class VisageGenerator:
                     np.save(f'tmp/visage{str(i)}.npy', landmark[i])
                     lmks_path = f'tmp/visage{str(i)}.npy'
                 visage_path = f'output/visage{str(i)}.obj'
-                if not config.save_obj or config.texturing:
-                    mesh = trimesh.Trimesh(vertices=vertex[i], faces=flame_layer.faces)
-                    normals = mesh.vertex_normals
-                    with open(f'tmp/visage{str(i)}.obj', 'w') as f:
-                        f.write(trimesh.exchange.obj.export_obj(mesh, True, False, False))
+                if not config.save_obj:
                     visage_path = f'tmp/visage{str(i)}.obj'
+                    self.save_obj(visage_path, vertex[i], flame_layer.faces, texture[i])
                 if i != 0:
                     lmks_paths += ";"
                     visage_paths += ";"
@@ -114,11 +105,20 @@ class VisageGenerator:
             elif config.save_png:
                 pass
         if config.save_lmks2D:
-            os.system(f'python getLandmark2D.py {visage_paths} {lmks_paths} {save_paths}')
+            os.system(f'python getLandmark2D.py {visage_paths} {lmks_paths} {save_paths} {config.save_png}')
 
         self._landmark = landmark
         self._vertex = vertex
         self._faces = flame_layer.faces
+
+    def save_obj(self, path, vertices, faces, texture=None):
+        if texture is not None:
+            self.render.save_obj(path, vertices, texture)
+        else:
+            mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+            normals = mesh.vertex_normals
+            with open(path, 'w') as f:
+                f.write(trimesh.exchange.obj.export_obj(mesh, True, False, False))
 
     def view(self, other_objects=None):
         file_obj = []

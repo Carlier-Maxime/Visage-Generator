@@ -16,11 +16,12 @@ import util
 
 class MyApp(ShowBase):
 
-    def __init__(self, files, lmks3D_paths, save_paths, pyv=""):
+    def __init__(self, files, lmks3D_paths, save_paths, screen=False, pyv=""):
         ShowBase.__init__(self)
         self.files = files.split(";")
         self.lmk3d_paths = lmks3D_paths.split(";")
         self.save_paths = save_paths.split(";")
+        self.screen = screen
         self.pyv = pyv
         self.ind = 0
         self.model = self.loader.load_model(self.files[self.ind])
@@ -77,8 +78,8 @@ class MyApp(ShowBase):
         self.title.destroy()
 
     def screenshotTask(self, task):
-        base_name = self.files[self.ind].split(".obj")[0].split(".stl")[0]
-        base.screenshot(f"{base_name}.png", False)  # screen
+        if self.screen:
+            base.screenshot(f"{self.save_paths[self.ind][:-4]}.png", False)  # screen
 
         # transform landmark 3d to 2d
         lmks3d = np.load(self.lmk3d_paths[self.ind])
@@ -128,7 +129,9 @@ class MyApp(ShowBase):
 if __name__ == '__main__':
     loadPrcFile("etc/Config.prc")
     args = sys.argv[1:]
-    if len(args) < 4:
+    if len(args) < 5:
+        if len(args) < 4:
+            args.append('False')
         args.append("")
-    app = MyApp(str(args[0]), str(args[1]), str(args[2]), str(args[3]))
+    app = MyApp(str(args[0]), str(args[1]), str(args[2]), bool(args[3]), args[4])
     app.run()
