@@ -12,6 +12,7 @@ import numpy as np
 import torch
 import trimesh
 
+import getLandmark2D
 from FLAME import FLAME
 from Viewer import Viewer
 from config import get_config
@@ -108,7 +109,7 @@ class VisageGenerator:
             elif config.save_png:
                 pass
         if config.save_lmks2D:
-            os.system(f'python getLandmark2D.py {visage_paths} {lmks_paths} {save_paths} {config.save_png}')
+            getLandmark2D.run(visage_paths, lmks_paths, save_paths, config.save_png)
 
         self._landmark = landmark
         self._vertex = vertex

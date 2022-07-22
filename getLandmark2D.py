@@ -125,6 +125,10 @@ class MyApp(ShowBase):
         # lens.
         return None
 
+def run(files, lmks3D_paths, save_paths, screen=False, pyv=""):
+    loadPrcFile("etc/Config.prc")
+    app = MyApp(files, lmks3D_paths, save_paths, screen, pyv)
+    app.run()
 
 if __name__ == '__main__':
     loadPrcFile("etc/Config.prc")
