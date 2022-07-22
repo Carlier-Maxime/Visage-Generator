@@ -1,6 +1,7 @@
 import logging as log
 import os
 import sys
+from datetime import datetime
 
 import cv2
 import numpy as np
@@ -93,7 +94,7 @@ class MyApp(ShowBase):
             lmks2d.append([int(x), int(y)])
 
         print("Sauvegarde des landmarks")
-        np.save(self.save_path, lmks2d)
+        np.save(self.save_path, lmks2d[17:])
         self.finalizeExit()
         return task.done
 
