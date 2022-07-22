@@ -123,4 +123,4 @@ class VisageGenerator:
 
 
 if __name__ == "__main__":
-    VisageGenerator(main_launch=True).view()
+    VisageGenerator(main_launch=True)
