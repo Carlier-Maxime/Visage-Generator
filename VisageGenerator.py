@@ -62,6 +62,7 @@ class VisageGenerator:
             eye_pose = torch.zeros(nb_face, 6).to(device)
             vertex, landmark = flame_layer(shape_params, expression_params, pose_params, neck_pose, eye_pose)
 
+        texture = None
         if config.texturing:
             print('Texturing')
             tex_space = np.load("model/FLAME_texture.npz")
@@ -83,7 +84,8 @@ class VisageGenerator:
         save_paths = ""
         for i in range(nb_face):
             if config.save_obj:
-                self.save_obj(f'output/visage{str(i)}.obj', vertex[i], flame_layer.faces, texture[i])
+                tex = None if texture is None else texture[i]
+                self.save_obj(f'output/visage{str(i)}.obj', vertex[i], flame_layer.faces, tex)
             if config.save_lmks3D:
                 np.save(f'output/visage{str(i)}.npy', landmark[i])
             if config.save_lmks2D:
@@ -94,7 +96,8 @@ class VisageGenerator:
                 visage_path = f'output/visage{str(i)}.obj'
                 if not config.save_obj:
                     visage_path = f'tmp/visage{str(i)}.obj'
-                    self.save_obj(visage_path, vertex[i], flame_layer.faces, texture[i])
+                    tex = None if texture is None else texture[i]
+                    self.save_obj(visage_path, vertex[i], flame_layer.faces, tex)
                 if i != 0:
                     lmks_paths += ";"
                     visage_paths += ";"
