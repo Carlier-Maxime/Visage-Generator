@@ -76,7 +76,14 @@ class VisageGenerator:
         if not os.path.isdir('output'):
             os.mkdir('output')
         for i in range(nb_face):
-            render.save_obj('output/visage' + str(i) + '.obj', vertex[i], texture[i])
+            if config.save_obj:
+                render.save_obj('output/visage' + str(i) + '.obj', vertex[i], texture[i])
+            if config.save_lmks3D:
+                np.save(f'output/visage{str(i)}.npy', landmark[i])
+            if config.save_lmks2D:
+                pass
+            elif config.save_png:
+                pass
 
         self._landmark = landmark
         self._vertex = vertex

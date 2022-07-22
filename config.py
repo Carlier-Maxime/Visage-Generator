@@ -3,6 +3,34 @@ import argparse
 parser = argparse.ArgumentParser(description='FLAME model')
 
 parser.add_argument(
+    '--save_obj',
+    type=bool,
+    default=True,
+    help='enable save into file obj'
+)
+
+parser.add_argument(
+    '--save_png',
+    type=bool,
+    default=False,
+    help='enable save into file png'
+)
+
+parser.add_argument(
+    '--save_lmks3D',
+    type=bool,
+    default=False,
+    help='enable save landmarks 3D into file npy'
+)
+
+parser.add_argument(
+    '--save_lmks2D',
+    type=bool,
+    default=False,
+    help='enable save landmarks 2D into file npy'
+)
+
+parser.add_argument(
     '--min_shape_param',
     type=float,
     default=-2,
