@@ -10,6 +10,7 @@ import os
 
 import numpy as np
 import torch
+import trimesh
 
 from FLAME import FLAME
 from Viewer import Viewer
@@ -61,27 +62,46 @@ class VisageGenerator:
             eye_pose = torch.zeros(nb_face, 6).to(device)
             vertex, landmark = flame_layer(shape_params, expression_params, pose_params, neck_pose, eye_pose)
 
-        print('Texturing')
-        tex_space = np.load("model/FLAME_texture.npz")
-        texture_mean = tex_space['mean'].reshape(1, -1)
-        texture_basis = tex_space['tex_dir'].reshape(-1, 200)
-        texture_mean = torch.from_numpy(texture_mean).float()[None, ...]
-        texture_basis = torch.from_numpy(texture_basis[:, :50]).float()[None, ...]
-        texture = texture_mean + (texture_basis * texture_params[:, None, :]).sum(-1)
-        texture = texture.reshape(texture_params.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
-        texture = texture[:, [2, 1, 0], :, :]
-        texture = texture / 255
+        if config.texturing:
+            print('Texturing')
+            tex_space = np.load("model/FLAME_texture.npz")
+            texture_mean = tex_space['mean'].reshape(1, -1)
+            texture_basis = tex_space['tex_dir'].reshape(-1, 200)
+            texture_mean = torch.from_numpy(texture_mean).float()[None, ...]
+            texture_basis = torch.from_numpy(texture_basis[:, :50]).float()[None, ...]
+            texture = texture_mean + (texture_basis * texture_params[:, None, :]).sum(-1)
+            texture = texture.reshape(texture_params.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
+            texture = texture[:, [2, 1, 0], :, :]
+            texture = texture / 255
 
         print("Save")
-        if not os.path.isdir('output'):
-            os.mkdir('output')
+        for folder in ['output', 'tmp']:
+            if not os.path.isdir(folder):
+                os.mkdir(folder)
         for i in range(nb_face):
             if config.save_obj:
-                render.save_obj('output/visage' + str(i) + '.obj', vertex[i], texture[i])
+                if config.texturing:
+                    render.save_obj(f'output/visage{str(i)}.obj', vertex[i], texture[i])
+                else:
+                    mesh = trimesh.Trimesh(vertices=vertex[i], faces=flame_layer.faces)
+                    normals = mesh.vertex_normals
+                    with open(f'output/visage{str(i)}.obj', 'w') as f:
+                        f.write(trimesh.exchange.obj.export_obj(mesh, True, False, False))
             if config.save_lmks3D:
                 np.save(f'output/visage{str(i)}.npy', landmark[i])
             if config.save_lmks2D:
-                pass
+                lmks_path = f'output/visage{str(i)}.npy'
+                if not config.save_lmks3D:
+                    np.save(f'tmp/visage.npy', landmark[i])
+                    lmks_path = f'tmp/visage.npy'
+                visage_path = f'output/visage{str(i)}.obj'
+                if not config.save_obj or config.texturing:
+                    mesh = trimesh.Trimesh(vertices=vertex[i], faces=flame_layer.faces)
+                    normals = mesh.vertex_normals
+                    with open(f'tmp/visage.obj', 'w') as f:
+                        f.write(trimesh.exchange.obj.export_obj(mesh, True, False, False))
+                    visage_path = f'tmp/visage.obj'
+                os.system(f'python getLandmark2D.py {visage_path} {lmks_path}')
             elif config.save_png:
                 pass
 
@@ -100,7 +120,6 @@ class VisageGenerator:
 
     def get_faces(self):
         return self._faces
-
 
 if __name__ == "__main__":
     VisageGenerator(main_launch=True).view()

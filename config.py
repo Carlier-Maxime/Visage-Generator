@@ -3,6 +3,13 @@ import argparse
 parser = argparse.ArgumentParser(description='FLAME model')
 
 parser.add_argument(
+    '--texturing',
+    type=bool,
+    default=True,
+    help='enable texture'
+)
+
+parser.add_argument(
     '--save_obj',
     type=bool,
     default=True,

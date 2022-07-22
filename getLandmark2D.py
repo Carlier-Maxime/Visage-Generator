@@ -69,7 +69,7 @@ if __name__ == '__main__':
     print("Configuration de panda3d")
     loadPrcFile("etc/Config.prc")
     args = sys.argv[1:]
-    if len(args) < 2:
+    if len(args) < 3:
         args.append("")
-    app = MyApp(str(args[0]), str(args[1]))
+    app = MyApp(str(args[0]), str(args[1]), str(args[2]))
     app.run()
