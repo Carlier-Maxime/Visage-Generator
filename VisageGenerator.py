@@ -78,6 +78,9 @@ class VisageGenerator:
         for folder in ['output', 'tmp']:
             if not os.path.isdir(folder):
                 os.mkdir(folder)
+        lmks_paths = ""
+        visage_paths = ""
+        save_paths = ""
         for i in range(nb_face):
             if config.save_obj:
                 if config.texturing:
@@ -92,18 +95,26 @@ class VisageGenerator:
             if config.save_lmks2D:
                 lmks_path = f'output/visage{str(i)}.npy'
                 if not config.save_lmks3D:
-                    np.save(f'tmp/visage.npy', landmark[i])
-                    lmks_path = f'tmp/visage.npy'
+                    np.save(f'tmp/visage{str(i)}.npy', landmark[i])
+                    lmks_path = f'tmp/visage{str(i)}.npy'
                 visage_path = f'output/visage{str(i)}.obj'
                 if not config.save_obj or config.texturing:
                     mesh = trimesh.Trimesh(vertices=vertex[i], faces=flame_layer.faces)
                     normals = mesh.vertex_normals
-                    with open(f'tmp/visage.obj', 'w') as f:
+                    with open(f'tmp/visage{str(i)}.obj', 'w') as f:
                         f.write(trimesh.exchange.obj.export_obj(mesh, True, False, False))
-                    visage_path = f'tmp/visage.obj'
-                os.system(f'python getLandmark2D.py {visage_path} {lmks_path} output/visage{str(i)}_lmks2d.npy')
+                    visage_path = f'tmp/visage{str(i)}.obj'
+                if i != 0:
+                    lmks_paths += ";"
+                    visage_paths += ";"
+                    save_paths += ";"
+                lmks_paths += lmks_path
+                visage_paths += visage_path
+                save_paths += f'output/visage{str(i)}_lmks2d.npy'
             elif config.save_png:
                 pass
+        if config.save_lmks2D:
+            os.system(f'python getLandmark2D.py {visage_paths} {lmks_paths} {save_paths}')
 
         self._landmark = landmark
         self._vertex = vertex

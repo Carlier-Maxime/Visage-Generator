@@ -16,19 +16,19 @@ import util
 
 class MyApp(ShowBase):
 
-    def __init__(self, file_path, lmks3D_path, save_path="tmp/lmks2d.npy", pyv=""):
+    def __init__(self, files, lmks3D_paths, save_paths, pyv=""):
         ShowBase.__init__(self)
-        print("préparation de la scéne")
-        self.file_path = file_path
-        self.lmk3d_path = lmks3D_path
-        self.save_path = save_path
+        self.files = files.split(";")
+        self.lmk3d_paths = lmks3D_paths.split(";")
+        self.save_paths = save_paths.split(";")
         self.pyv = pyv
-        self.model = self.loader.load_model(file_path)
+        self.ind = 0
+        self.model = self.loader.load_model(self.files[self.ind])
         self.model.reparentTo(render)
         self.dlight = DirectionalLight('my dlight')
-        dlnp = render.attachNewNode(self.dlight)
-        dlnp.setPosHpr(0, 0, 10, 90, -45, 0)
-        self.model.setLight(dlnp)
+        self.dlnp = render.attachNewNode(self.dlight)
+        self.dlnp.setPosHpr(0, 0, 10, 90, -45, 0)
+        self.model.setLight(self.dlnp)
         base.disableMouse()
         base.setBackgroundColor(1, 1, 1)
         base.camera.setPosHpr(0.77, -0.18, 0.86, 90, -45, 0)
@@ -77,12 +77,11 @@ class MyApp(ShowBase):
         self.title.destroy()
 
     def screenshotTask(self, task):
-        base_name = self.file_path.split(".obj")[0].split(".stl")[0]
-        print("screenshot de l'aperçu de la scene")
-        base.screenshot(f"{base_name}.png", False)
+        base_name = self.files[self.ind].split(".obj")[0].split(".stl")[0]
+        base.screenshot(f"{base_name}.png", False)  # screen
 
-        print("Transformation des landmark 3D en landmark 2D..")
-        lmks3d = np.load(self.lmk3d_path)
+        # transform landmark 3d to 2d
+        lmks3d = np.load(self.lmk3d_paths[self.ind])
         lmks2d = []
         for lmk3d in lmks3d:
             lmk2d = self.Coord3dIn2d(self.model, Point3(lmk3d[0], lmk3d[1], lmk3d[2]))
@@ -93,8 +92,16 @@ class MyApp(ShowBase):
             y = y * -1 * halfY + halfY
             lmks2d.append([int(x), int(y)])
 
-        print("Sauvegarde des landmarks")
-        np.save(self.save_path, lmks2d[17:])
+        # save landmarks 2D
+        np.save(self.save_paths[self.ind], lmks2d[17:])
+        self.ind += 1
+        if self.ind < len(self.files):
+            self.model.removeNode()
+            self.model = self.loader.load_model(self.files[self.ind])
+            self.model.reparentTo(render)
+            self.model.setLight(self.dlnp)
+            taskMgr.doMethodLater(0, self.screenshotTask, 'screenshot')
+            return task.done
         self.finalizeExit()
         return task.done
 
@@ -119,12 +126,9 @@ class MyApp(ShowBase):
 
 
 if __name__ == '__main__':
-    print("Configuration de panda3d")
     loadPrcFile("etc/Config.prc")
     args = sys.argv[1:]
     if len(args) < 4:
-        if len(args) < 3:
-            args.append("")
         args.append("")
     app = MyApp(str(args[0]), str(args[1]), str(args[2]), str(args[3]))
     app.run()
