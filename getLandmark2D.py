@@ -22,17 +22,19 @@ class MyApp(ShowBase):
         self.lmk3d_path = lmks3D_path
         self.save_path = save_path
         self.pyv = pyv
-        model = self.loader.load_model(file_path)
-        model.reparentTo(render)
+        self.model = self.loader.load_model(file_path)
+        self.model.reparentTo(render)
         self.dlight = DirectionalLight('my dlight')
         dlnp = render.attachNewNode(self.dlight)
         dlnp.setPosHpr(0, 0, 10, 90, -45, 0)
-        model.setLight(dlnp)
+        self.model.setLight(dlnp)
         base.disableMouse()
         base.setBackgroundColor(1, 1, 1)
         base.camera.setPosHpr(0.77, -0.18, 0.86, 90, -45, 0)
         base.camLens.setFov(LVecBase2f(26.3201, 17))
+        taskMgr.doMethodLater(0, self.screenshotTask, 'screenshot')
 
+    def enable_mouve_camera(self):
         self.accept('q', self.move, [0, 0.01, 0, 0, 0, 0, 0])
         self.accept('d', self.move, [0, -0.01, 0, 0, 0, 0, 0])
         self.accept('s', self.move, [0.01, 0, 0, 0, 0, 0, 0])
@@ -49,8 +51,6 @@ class MyApp(ShowBase):
         self.accept('o', self.move, [0, 0, 0, 0, 0, 0, 1])
         self.accept('c', self.ShowCamPos)
         self.accept('c-up', self.HideCamPos)
-
-        #taskMgr.doMethodLater(0, self.screenshotTask, 'screenshot')
 
     def move(self, x, y, z, h, p, r, fov):
         base.camera.setX(base.camera.getX() + x)
@@ -84,22 +84,37 @@ class MyApp(ShowBase):
         lmks3d = np.load(self.lmk3d_path)
         lmks2d = []
         for lmk3d in lmks3d:
-            lmk2d = self.Coord3dIn2d(Point3(lmk3d[0], lmk3d[1], lmk3d[2]))
-            lmk2d = [lmk2d[0], lmk2d[1]]
-            lmks2d.append(lmk2d)
+            lmk2d = self.Coord3dIn2d(self.model, Point3(lmk3d[0], lmk3d[1], lmk3d[2]))
+            x, y = lmk2d[0], lmk2d[1]
+            halfX = base.win.getXSize() / 2
+            halfY = base.win.getYSize() / 2
+            x = x * halfX + halfX
+            y = y * -1 * halfY + halfY
+            lmks2d.append([int(x), int(y)])
 
         print("Sauvegarde des landmarks")
         np.save(self.save_path, lmks2d)
         self.finalizeExit()
         return task.done
 
-    def Coord3dIn2d(self, coord3d):
-        coord2d = Point2()
-        base.camLens.project(coord3d, coord2d)
-        coordInRender2d = Point3(coord2d[0], 0, coord2d[1])
-        coordInAspect2d = aspect2d.getRelativePoint(render2d,
-                                                    coordInRender2d)
-        return coordInAspect2d
+    def Coord3dIn2d(self, nodePath, point=Point3(0, 0, 0)):
+        """ Computes a 3-d point, relative to the indicated node, into a
+        2-d point as seen by the camera.  The range of the returned value
+        is based on the len's current film size and film offset, which is
+        (-1 .. 1) by default. """
+
+        # Convert the point into the camera's coordinate space
+        p3d = base.cam.getRelativePoint(nodePath, point)
+
+        # Ask the lens to project the 3-d point to 2-d.
+        p2d = Point2()
+        if base.camLens.project(p3d, p2d):
+            # Got it!
+            return p2d
+
+        # If project() returns false, it means the point was behind the
+        # lens.
+        return None
 
 
 if __name__ == '__main__':
