@@ -419,3 +419,4 @@ def gen_lst():
         for (folder, sub_folder, files) in os.walk('.'):
             for i in range(0, len(files), 2):
                 f.write(f'{os.path.abspath(files[i])} {os.path.abspath(files[i+1])} 200.100 600.100 200.500 600.500\n')
+    os.chdir('..')

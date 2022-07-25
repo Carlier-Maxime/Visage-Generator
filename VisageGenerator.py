@@ -105,7 +105,7 @@ class VisageGenerator:
                     save_paths += ";"
                 lmks_paths += lmks_path
                 visage_paths += visage_path
-                save_paths += f'output/visage{str(i)}_lmks2d.npy'
+                save_paths += f'output/visage{str(i)}_lmks2d.{config.lmk2d_format}'
             elif config.save_png:
                 pass
         if config.save_lmks2D:

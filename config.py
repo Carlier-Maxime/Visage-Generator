@@ -15,6 +15,13 @@ def str2bool(v):
 parser = argparse.ArgumentParser(description='FLAME model')
 
 parser.add_argument(
+    '--lmk2d_format',
+    type=str,
+    default="npy",
+    help="format used for save lmk2d. (npy and pts is supported)"
+)
+
+parser.add_argument(
     '--texturing',
     type=str2bool,
     default=True,

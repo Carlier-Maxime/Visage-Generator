@@ -94,7 +94,16 @@ class MyApp(ShowBase):
             lmks2d.append([int(x), int(y)])
 
         # save landmarks 2D
-        np.save(self.save_paths[self.ind], lmks2d[17:])
+        save_path = self.save_paths[self.ind]
+        if save_path.endswith('.npy'):
+            np.save(save_path, lmks2d[17:])
+        elif save_path.endswith('.pts'):
+            with open(save_path, 'w')as f:
+                lmks2d = lmks2d[17:]
+                for i in range(len(lmks2d)):
+                    f.write(f'{i+1} {lmks2d[i][0]} {lmks2d[i][1]} False\n')
+        else:
+            log.warning('File format for save 3d landmarks is not supported !')
         self.ind += 1
         if self.ind < len(self.files):
             self.model.removeNode()
