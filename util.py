@@ -411,3 +411,11 @@ def save_obj(filename, vertices, faces, textures=None, uvcoords=None, uvfaces=No
         with open(filename_mtl, 'w') as f:
             f.write('newmtl %s\n' % material_name)
             f.write('map_Kd %s\n' % os.path.basename(filename_texture))
+
+
+def gen_lst():
+    with open('tmp/result.lst', 'w') as f:
+        os.chdir('output')
+        for (folder, sub_folder, files) in os.walk('.'):
+            for i in range(0, len(files), 2):
+                f.write(f'{os.path.abspath(files[i])} {os.path.abspath(files[i+1])} 200.100 600.100 200.500 600.500\n')
