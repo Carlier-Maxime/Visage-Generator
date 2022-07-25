@@ -13,6 +13,12 @@ conditions of use of resources.
 ## Config
 
 Here are the different settings you can change:
+- ```--lmk2d_format``` : format used for save lmk2d. (npy and pts is supported)
+- ```--texturing``` : enable texture
+- ```--save_obj``` : enable save into file obj
+- ```--save_png``` : enable save into file png
+- ```--save_lmks3d``` : enable save landmarks 3D into file npy
+- ```--save_lmks2d``` : enable save landmarks 2D into file npy
 - ```--min_shape_param``` : minimum value of shape param.
 - ```--max_shape_param``` : maximum value of shape param.
 - ```--min_expression_param``` : minimum value of expression param.
