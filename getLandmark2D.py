@@ -1,17 +1,10 @@
 import logging as log
-import os
 import sys
-from datetime import datetime
 
-import cv2
 import numpy as np
 from direct.gui.OnscreenText import OnscreenText
 from direct.showbase.ShowBase import ShowBase
-from direct.showbase.ShowBaseGlobal import render2d, aspect2d
-from panda3d.core import DirectionalLight, CollisionTraverser, \
-    CollisionHandlerQueue, CollisionNode, CollisionRay, GeomNode, loadPrcFile, Point3, Point2, LVecBase2f
-
-import util
+from panda3d.core import DirectionalLight, loadPrcFile, Point3, Point2, LVecBase2f
 
 
 class MyApp(ShowBase):
@@ -61,7 +54,7 @@ class MyApp(ShowBase):
         base.camera.setH(base.camera.getH() + h)
         base.camera.setP(base.camera.getP() + p)
         base.camera.setR(base.camera.getR() + r)
-        base.camLens.setFov(base.camLens.getFov()+fov)
+        base.camLens.setFov(base.camLens.getFov() + fov)
 
     def ShowCamPos(self):
         x = base.camera.getX()
@@ -71,8 +64,10 @@ class MyApp(ShowBase):
         p = base.camera.getP()
         r = base.camera.getR()
         fov = base.camLens.getFov()
-        self.title = OnscreenText(text=str(x) + " : " + str(y) + " : " + str(z) + "\n" + str(h) + " : " + str(p) + " : " + str(r) + " : " + str(fov),
-                                  style=1, fg=(1, 1, 0, 1), pos=(0, 0), scale=0.07)
+        self.title = OnscreenText(
+            text=str(x) + " : " + str(y) + " : " + str(z) + "\n" + str(h) + " : " + str(p) + " : " + str(
+                r) + " : " + str(fov),
+            style=1, fg=(1, 1, 0, 1), pos=(0, 0), scale=0.07)
 
     def HideCamPos(self):
         self.title.destroy()
@@ -98,10 +93,10 @@ class MyApp(ShowBase):
         if save_path.endswith('.npy'):
             np.save(save_path, lmks2d[17:])
         elif save_path.endswith('.pts'):
-            with open(save_path, 'w')as f:
+            with open(save_path, 'w') as f:
                 lmks2d = lmks2d[17:]
                 for i in range(len(lmks2d)):
-                    f.write(f'{i+1} {lmks2d[i][0]} {lmks2d[i][1]} False\n')
+                    f.write(f'{i + 1} {lmks2d[i][0]} {lmks2d[i][1]} False\n')
         else:
             log.warning('File format for save 3d landmarks is not supported !')
         self.ind += 1
@@ -134,10 +129,12 @@ class MyApp(ShowBase):
         # lens.
         return None
 
+
 def run(files, lmks3D_paths, save_paths, screen=False, pyv=""):
     loadPrcFile("etc/Config.prc")
     app = MyApp(files, lmks3D_paths, save_paths, screen, pyv)
     app.run()
+
 
 if __name__ == '__main__':
     loadPrcFile("etc/Config.prc")

@@ -120,7 +120,7 @@ class VisageGenerator:
             self.render.save_obj(path, vertices, texture)
         else:
             mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
-            normals = mesh.vertex_normals
+            normals = mesh.vertex_normals  # generate normals
             with open(path, 'w') as f:
                 f.write(trimesh.exchange.obj.export_obj(mesh, True, False, False))
 
