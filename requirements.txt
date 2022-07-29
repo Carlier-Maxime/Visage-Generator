@@ -8,3 +8,4 @@ smplx
 pickle-mixin
 git+https://github.com/facebookresearch/pytorch3d#egg=pytorch3d
 scikit-image
+panda3d
