@@ -10,8 +10,21 @@ from util import read_index_opti_tri
 
 
 class Viewer(pyrender.Viewer):
-    def __init__(self, vertex, landmark, faces, file_obj_for_color=None, show_joints=False, show_vertices=False,
-                 show_markers=True, other_objects=None):
+    def __init__(self, vertex: list, landmark: list, faces: list, file_obj_for_color: list = None,
+                 show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True,
+                 other_objects: list = None):
+        """
+        Args:
+            vertex (list): array of all vertex
+            landmark (list): array of all landmark
+            faces (list): array of all faces
+            file_obj_for_color (list): array of all path file for 3D object color
+            show_joints (bool): display joints (landmark)
+            show_vertices (bool): display vertices
+            show_markers (bool): display markers
+            other_objects (list): list of all others objects. one object represented by : [vertices, faces]
+                but the triangles may be empty : []
+        """
         config = get_config()
         self._nbFace = config.number_faces
         self._device = config.device
@@ -72,7 +85,15 @@ class Viewer(pyrender.Viewer):
         if show_markers:
             self.show_markers()
 
-    def on_key_press(self, symbol, modifiers):
+    def on_key_press(self, symbol: int, modifiers) -> None:
+        """
+        This function call when key is pressed.
+        Args:
+            symbol (int): int value for key pressed
+            modifiers:
+
+        Returns: None
+        """
         if self._ctrl:  # Ctrl On
             if symbol == 115:  # save markers (S)
                 self.save_marker()
@@ -114,7 +135,11 @@ class Viewer(pyrender.Viewer):
             if symbol == 65366:  # Down Page
                 self.next_marker(1)
 
-    def show_vertices(self):
+    def show_vertices(self) -> None:
+        """
+        enable / disable display vertices
+        Returns: None
+        """
         self.render_lock.acquire()
         if not self._show_vertices:
             self._scene.add_node(self._verticesNode)
@@ -124,7 +149,11 @@ class Viewer(pyrender.Viewer):
             self._show_vertices = False
         self.render_lock.release()
 
-    def show_joints(self):
+    def show_joints(self) -> None:
+        """
+        enable / disable display joints
+        Returns: None
+        """
         self.render_lock.acquire()
         if not self._show_joints:
             self._scene.add_node(self._jointsNode)
@@ -134,7 +163,11 @@ class Viewer(pyrender.Viewer):
             self._show_joints = False
         self.render_lock.release()
 
-    def show_markers(self):
+    def show_markers(self) -> None:
+        """
+        enable / disable display markers
+        Returns: None
+        """
         self.render_lock.acquire()
         if len(self._tfs_markers) <= 0:
             self._show_markers = False
@@ -148,7 +181,14 @@ class Viewer(pyrender.Viewer):
             self._show_markers = False
         self.render_lock.release()
 
-    def set_visage(self, i):
+    def set_visage(self, i) -> None:
+        """
+        Switch visage to the visage provided by index
+        Args:
+            i: index visage
+
+        Returns: None
+        """
         if self._fileObjForColor is not None:
             mesh = pyrender.Mesh.from_trimesh(trimesh.load(self._fileObjForColor[self._index]))
         else:
@@ -158,7 +198,12 @@ class Viewer(pyrender.Viewer):
             mesh = pyrender.Mesh.from_trimesh(tri_mesh)
         self._visage = pyrender.Node("Visage", mesh=mesh)
 
-    def on_close(self):
+    def on_close(self) -> None:
+        """
+        This function call when the app is closed.
+        Switch to the next visage or close
+        Returns: None
+        """
         if self._index < self._nbFace - 1:
             self._index = self._index + 1
             self.render_lock.acquire()
@@ -170,7 +215,11 @@ class Viewer(pyrender.Viewer):
         else:
             pyrender.Viewer.on_close(self)
 
-    def edit_markers(self):
+    def edit_markers(self) -> None:
+        """
+        Enable / disable edit markers
+        Returns: None
+        """
         if not self._edit_markers:
             if len(self._directionalMatrix) == 0:
                 self._directionalMatrix = np.load("directionalMatrix.npy")
@@ -188,7 +237,14 @@ class Viewer(pyrender.Viewer):
             self._edit_markers = False
             self._message_text = 'Disable edit markers'
 
-    def next_marker(self, direction):
+    def next_marker(self, direction: int) -> None:
+        """
+        Switch to the next marker in the direction provided
+        Args:
+            direction (int): index direction
+
+        Returns: None
+        """
         i = self._directionalMatrix[self._slcIndex][direction]
         if i == -1:
             return
@@ -198,7 +254,11 @@ class Viewer(pyrender.Viewer):
         tfs[:3, 3] = vert
         self._scene.set_pose(self._selectNode, tfs)
 
-    def update_tfs(self):
+    def update_tfs(self) -> None:
+        """
+        Update all position for all points based on face
+        Returns: None
+        """
         if self._show_vertices:
             self._scene.remove_node(self._verticesNode)
             self._verticesNode, self._tfs_vertices = self.gen_vertices_node()
@@ -222,6 +282,10 @@ class Viewer(pyrender.Viewer):
             self._scene.set_pose(self._selectNode, tfs)
 
     def gen_vertices_node(self):
+        """
+        Generate vertices Node and return result and tfs
+        Returns: vertices node, tfs
+        """
         vertices = self._vertex[self._index]
         sm = trimesh.creation.uv_sphere(radius=0.0019)
         sm.visual.vertex_colors = [0.7, 0.1, 0.1, 1.0]
@@ -231,6 +295,10 @@ class Viewer(pyrender.Viewer):
         return pyrender.Node("vertices", mesh=vertices_pcl), tfs
 
     def gen_joints_node(self):
+        """
+        Generate joints Node and return result and tfs
+        Returns: joints node, tfs
+        """
         joints = self._landmark[self._index]
         sm = trimesh.creation.uv_sphere(radius=0.0019)
         sm.visual.vertex_colors = [0.0, 0.5, 0.0, 1.0]
@@ -240,6 +308,10 @@ class Viewer(pyrender.Viewer):
         return pyrender.Node("joints", mesh=joints_pcl), tfs
 
     def gen_markers_node(self):
+        """
+        Generate markers Node and return result and tfs
+        Returns: markers node, tfs
+        """
         sm = trimesh.creation.uv_sphere(radius=0.0005)
         sm.visual.vertex_colors = [0.8, 0.0, 0.5, 1.0]
         t = []
@@ -255,21 +327,39 @@ class Viewer(pyrender.Viewer):
             markers_pcl = pyrender.Mesh.from_trimesh(sm)
         return pyrender.Node("markers", mesh=markers_pcl), tfs_markers
 
-    def add_marker(self):
+    def add_marker(self) -> None:
+        """
+        Add marker into all markers.
+        The marker added is the selected marker
+        Returns: None
+        """
         self._markersIndex = np.append(self._markersIndex, [[self._directionalMatrix[self._slcIndex][0], -1, 0, 0]],
                                        axis=0)
         self.update_marker()
 
-    def save_marker(self):
+    def save_marker(self) -> None:
+        """
+        Save all markers in the numpy file.
+        The program will keep these markers even at the next launch
+        Returns: None
+        """
         np.save("markers.npy", self._markersIndex)
 
     def load_marker(self):
+        """
+        Load marker file (markers.npy), if file not exists return the empty numpy array
+        Returns: array of all markers
+        """
         self._markersIndex = np.array([], int)
         if not exists("markers.npy"):
             return
         return np.load("markers.npy")
 
-    def remove_marker(self):
+    def remove_marker(self) -> None:
+        """
+        Remove selected marker in the list of all markers
+        Returns: None
+        """
         ind = self._directionalMatrix[self._slcIndex][0]
         for i in range(len(self._markersIndex)):
             if self._markersIndex[i][0] == ind:
@@ -278,7 +368,11 @@ class Viewer(pyrender.Viewer):
                 break
         self.update_marker()
 
-    def update_marker(self):
+    def update_marker(self) -> None:
+        """
+        Update marker view and print number of markers
+        Returns: None
+        """
         if self._show_markers:
             self._scene.remove_node(self._markersNode)
         self.gen_markers_node()

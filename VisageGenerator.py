@@ -20,11 +20,21 @@ from renderer import Renderer
 
 
 class VisageGenerator:
-    def __init__(self, min_shape_param=-2, max_shape_param=2,
-                 min_expression_param=-2, max_expression_param=2,
-                 global_pose_param_1=45, global_pose_param_2=45, global_pose_param_3=90,
-                 main_launch=False
-                 ) -> None:
+    def __init__(self, min_shape_param: float = -2, max_shape_param: float = 2,
+                 min_expression_param: float = -2, max_expression_param: float = 2,
+                 global_pose_param_1: float = 45, global_pose_param_2: float = 45, global_pose_param_3: float = 90,
+                 main_launch: bool = False) -> None:
+        """
+        Args:
+            min_shape_param (float): minimum value for shape param
+            max_shape_param (float): maximum value for shape param
+            min_expression_param (float): minimum value for expression param
+            max_expression_param (float): maximum value for expression param
+            global_pose_param_1 (float): value of first global pose param
+            global_pose_param_2 (float): value of second global pose param
+            global_pose_param_3 (float): value of third global pose param
+            main_launch (bool): True if the launch file in command line ('python ./VisageGenerator.py')
+        """
         print("Load config")
         config = get_config()
         nb_face = config.number_faces
@@ -115,7 +125,18 @@ class VisageGenerator:
         self._vertex = vertex
         self._faces = flame_layer.faces
 
-    def save_obj(self, path, vertices, faces, texture=None):
+    def save_obj(self, path: str, vertices: list, faces: list, texture=None) -> None:
+        """
+        Save 3D object to the obj format
+        Args:
+            path (str): save path
+            vertices (list): array of all vertex
+            faces (list): array of all face
+            texture: texture
+
+        Returns: None
+
+        """
         if texture is not None:
             self.render.save_obj(path, vertices, texture)
         else:
@@ -124,16 +145,34 @@ class VisageGenerator:
             with open(path, 'w') as f:
                 f.write(trimesh.exchange.obj.export_obj(mesh, True, False, False))
 
-    def view(self, other_objects=None):
+    def view(self, other_objects=None) -> None:
+        """
+        View visage generate
+        Args:
+            other_objects: other object to display with faces
+
+        Returns: None
+        """
         file_obj = []
         for i in range(self._nbFace):
             file_obj.append('output/visage' + str(i) + '.obj')
         Viewer(self._vertex, self._landmark, self._faces, file_obj, other_objects=other_objects)
 
-    def get_vertices(self, i):
+    def get_vertices(self, i: int) -> list:
+        """
+        Obtain vertices for face
+        Args:
+            i: index of face
+
+        Returns: vertices
+        """
         return self._vertex[i]
 
-    def get_faces(self):
+    def get_faces(self) -> list:
+        """
+        Obtain faces
+        Returns: array of all faces
+        """
         return self._faces
 
 
