@@ -1,13 +1,9 @@
 /nogit
-/model/*.pkl
-/model/*.npy
-/model/*.ply
-/model/*.npz
+/model
+!model/readme.md
 __pycache__
-*.npy
-!directionalMatrix.npy
-!markers.npy
 /output
 /venv
 /.idea
 /tmp
+/pytorch3d
