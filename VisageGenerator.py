@@ -20,12 +20,15 @@ from renderer import Renderer
 
 
 class VisageGenerator:
-    def __init__(self, min_shape_param: float = -2, max_shape_param: float = 2,
+    def __init__(self, nb_face: int = 1, device: str = "cpu", min_shape_param: float = -2, max_shape_param: float = 2,
                  min_expression_param: float = -2, max_expression_param: float = 2,
                  global_pose_param_1: float = 45, global_pose_param_2: float = 45, global_pose_param_3: float = 90,
-                 main_launch: bool = False) -> None:
+                 texturing: bool = True, save_lmks2D: bool = False, save_lmks3D: bool = False, save_png: bool = False,
+                 save_obj: bool = True, lmk2d_format: str = "npy") -> None:
         """
         Args:
+            nb_face (int): number of faces to generate
+            device (str): device used ('cpu' or 'cuda')
             min_shape_param (float): minimum value for shape param
             max_shape_param (float): maximum value for shape param
             min_expression_param (float): minimum value for expression param
@@ -33,21 +36,16 @@ class VisageGenerator:
             global_pose_param_1 (float): value of first global pose param
             global_pose_param_2 (float): value of second global pose param
             global_pose_param_3 (float): value of third global pose param
-            main_launch (bool): True if the launch file in command line ('python ./VisageGenerator.py')
+            texturing (bool): enable texturing
+            save_lmks2D (bool): save 2D landmarks
+            save_lmks3D (bool): save 3D landmarks
+            save_png (bool): save an image of the 3D face preview
+            save_obj (bool): save 3D object to the file
+            lmk2d_format (str): format used for save 2D landmark
         """
         print("Load config")
         config = get_config()
-        nb_face = config.number_faces
         self._nbFace = nb_face
-        device = config.device
-        if main_launch:
-            min_shape_param = config.min_shape_param
-            max_shape_param = config.max_shape_param
-            min_expression_param = config.min_expression_param
-            max_expression_param = config.max_expression_param
-            global_pose_param_1 = config.global_pose_param_1
-            global_pose_param_2 = config.global_pose_param_2
-            global_pose_param_3 = config.global_pose_param_3
         radian = np.pi / 180.0
 
         flame_layer = FLAME(config)
@@ -74,7 +72,7 @@ class VisageGenerator:
             vertex, landmark = flame_layer(shape_params, expression_params, pose_params, neck_pose, eye_pose)
 
         texture = None
-        if config.texturing:
+        if texturing:
             print('Texturing')
             tex_space = np.load("model/FLAME_texture.npz")
             texture_mean = tex_space['mean'].reshape(1, -1)
@@ -94,18 +92,18 @@ class VisageGenerator:
         visage_paths = ""
         save_paths = ""
         for i in range(nb_face):
-            if config.save_obj:
+            if save_obj:
                 tex = None if texture is None else texture[i]
                 self.save_obj(f'output/visage{str(i)}.obj', vertex[i], flame_layer.faces, tex)
-            if config.save_lmks3D:
+            if save_lmks3D:
                 np.save(f'output/visage{str(i)}.npy', landmark[i])
-            if config.save_lmks2D:
+            if save_lmks2D:
                 lmks_path = f'output/visage{str(i)}.npy'
-                if not config.save_lmks3D:
+                if not save_lmks3D:
                     np.save(f'tmp/visage{str(i)}.npy', landmark[i])
                     lmks_path = f'tmp/visage{str(i)}.npy'
                 visage_path = f'output/visage{str(i)}.obj'
-                if not config.save_obj:
+                if not save_obj:
                     visage_path = f'tmp/visage{str(i)}.obj'
                     tex = None if texture is None else texture[i]
                     self.save_obj(visage_path, vertex[i], flame_layer.faces, tex)
@@ -115,11 +113,11 @@ class VisageGenerator:
                     save_paths += ";"
                 lmks_paths += lmks_path
                 visage_paths += visage_path
-                save_paths += f'output/visage{str(i)}_lmks2d.{config.lmk2d_format}'
-            elif config.save_png:
+                save_paths += f'output/visage{str(i)}_lmks2d.{lmk2d_format}'
+            elif save_png:
                 pass
-        if config.save_lmks2D:
-            getLandmark2D.run(visage_paths, lmks_paths, save_paths, config.save_png)
+        if save_lmks2D:
+            getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
 
         self._landmark = landmark
         self._vertex = vertex
@@ -177,4 +175,7 @@ class VisageGenerator:
 
 
 if __name__ == "__main__":
-    VisageGenerator(main_launch=True)
+    cfg = get_config()
+    VisageGenerator(cfg.number_faces, cfg.device, cfg.min_shape_param, cfg.max_shape_param, cfg.min_expression_param,
+                    cfg.max_expression_param, cfg.global_pose_param_1, cfg.global_pose_param_2, cfg.global_pose_param_3,
+                    cfg.texturing, cfg.save_lmks2D, cfg.save_lmks3D, cfg.save_png, cfg.save_obj, cfg.lmk2d_format)
