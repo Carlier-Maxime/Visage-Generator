@@ -143,7 +143,7 @@ class MyApp(ShowBase):
             self.model = self.loader.load_model(self.files[self.ind])
             self.model.reparentTo(render)
             self.model.setLight(self.dlnp)
-            taskMgr.doMethodLater(0, self.screenshotTask, 'screenshot')
+            taskMgr.doMethodLater(0, self.MainTask, 'screenshot')
             return task.done
         self.finalizeExit()
         return task.done
