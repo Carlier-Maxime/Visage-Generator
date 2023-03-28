@@ -77,8 +77,8 @@ class VisageGenerator:
             tex_space = np.load("model/FLAME_texture.npz")
             texture_mean = tex_space['mean'].reshape(1, -1)
             texture_basis = tex_space['tex_dir'].reshape(-1, 200)
-            texture_mean = torch.from_numpy(texture_mean).float()[None, ...]
-            texture_basis = torch.from_numpy(texture_basis[:, :50]).float()[None, ...]
+            texture_mean = torch.from_numpy(texture_mean).float()[None, ...].to(device)
+            texture_basis = torch.from_numpy(texture_basis[:, :50]).float()[None, ...].to(device)
             texture = texture_mean + (texture_basis * texture_params[:, None, :]).sum(-1)
             texture = texture.reshape(texture_params.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
             texture = texture[:, [2, 1, 0], :, :]
