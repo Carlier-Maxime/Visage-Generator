@@ -290,7 +290,7 @@ class Viewer(pyrender.Viewer):
         sm = trimesh.creation.uv_sphere(radius=0.0019)
         sm.visual.vertex_colors = [0.7, 0.1, 0.1, 1.0]
         tfs = np.tile(np.eye(4), (len(vertices), 1, 1))
-        tfs[:, :3, 3] = vertices
+        tfs[:, :3, 3] = vertices.cpu().numpy()
         vertices_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
         return pyrender.Node("vertices", mesh=vertices_pcl), tfs
 
@@ -303,7 +303,7 @@ class Viewer(pyrender.Viewer):
         sm = trimesh.creation.uv_sphere(radius=0.0019)
         sm.visual.vertex_colors = [0.0, 0.5, 0.0, 1.0]
         tfs = np.tile(np.eye(4), (len(joints), 1, 1))
-        tfs[:, :3, 3] = joints
+        tfs[:, :3, 3] = joints.cpu().numpy()
         joints_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
         return pyrender.Node("joints", mesh=joints_pcl), tfs
 
@@ -312,8 +312,8 @@ class Viewer(pyrender.Viewer):
         Generate markers Node and return result and tfs
         Returns: markers node, tfs
         """
-        sm = trimesh.creation.uv_sphere(radius=0.0005)
-        sm.visual.vertex_colors = [0.8, 0.0, 0.5, 1.0]
+        sm = trimesh.creation.uv_sphere(radius=0.0015)
+        sm.visual.vertex_colors = [0.0, 1.0, 0.0, 1.0]
         t = []
         for marker in self._markersIndex:
             t.append(read_index_opti_tri(self._vertex[self._index], self._faces, marker))

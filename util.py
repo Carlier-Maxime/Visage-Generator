@@ -376,10 +376,11 @@ def read_index_opti_tri(vertices: list, faces: list, index_opti_tri: list) -> li
 
     Returns: coordinate point for index provided
     """
-    p = vertices[int(index_opti_tri[0])]
+    p = vertices[int(index_opti_tri[0])].cpu().numpy()
     if index_opti_tri[1] != -1:
-        tri = np.array(vertices)[faces[int(index_opti_tri[1])]]
-        vectors = np.array(get_vector_for_point([tri], p)[0])
+        tri = np.array(vertices.cpu().numpy())[faces[int(index_opti_tri[1])]]
+        tmp = get_vector_for_point([tri], p)[0]
+        vectors = np.array(torch.tensor(tmp).cpu())
         p = p + vectors[0] * index_opti_tri[2]
         p = p + vectors[1] * index_opti_tri[3]
     return p

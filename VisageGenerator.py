@@ -176,6 +176,8 @@ class VisageGenerator:
 
 if __name__ == "__main__":
     cfg = get_config()
-    VisageGenerator(cfg.number_faces, cfg.device, cfg.min_shape_param, cfg.max_shape_param, cfg.min_expression_param,
+    vg = VisageGenerator(cfg.number_faces, cfg.device, cfg.min_shape_param, cfg.max_shape_param, cfg.min_expression_param,
                     cfg.max_expression_param, cfg.global_pose_param_1, cfg.global_pose_param_2, cfg.global_pose_param_3,
                     cfg.texturing, cfg.save_lmks2D, cfg.save_lmks3D, cfg.save_png, cfg.save_obj, cfg.lmk2d_format)
+    if bool(int(input("open the view ? (0|1) : "))):
+        vg.view()
