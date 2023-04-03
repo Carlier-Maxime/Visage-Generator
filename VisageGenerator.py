@@ -55,7 +55,7 @@ class VisageGenerator():
         if texture is not None:
             self.render.save_obj(path, vertices, texture)
         else:
-            mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+            mesh = trimesh.Trimesh(vertices=vertices.cpu(), faces=faces)
             normals = mesh.vertex_normals  # generate normals
             with open(path, 'w') as f:
                 f.write(trimesh.exchange.obj.export_obj(mesh, True, False, False))
@@ -144,24 +144,23 @@ class VisageGenerator():
         visage_paths = ""
         save_paths = ""
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
-            self._vertex[i].to(self.device)
-            self._landmark[i].to(self.device)
-            self._textures[i].to(self.device)
+            vertices = self._vertex[i].to(self.device)
+            lmk = self._landmark[i].to(self.device)
+            if self._textures is None: texture=None
+            else: texture = self._textures[i].to(self.device)
             if save_obj:
-                tex = None if self._textures is None else self._textures[i]
-                self.save_obj(f'output/visage{str(i)}.obj', self._vertex[i], self._faces, tex)
+                self.save_obj(f'output/visage{str(i)}.obj', vertices, self._faces, texture)
             if save_lmks3D:
-                np.save(f'output/visage{str(i)}.npy', self._landmark[i])
+                np.save(f'output/visage{str(i)}.npy', lmk)
             if save_lmks2D:
                 lmks_path = f'output/visage{str(i)}.npy'
                 if not save_lmks3D:
-                    np.save(f'tmp/visage{str(i)}.npy', self._landmark[i])
+                    np.save(f'tmp/visage{str(i)}.npy', lmk)
                     lmks_path = f'tmp/visage{str(i)}.npy'
                 visage_path = f'output/visage{str(i)}.obj'
                 if not save_obj:
                     visage_path = f'tmp/visage{str(i)}.obj'
-                    tex = None if self._textures is None else self._textures[i]
-                    self.save_obj(visage_path, self._vertex[i], self._faces, tex)
+                    self.save_obj(visage_path, lmk, self._faces, texture)
                 if i != 0:
                     lmks_paths += ";"
                     visage_paths += ";"
@@ -171,9 +170,6 @@ class VisageGenerator():
                 save_paths += f'output/visage{str(i)}_lmks2d.{lmk2D_format}'
             elif save_png:
                 pass
-            self._vertex[i].cpu()
-            self._landmark[i].cpu()
-            self._textures[i].cpu()
         if save_lmks2D:
             getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
 
