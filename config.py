@@ -1,5 +1,5 @@
 class Config:
-    nb_faces=10000
+    nb_faces=1000
     lmk2D_format="npy"
     texturing=True
     save_obj=False
@@ -25,3 +25,4 @@ class Config:
     dynamic_landmark_embedding_path='./model/flame_dynamic_embedding.npy'
     optimize_eyeballpose=True
     optimize_neckpose=True
+    texture_batch_size=16
