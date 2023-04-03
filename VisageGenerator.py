@@ -19,112 +19,25 @@ from Viewer import Viewer
 from renderer import Renderer
 from config import Config
 
-class VisageGenerator:
-    def __init__(self, nb_face:int = 1, device: str = "cpu", min_shape_param: float = -2, max_shape_param: float = 2,
-                 min_expression_param: float = -2, max_expression_param: float = 2,
-                 global_pose_param_1: float = 45, global_pose_param_2: float = 45, global_pose_param_3: float = 90,
-                 texturing: bool = True, save_lmks2D: bool = False, save_lmks3D: bool = False, save_png: bool = False,
-                 save_obj: bool = True, lmk2d_format: str = "npy", flame_model_path=Config.flame_model_path, batch_size=Config.batch_size,
-                 use_face_contour=Config.use_face_contour, use_3D_translation=Config.use_3D_translation, shape_params=Config.shape_params, expression_params=Config.expression_params, 
-                 static_landmark_embedding_path=Config.static_landmark_embedding_path, dynamic_landmark_embedding_path=Config.dynamic_landmark_embedding_path,
-                 optimize_eyeballpose=Config.optimize_eyeballpose, optimize_neckpose=Config.optimize_neckpose
+class VisageGenerator():
+    def __init__(self, device:str = Config.device, min_shape_param:float = Config.min_shape_param, max_shape_param:float = Config.max_shape_param,
+                 min_expression_param:float = Config.min_expression_param, max_expression_param:float = Config.max_expression_param,
+                 global_pose_param1:float = Config.global_pose_param1, global_pose_param2:float = Config.global_pose_param2, global_pose_param3:float = Config.global_pose_param3,
+                 flame_model_path=Config.flame_model_path, batch_size=Config.batch_size, use_face_contour=Config.use_face_contour,
+                 use_3D_translation=Config.use_3D_translation, shape_params=Config.shape_params, expression_params=Config.expression_params, 
+                 static_landmark_embedding_path=Config.static_landmark_embedding_path, dynamic_landmark_embedding_path=Config.dynamic_landmark_embedding_path
         ):
-        """
-        Args:
-            nb_face (int): number of faces to generate
-            device (str): device used ('cpu' or 'cuda')
-            min_shape_param (float): minimum value for shape param
-            max_shape_param (float): maximum value for shape param
-            min_expression_param (float): minimum value for expression param
-            max_expression_param (float): maximum value for expression param
-            global_pose_param_1 (float): value of first global pose param
-            global_pose_param_2 (float): value of second global pose param
-            global_pose_param_3 (float): value of third global pose param
-            texturing (bool): enable texturing
-            save_lmks2D (bool): save 2D landmarks
-            save_lmks3D (bool): save 3D landmarks
-            save_png (bool): save an image of the 3D face preview
-            save_obj (bool): save 3D object to the file
-            lmk2d_format (str): format used for save 2D landmark
-        """
-        print("Load config")
-        self._nbFace = nb_face
-        radian = np.pi / 180.0
-
-        flame_layer = FLAME(flame_model_path, nb_face, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path)
+        self.flame_layer = FLAME(flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path).to(device)
         self.render = Renderer(512, "visage.obj", 512).to(device)
-
-        print('Generate random parameters')
-        shape_params = torch.tensor(np.random.uniform(min_shape_param, max_shape_param, [nb_face, 300]),
-                                    dtype=torch.float32).to(device)
-        pose_params_numpy = np.array(
-            [[global_pose_param_1 * radian, global_pose_param_2 * radian, global_pose_param_3 * radian, 0.0, 0.0, 0.0]]
-            * nb_face,
-            dtype=np.float32)
-        pose_params = torch.tensor(pose_params_numpy, dtype=torch.float32).to(device)
-        expression_params = torch.tensor(np.random.uniform(min_expression_param, max_expression_param, [nb_face, 100]),
-                                         dtype=torch.float32).to(device)
-        texture_params = torch.tensor(np.random.uniform(-2, 2, [nb_face, 50])).float().to(device)
-
-        print("Create Visage")
-        flame_layer.to(device)
-        vertex, landmark = flame_layer(shape_params, expression_params, pose_params)
-        if optimize_eyeballpose and optimize_neckpose:
-            neck_pose = torch.zeros(nb_face, 3).to(device)
-            eye_pose = torch.zeros(nb_face, 6).to(device)
-            vertex, landmark = flame_layer(shape_params, expression_params, pose_params, neck_pose, eye_pose)
-
-        texture = None
-        if texturing:
-            print('Texturing')
-            tex_space = np.load("model/FLAME_texture.npz")
-            texture_mean = tex_space['mean'].reshape(1, -1)
-            texture_basis = tex_space['tex_dir'].reshape(-1, 200)
-            texture_mean = torch.from_numpy(texture_mean).float()[None, ...].to(device)
-            texture_basis = torch.from_numpy(texture_basis[:, :50]).float()[None, ...].to(device)
-            texture = texture_mean + (texture_basis * texture_params[:, None, :]).sum(-1)
-            texture = texture.reshape(texture_params.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
-            texture = texture[:, [2, 1, 0], :, :]
-            texture = texture / 255
-
-        print("Save")
-        for folder in ['output', 'tmp']:
-            if not os.path.isdir(folder):
-                os.mkdir(folder)
-        lmks_paths = ""
-        visage_paths = ""
-        save_paths = ""
-        for i in range(nb_face):
-            if save_obj:
-                tex = None if texture is None else texture[i]
-                self.save_obj(f'output/visage{str(i)}.obj', vertex[i], flame_layer.faces, tex)
-            if save_lmks3D:
-                np.save(f'output/visage{str(i)}.npy', landmark[i])
-            if save_lmks2D:
-                lmks_path = f'output/visage{str(i)}.npy'
-                if not save_lmks3D:
-                    np.save(f'tmp/visage{str(i)}.npy', landmark[i])
-                    lmks_path = f'tmp/visage{str(i)}.npy'
-                visage_path = f'output/visage{str(i)}.obj'
-                if not save_obj:
-                    visage_path = f'tmp/visage{str(i)}.obj'
-                    tex = None if texture is None else texture[i]
-                    self.save_obj(visage_path, vertex[i], flame_layer.faces, tex)
-                if i != 0:
-                    lmks_paths += ";"
-                    visage_paths += ";"
-                    save_paths += ";"
-                lmks_paths += lmks_path
-                visage_paths += visage_path
-                save_paths += f'output/visage{str(i)}_lmks2d.{lmk2d_format}'
-            elif save_png:
-                pass
-        if save_lmks2D:
-            getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
-
-        self._landmark = landmark
-        self._vertex = vertex
-        self._faces = flame_layer.faces
+        self.device = device
+        self.min_shape_param = min_shape_param
+        self.max_shape_param = max_shape_param
+        self.min_expression_param = min_expression_param
+        self.max_expression_param = max_expression_param
+        self.global_pose_param1 = global_pose_param1
+        self.global_pose_param2 = global_pose_param2
+        self.global_pose_param3 = global_pose_param3
+        self.batch_size = batch_size
 
     def save_obj(self, path: str, vertices: list, faces: list, texture=None) -> None:
         """
@@ -175,6 +88,79 @@ class VisageGenerator:
         Returns: array of all faces
         """
         return self._faces
+
+    def generate(self, nb_faces:int = Config.nb_faces, texturing:bool = Config.texturing, optimize_eyeballpose=Config.optimize_eyeballpose, optimize_neckpose=Config.optimize_neckpose):
+        print('Generate random parameters')
+        radian = np.pi / 180.0
+        shape_params = torch.tensor(np.random.uniform(self.min_shape_param, self.max_shape_param, [nb_faces, 300]),dtype=torch.float32).to(self.device)
+        pose_params_numpy = np.array(
+            [[self.global_pose_param1 * radian, self.global_pose_param2 * radian, self.global_pose_param3 * radian, 0.0, 0.0, 0.0]] * nb_faces,
+            dtype=np.float32)
+        pose_params = torch.tensor(pose_params_numpy, dtype=torch.float32).to(self.device)
+        expression_params = torch.tensor(np.random.uniform(self.min_expression_param, self.max_expression_param, [nb_faces, 100]),dtype=torch.float32).to(self.device)
+        texture_params = torch.tensor(np.random.uniform(-2, 2, [nb_faces, 50])).float().to(self.device)
+
+        print("Create Visage")
+        if optimize_eyeballpose and optimize_neckpose:
+            neck_pose = torch.zeros(nb_faces, 3).to(self.device)
+            eye_pose = torch.zeros(nb_faces, 6).to(self.device)
+            vertex, landmark = self.flame_layer(shape_params, expression_params, pose_params, neck_pose, eye_pose)
+        else: vertex, landmark = self.flame_layer(shape_params, expression_params, pose_params)
+
+        texture = None
+        if texturing:
+            print('Texturing')
+            tex_space = np.load("model/FLAME_texture.npz")
+            texture_mean = tex_space['mean'].reshape(1, -1)
+            texture_basis = tex_space['tex_dir'].reshape(-1, 200)
+            texture_mean = torch.from_numpy(texture_mean).float()[None, ...].to(self.device)
+            texture_basis = torch.from_numpy(texture_basis[:, :50]).float()[None, ...].to(self.device)
+            texture = texture_mean + (texture_basis * texture_params[:, None, :]).sum(-1)
+            texture = texture.reshape(texture_params.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
+            texture = texture[:, [2, 1, 0], :, :]
+            texture = texture / 255
+
+        self._landmark = landmark
+        self._vertex = vertex
+        self._faces = self.flame_layer.faces
+        self._texture = texture
+
+    def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D:bool=Config.save_lmks3D, lmk2D_format:str=Config.lmk2D_format):
+        print("Save")
+        for folder in ['output', 'tmp']:
+            if not os.path.isdir(folder):
+                os.mkdir(folder)
+        lmks_paths = ""
+        visage_paths = ""
+        save_paths = ""
+        for i in range(len(self._vertex)):
+            if save_obj:
+                tex = None if self._texture is None else self._texture[i]
+                self.save_obj(f'output/visage{str(i)}.obj', self._vertex[i], self._faces, tex)
+            if save_lmks3D:
+                np.save(f'output/visage{str(i)}.npy', self._landmark[i])
+            if save_lmks2D:
+                lmks_path = f'output/visage{str(i)}.npy'
+                if not save_lmks3D:
+                    np.save(f'tmp/visage{str(i)}.npy', self._landmark[i])
+                    lmks_path = f'tmp/visage{str(i)}.npy'
+                visage_path = f'output/visage{str(i)}.obj'
+                if not save_obj:
+                    visage_path = f'tmp/visage{str(i)}.obj'
+                    tex = None if self._texture is None else self._texture[i]
+                    self.save_obj(visage_path, self._vertex[i], self._faces, tex)
+                if i != 0:
+                    lmks_paths += ";"
+                    visage_paths += ";"
+                    save_paths += ";"
+                lmks_paths += lmks_path
+                visage_paths += visage_path
+                save_paths += f'output/visage{str(i)}_lmks2d.{lmk2D_format}'
+            elif save_png:
+                pass
+        if save_lmks2D:
+            getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
+
 
 @click.command()
 @click.option('--nb-faces', type=int, default=Config.nb_faces, help='number faces generate')
@@ -231,7 +217,9 @@ def main(
     optimize_eyeballpose,
     optimize_neckpose
 ):
-    vg = VisageGenerator(nb_faces, device, min_shape_param, max_shape_param, min_expression_param, max_expression_param, global_pose_param1, global_pose_param2, global_pose_param3, texturing, save_lmks2D, save_lmks3D, save_png, save_obj, lmk2d_format, flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path, optimize_eyeballpose, optimize_neckpose)
+    vg = VisageGenerator(device, min_shape_param, max_shape_param, min_expression_param, max_expression_param, global_pose_param1, global_pose_param2, global_pose_param3, flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path)
+    vg.generate(nb_faces, texturing, optimize_eyeballpose, optimize_neckpose)
+    vg.save(save_obj, save_png, save_lmks2D, save_lmks3D, lmk2d_format)
     if view:
         vg.view()
 
