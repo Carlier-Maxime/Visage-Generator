@@ -18,6 +18,7 @@ from FLAME import FLAME
 from Viewer import Viewer
 from renderer import Renderer
 from config import Config
+from tqdm import trange
 
 class VisageGenerator():
     def __init__(self, device:str = Config.device, min_shape_param:float = Config.min_shape_param, max_shape_param:float = Config.max_shape_param,
@@ -89,7 +90,7 @@ class VisageGenerator():
         """
         return self._faces
 
-    def generate(self, nb_faces:int = Config.nb_faces, texturing:bool = Config.texturing, optimize_eyeballpose=Config.optimize_eyeballpose, optimize_neckpose=Config.optimize_neckpose):
+    def genParams(self, nb_faces:int = Config.nb_faces, texturing:bool = Config.texturing):
         print('Generate random parameters')
         radian = np.pi / 180.0
         shape_params = torch.tensor(np.random.uniform(self.min_shape_param, self.max_shape_param, [nb_faces, 300]),dtype=torch.float32).to(self.device)
@@ -98,32 +99,43 @@ class VisageGenerator():
             dtype=np.float32)
         pose_params = torch.tensor(pose_params_numpy, dtype=torch.float32).to(self.device)
         expression_params = torch.tensor(np.random.uniform(self.min_expression_param, self.max_expression_param, [nb_faces, 100]),dtype=torch.float32).to(self.device)
-        texture_params = torch.tensor(np.random.uniform(-2, 2, [nb_faces, 50])).float().to(self.device)
+        if texturing: texture_params = torch.tensor(np.random.uniform(-2, 2, [nb_faces, 50])).float().to(self.device)
+        else: texture_params = None
+        return shape_params, pose_params, expression_params, texture_params
 
-        print("Create Visage")
-        if optimize_eyeballpose and optimize_neckpose:
-            neck_pose = torch.zeros(nb_faces, 3).to(self.device)
-            eye_pose = torch.zeros(nb_faces, 6).to(self.device)
-            vertex, landmark = self.flame_layer(shape_params, expression_params, pose_params, neck_pose, eye_pose)
-        else: vertex, landmark = self.flame_layer(shape_params, expression_params, pose_params)
+    def generate(self, nb_faces:int = Config.nb_faces, texturing:bool = Config.texturing, optimize_eyeballpose=Config.optimize_eyeballpose, optimize_neckpose=Config.optimize_neckpose):
+        shape_params, pose_params, expression_params, texture_params = self.genParams(nb_faces, texturing)
 
-        texture = None
+        self._vertex = None
+        self._landmark = None
+        for i in trange(nb_faces//self.batch_size, desc='generate visages', unit='step'):
+            if optimize_eyeballpose and optimize_neckpose:
+                neck_pose = torch.zeros(self.batch_size, 3).to(self.device)
+                eye_pose = torch.zeros(self.batch_size, 6).to(self.device)
+                vertices, lmks = self.flame_layer(shape_params[i*self.batch_size:(i+1)*self.batch_size], expression_params[i*self.batch_size:(i+1)*self.batch_size], pose_params[i*self.batch_size:(i+1)*self.batch_size], neck_pose, eye_pose)
+            else: vertices, lmks = self.flame_layer(shape_params[i*self.batch_size:(i+1)*self.batch_size], expression_params[i*self.batch_size:(i+1)*self.batch_size], pose_params[i*self.batch_size:(i+1)*self.batch_size])
+            if self._vertex is None: self._vertex = vertices
+            else: self._vertex = torch.cat((self._vertex, vertices))
+            if self._landmark is None: self._landmark = lmks
+            else: self._landmark = torch.cat((self._landmark, lmks))
+        self._faces = self.flame_layer.faces
+
+        self._textures = None
         if texturing:
-            print('Texturing')
+            print('Load textures')
             tex_space = np.load("model/FLAME_texture.npz")
             texture_mean = tex_space['mean'].reshape(1, -1)
             texture_basis = tex_space['tex_dir'].reshape(-1, 200)
             texture_mean = torch.from_numpy(texture_mean).float()[None, ...].to(self.device)
             texture_basis = torch.from_numpy(texture_basis[:, :50]).float()[None, ...].to(self.device)
-            texture = texture_mean + (texture_basis * texture_params[:, None, :]).sum(-1)
-            texture = texture.reshape(texture_params.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
-            texture = texture[:, [2, 1, 0], :, :]
-            texture = texture / 255
+            for i in trange(nb_faces//self.batch_size, desc='texturing', unit='step'):
+                texture = texture_mean + (texture_basis * texture_params[i*self.batch_size:(i+1)*self.batch_size][:, None, :]).sum(-1)
+                texture = texture.reshape(self.batch_size, 512, 512, 3).permute(0, 3, 1, 2)
+                texture = texture[:, [2, 1, 0], :, :]
+                texture = texture / 255
+                if self._textures is None: self._textures = texture
+                else: self._textures = torch.cat((self._textures, texture))
 
-        self._landmark = landmark
-        self._vertex = vertex
-        self._faces = self.flame_layer.faces
-        self._texture = texture
 
     def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D:bool=Config.save_lmks3D, lmk2D_format:str=Config.lmk2D_format):
         print("Save")
@@ -135,7 +147,7 @@ class VisageGenerator():
         save_paths = ""
         for i in range(len(self._vertex)):
             if save_obj:
-                tex = None if self._texture is None else self._texture[i]
+                tex = None if self._textures is None else self._textures[i]
                 self.save_obj(f'output/visage{str(i)}.obj', self._vertex[i], self._faces, tex)
             if save_lmks3D:
                 np.save(f'output/visage{str(i)}.npy', self._landmark[i])
@@ -147,7 +159,7 @@ class VisageGenerator():
                 visage_path = f'output/visage{str(i)}.obj'
                 if not save_obj:
                     visage_path = f'tmp/visage{str(i)}.obj'
-                    tex = None if self._texture is None else self._texture[i]
+                    tex = None if self._textures is None else self._textures[i]
                     self.save_obj(visage_path, self._vertex[i], self._faces, tex)
                 if i != 0:
                     lmks_paths += ";"
