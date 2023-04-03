@@ -5,7 +5,6 @@ import pyrender
 import torch
 import trimesh
 
-from config import get_config
 from util import read_index_opti_tri
 
 

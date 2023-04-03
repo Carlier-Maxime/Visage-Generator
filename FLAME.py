@@ -40,15 +40,15 @@ class FLAME(nn.Module):
     which outputs the a mesh and 3D facial landmarks
     """
 
-    def __init__(self, config):
+    def __init__(self, flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path):
         super(FLAME, self).__init__()
         print("creating the FLAME Decoder")
-        with open(config.flame_model_path, 'rb') as f:
+        with open(flame_model_path, 'rb') as f:
             self.flame_model = Struct(**pickle.load(f, encoding='latin1'))
         self.NECK_IDX = 1
-        self.batch_size = config.number_faces
+        self.batch_size = batch_size
         self.dtype = torch.float32
-        self.use_face_contour = config.use_face_contour
+        self.use_face_contour = use_face_contour
         self.faces = self.flame_model.f
         self.register_buffer('faces_tensor',
                              to_tensor(to_np(self.faces, dtype=np.int64),
@@ -57,7 +57,7 @@ class FLAME(nn.Module):
         # Fixing remaining Shape betas
         # There are total 300 shape parameters to control FLAME; But one can use the first few parameters to express
         # the shape. For example 100 shape parameters are used for RingNet project 
-        default_shape = torch.zeros([self.batch_size, 300 - config.shape_params],
+        default_shape = torch.zeros([self.batch_size, 300 - shape_params],
                                     dtype=self.dtype, requires_grad=False)
         self.register_parameter('shape_betas', nn.Parameter(default_shape,
                                                             requires_grad=False))
@@ -65,7 +65,7 @@ class FLAME(nn.Module):
         # Fixing remaining expression betas There are total 100 shape expression parameters to control FLAME; But one
         # can use the first few parameters to express the expression. For example 50 expression parameters are used
         # for RingNet project
-        default_exp = torch.zeros([self.batch_size, 100 - config.expression_params],
+        default_exp = torch.zeros([self.batch_size, 100 - expression_params],
                                   dtype=self.dtype, requires_grad=False)
         self.register_parameter('expression_betas', nn.Parameter(default_exp,
                                                                  requires_grad=False))
@@ -83,7 +83,7 @@ class FLAME(nn.Module):
 
         # Fixing 3D translation since we use translation in the image plane
 
-        self.use_3D_translation = config.use_3D_translation
+        self.use_3D_translation = use_3D_translation
 
         default_transl = torch.zeros([self.batch_size, 3],
                                      dtype=self.dtype, requires_grad=False)
@@ -123,7 +123,7 @@ class FLAME(nn.Module):
 
         # Static and Dynamic Landmark embeddings for FLAME
 
-        with open(config.static_landmark_embedding_path, 'rb') as f:
+        with open(static_landmark_embedding_path, 'rb') as f:
             static_embeddings = Struct(**pickle.load(f, encoding='latin1'))
 
         lmk_faces_idx = static_embeddings.lmk_face_idx.astype(np.int64)
@@ -134,7 +134,7 @@ class FLAME(nn.Module):
                              torch.tensor(lmk_bary_coords, dtype=self.dtype))
 
         if self.use_face_contour:
-            conture_embeddings = np.load(config.dynamic_landmark_embedding_path,
+            conture_embeddings = np.load(dynamic_landmark_embedding_path,
                                          allow_pickle=True, encoding='latin1')
             conture_embeddings = conture_embeddings[()]
             dynamic_lmk_faces_idx = np.array(conture_embeddings['lmk_face_idx']).astype(np.int64)
