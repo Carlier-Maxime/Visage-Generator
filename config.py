@@ -214,6 +214,12 @@ parser.add_argument(
     help='weight on ring loss.'
 )
 
+parser.add_argument(
+    '--view',
+    type=bool,
+    default=False,
+    help='enable view'
+)
 
 def get_config():
     config = parser.parse_args()
