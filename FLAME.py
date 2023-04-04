@@ -215,22 +215,21 @@ class FLAME(nn.Module):
                 vertices: N X V X 3
                 landmarks: N X number of landmarks X 3
         """
-        betas = torch.cat([shape_params, self.shape_betas, expression_params, self.expression_betas], dim=1)
+        size=shape_params.shape[0]
+        betas = torch.cat([shape_params, self.shape_betas[:size], expression_params, self.expression_betas[:size]], dim=1)
         neck_pose = (neck_pose if neck_pose is not None else self.neck_pose)
         eye_pose = (eye_pose if eye_pose is not None else self.eye_pose)
         transl = (transl if transl is not None else self.transl)
         full_pose = torch.cat([pose_params[:, :3], neck_pose, pose_params[:, 3:], eye_pose], dim=1)
-        template_vertices = self.v_template.unsqueeze(0).repeat(self.batch_size, 1, 1)
+        template_vertices = self.v_template.unsqueeze(0).repeat(size, 1, 1)
 
         vertices, _ = lbs(betas, full_pose, template_vertices,
                           self.shapedirs, self.posedirs,
                           self.J_regressor, self.parents,
                           self.lbs_weights)
 
-        lmk_faces_idx = self.lmk_faces_idx.unsqueeze(dim=0).repeat(
-            self.batch_size, 1)
-        lmk_bary_coords = self.lmk_bary_coords.unsqueeze(dim=0).repeat(
-            self.batch_size, 1, 1)
+        lmk_faces_idx = self.lmk_faces_idx.unsqueeze(dim=0).repeat(size, 1)
+        lmk_bary_coords = self.lmk_bary_coords.unsqueeze(dim=0).repeat(size, 1, 1)
         if self.use_face_contour:
             dyn_lmk_faces_idx, dyn_lmk_bary_coords = self._find_dynamic_lmk_idx_and_bcoords(
                 vertices, full_pose, self.dynamic_lmk_faces_idx,
@@ -246,7 +245,7 @@ class FLAME(nn.Module):
                                        lmk_bary_coords)
 
         if self.use_3D_translation:
-            landmarks += transl.unsqueeze(dim=1)
-            vertices += transl.unsqueeze(dim=1)
+            landmarks += transl[:size].unsqueeze(dim=1)
+            vertices += transl[:size].unsqueeze(dim=1)
 
         return vertices, landmarks

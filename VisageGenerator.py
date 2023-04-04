@@ -108,12 +108,16 @@ class VisageGenerator():
 
         self._vertex = None
         self._landmark = None
-        for i in trange(nb_faces//self.batch_size, desc='generate visages', unit='step'):
+        for i in trange(nb_faces//self.batch_size+(1 if nb_faces%self.batch_size>0 else 0), desc='generate visages', unit='step'):
+            sp = shape_params[i*self.batch_size:(i+1)*self.batch_size]
+            ep = expression_params[i*self.batch_size:(i+1)*self.batch_size]
+            pp = pose_params[i*self.batch_size:(i+1)*self.batch_size]
+            neck_pose=None
+            eye_pose=None
             if optimize_eyeballpose and optimize_neckpose:
-                neck_pose = torch.zeros(self.batch_size, 3).to(self.device)
-                eye_pose = torch.zeros(self.batch_size, 6).to(self.device)
-                vertices, lmks = self.flame_layer(shape_params[i*self.batch_size:(i+1)*self.batch_size], expression_params[i*self.batch_size:(i+1)*self.batch_size], pose_params[i*self.batch_size:(i+1)*self.batch_size], neck_pose, eye_pose)
-            else: vertices, lmks = self.flame_layer(shape_params[i*self.batch_size:(i+1)*self.batch_size], expression_params[i*self.batch_size:(i+1)*self.batch_size], pose_params[i*self.batch_size:(i+1)*self.batch_size])
+                neck_pose = torch.zeros(sp.shape[0], 3).to(self.device)
+                eye_pose = torch.zeros(sp.shape[0], 6).to(self.device)
+            vertices, lmks = self.flame_layer(sp, ep, pp, neck_pose, eye_pose)
             if self._vertex is None: self._vertex = vertices.cpu()
             else: self._vertex = torch.cat((self._vertex, vertices.cpu()))
             if self._landmark is None: self._landmark = lmks.cpu()
@@ -127,9 +131,10 @@ class VisageGenerator():
             texture_basis = tex_space['tex_dir'].reshape(-1, 200)
             texture_mean = torch.from_numpy(texture_mean).float()[None, ...].to(self.device)
             texture_basis = torch.from_numpy(texture_basis[:, :50]).float()[None, ...].to(self.device)
-            for i in trange(nb_faces//texture_batch_size, desc='texturing', unit='step'):
-                texture = texture_mean + (texture_basis * texture_params[i*texture_batch_size:(i+1)*texture_batch_size][:, None, :]).sum(-1)
-                texture = texture.reshape(texture_batch_size, 512, 512, 3).permute(0, 3, 1, 2)
+            for i in trange(nb_faces//texture_batch_size+(1 if nb_faces%texture_batch_size>0 else 0), desc='texturing', unit='step'):
+                tp = texture_params[i*texture_batch_size:(i+1)*texture_batch_size]
+                texture = texture_mean + (texture_basis * tp[:, None, :]).sum(-1)
+                texture = texture.reshape(tp.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
                 texture = texture[:, [2, 1, 0], :, :]
                 texture = texture / 255
                 if self._textures is None: self._textures = texture.cpu()
