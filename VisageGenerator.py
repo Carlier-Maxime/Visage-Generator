@@ -12,6 +12,7 @@ import numpy as np
 import torch
 import click
 import PIL
+import trimesh
 
 import getLandmark2D
 from FLAME import FLAME
@@ -180,7 +181,7 @@ class VisageGenerator():
                 visage_path = f'output/visage{str(i)}.obj'
                 if not save_obj:
                     visage_path = f'tmp/visage{str(i)}.obj'
-                    self.save_obj(visage_path, lmk, texture=texture)
+                    self.save_obj(visage_path, vertices, texture=texture)
                 if i != 0:
                     lmks_paths += ";"
                     visage_paths += ";"
@@ -189,7 +190,19 @@ class VisageGenerator():
                 visage_paths += visage_path
                 save_paths += f'output/visage{str(i)}_lmks2d.{lmk2D_format}'
             elif save_png:
-                pass
+                if not save_obj:
+                    visage_path = f'tmp/visage{str(i)}.obj'
+                    self.save_obj(visage_path, vertices, texture=texture)
+                else: visage_path = f'output/visage{str(i)}.obj'
+                scene = trimesh.Scene()
+                mesh = trimesh.load(visage_path)
+                scene.add_geometry(mesh)
+                scene.camera_transform = [[-0.11912993, -0.59791899,  0.79265437,  0.30183245],
+                    [ 0.99086974, -0.12235528,  0.05662456, -0.13695809],
+                    [ 0.06312855,  0.79216291,  0.60703601,  0.29561023],
+                    [ 0.,          0.,          0.,          1.        ]]
+                with open(f'output/visage{str(i)}.png',"wb") as f:
+                    f.write(scene.save_image((256,256), visible=False))
         if save_lmks2D:
             getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
 
