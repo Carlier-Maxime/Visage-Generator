@@ -271,7 +271,7 @@ class Viewer(pyrender.Viewer):
             self._jointsNode, self._tfs_joints = self.gen_joints_node()
         if self._show_markers and len(self._tfs_markers) > 0:
             self._scene.remove_node(self._markersNode)
-            self.gen_markers_node()
+            self._markersNode, self._tfs_markers = self.gen_markers_node()
             self._scene.add_node(self._markersNode)
         else:
             self.gen_markers_node()
