@@ -157,7 +157,7 @@ class VisageGenerator():
                 else: self._textures = torch.cat((self._textures, texture.cpu()))
 
 
-    def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D:bool=Config.save_lmks3D, lmk2D_format:str=Config.lmk2D_format):
+    def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks3D_png:bool=Config.save_lmks3D_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D_npy:bool=Config.save_lmks3D_npy, lmk2D_format:str=Config.lmk2D_format):
         for folder in ['output', 'tmp']:
             if not os.path.isdir(folder):
                 os.mkdir(folder)
@@ -171,11 +171,11 @@ class VisageGenerator():
             else: texture = self._textures[i].to(self.device)
             if save_obj:
                 self.save_obj(f'output/visage{str(i)}.obj', vertices, texture=texture)
-            if save_lmks3D:
+            if save_lmks3D_npy:
                 np.save(f'output/visage{str(i)}.npy', lmk)
             if save_lmks2D:
                 lmks_path = f'output/visage{str(i)}.npy'
-                if not save_lmks3D:
+                if not save_lmks3D_npy:
                     np.save(f'tmp/visage{str(i)}.npy', lmk)
                     lmks_path = f'tmp/visage{str(i)}.npy'
                 visage_path = f'output/visage{str(i)}.obj'
@@ -189,20 +189,28 @@ class VisageGenerator():
                 lmks_paths += lmks_path
                 visage_paths += visage_path
                 save_paths += f'output/visage{str(i)}_lmks2d.{lmk2D_format}'
-            elif save_png:
+            elif save_png or save_lmks3D_png:
                 if not save_obj:
                     visage_path = f'tmp/visage{str(i)}.obj'
                     self.save_obj(visage_path, vertices, texture=texture)
                 else: visage_path = f'output/visage{str(i)}.obj'
                 scene = trimesh.Scene()
-                mesh = trimesh.load(visage_path)
-                scene.add_geometry(mesh)
                 scene.camera_transform = [[-0.11912993, -0.59791899,  0.79265437,  0.30183245],
                     [ 0.99086974, -0.12235528,  0.05662456, -0.13695809],
                     [ 0.06312855,  0.79216291,  0.60703601,  0.29561023],
                     [ 0.,          0.,          0.,          1.        ]]
-                with open(f'output/visage{str(i)}.png',"wb") as f:
-                    f.write(scene.save_image((256,256), visible=False))
+                mesh = trimesh.load(visage_path)
+                scene.add_geometry(mesh)
+                if save_png:
+                    with open(f'output/visage{str(i)}.png',"wb") as f:
+                        f.write(scene.save_image((256,256), visible=False))
+                if save_lmks3D_png:
+                    for p in lmk.cpu().numpy():
+                        sm = trimesh.primitives.Sphere(radius=0.0019, center=p)
+                        sm.visual.vertex_colors = [0.2, 1., 0.2, 1.]
+                        scene.add_geometry(sm)
+                    with open(f'output/visage{str(i)}_lmk.png',"wb") as f:
+                        f.write(scene.save_image((256,256), visible=False))
         if save_lmks2D:
             getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
 
@@ -213,7 +221,8 @@ class VisageGenerator():
 @click.option('--not-texturing', 'texturing', type=bool,  default=Config.texturing,  help='enable texture', is_flag=True)
 @click.option('--save-obj',  type=bool,  default=Config.save_obj,  help='enable save into file obj', is_flag=True)
 @click.option('--save-png',  type=bool,  default=Config.save_png,  help='enable save into file png', is_flag=True)
-@click.option('--save-lmks3D', 'save_lmks3D', type=bool,  default=Config.save_lmks3D,  help='enable save landmarks 3D into file npy', is_flag=True)
+@click.option('--save-lmks3D-npy', 'save_lmks3D_npy', type=bool,  default=Config.save_lmks3D_npy,  help='enable save landmarks 3D into file npy', is_flag=True)
+@click.option('--save-lmks3D-png', 'save_lmks3D_png', type=bool,  default=Config.save_lmks3D_png,  help='enable save landmarks 3D with visage into file png', is_flag=True)
 @click.option('--save-lmks2D', 'save_lmks2D',  type=bool,  default=Config.save_lmks2D,  help='enable save landmarks 2D into file npy', is_flag=True)
 @click.option('--min-shape_param',  type=float,  default=Config.min_shape_param,  help='minimum value for shape param')
 @click.option('--max-shape_param',  type=float,  default=Config.max_shape_param,  help='maximum value for shape param')
@@ -241,7 +250,8 @@ def main(
     texturing,
     save_obj,
     save_png,
-    save_lmks3D,
+    save_lmks3D_npy,
+    save_lmks3D_png,
     save_lmks2D,
     min_shape_param,
     max_shape_param,
@@ -266,7 +276,7 @@ def main(
 ):
     vg = VisageGenerator(device, min_shape_param, max_shape_param, min_expression_param, max_expression_param, global_pose_param1, global_pose_param2, global_pose_param3, flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path)
     vg.generate(nb_faces, texturing, optimize_eyeballpose, optimize_neckpose, texture_batch_size)
-    vg.save(save_obj, save_png, save_lmks2D, save_lmks3D, lmk2d_format)
+    vg.save(save_obj, save_png, save_lmks3D_png, save_lmks2D, save_lmks3D_npy, lmk2d_format)
     if view:
         vg.view()
 

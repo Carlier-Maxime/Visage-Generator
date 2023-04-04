@@ -4,7 +4,8 @@ class Config:
     texturing=True
     save_obj=False
     save_png=False
-    save_lmks3D=False
+    save_lmks3D_npy=False
+    save_lmks3D_png=False
     save_lmks2D=False
     min_shape_param=-2
     max_shape_param=2
