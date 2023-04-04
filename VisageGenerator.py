@@ -10,8 +10,8 @@ import os
 
 import numpy as np
 import torch
-import trimesh
 import click
+import PIL
 
 import getLandmark2D
 from FLAME import FLAME
@@ -40,7 +40,7 @@ class VisageGenerator():
         self.global_pose_param3 = global_pose_param3
         self.batch_size = batch_size
 
-    def save_obj(self, path: str, vertices: list, faces: list, texture=None) -> None:
+    def save_obj(self, path: str, vertices: list, faces=None, texture=None) -> None:
         """
         Save 3D object to the obj format
         Args:
@@ -52,13 +52,28 @@ class VisageGenerator():
         Returns: None
 
         """
+        uvcoords = []
+        uvfaces = []
+        basename = path.split(".obj")[0]
+        if faces is None: faces = self.render.faces[0].detach().cpu().numpy()
         if texture is not None:
-            self.render.save_obj(path, vertices, texture)
-        else:
-            mesh = trimesh.Trimesh(vertices=vertices.cpu(), faces=faces)
-            normals = mesh.vertex_normals  # generate normals
-            with open(path, 'w') as f:
-                f.write(trimesh.exchange.obj.export_obj(mesh, True, False, False))
+            texture_image = texture.detach().cpu().numpy().transpose(1, 2, 0).clip(0,1)
+            texture_image = (texture_image * 255).astype('uint8')
+            img = PIL.Image.fromarray(texture_image)
+            img.save(basename+"_texture.png")
+            uvcoords = self.render.raw_uvcoords[0].cpu().numpy().reshape((-1, 2))
+            uvfaces=self.render.uvfaces[0]
+            with open(basename+".mtl","w") as f:
+                f.write(f'newmtl material_0\nmap_Kd {basename.split("/")[-1]}_texture.png\n')
+        with open(path, 'w') as f:
+            if texture is not None: f.write(f'mtllib {basename.split("/")[-1]}.mtl\n')
+            for v in vertices: f.write(f'v {v[0]} {v[1]} {v[2]}\n')
+            for vt in uvcoords: f.write(f'vt {vt[0]} {vt[1]}\n')
+            if texture is None:
+                for face in faces: f.write(f'f {face[0]+1} {face[1]+1} {face[2]+1}\n')
+            else:
+                f.write(f'usemtl material_0\n')
+                for face, ivt in zip(faces, uvfaces): f.write(f'f {face[0]+1}/{ivt[0]+1} {face[1]+1}/{ivt[1]+1} {face[2]+1}/{ivt[2]+1}\n')
 
     def view(self, other_objects=None) -> None:
         """
@@ -154,7 +169,7 @@ class VisageGenerator():
             if self._textures is None: texture=None
             else: texture = self._textures[i].to(self.device)
             if save_obj:
-                self.save_obj(f'output/visage{str(i)}.obj', vertices, self._faces, texture)
+                self.save_obj(f'output/visage{str(i)}.obj', vertices, texture=texture)
             if save_lmks3D:
                 np.save(f'output/visage{str(i)}.npy', lmk)
             if save_lmks2D:
@@ -165,7 +180,7 @@ class VisageGenerator():
                 visage_path = f'output/visage{str(i)}.obj'
                 if not save_obj:
                     visage_path = f'tmp/visage{str(i)}.obj'
-                    self.save_obj(visage_path, lmk, self._faces, texture)
+                    self.save_obj(visage_path, lmk, texture=texture)
                 if i != 0:
                     lmks_paths += ";"
                     visage_paths += ";"
