@@ -6,12 +6,13 @@ import torch
 import trimesh
 
 from util import read_index_opti_tri
+from config import Config
 
 
 class Viewer(pyrender.Viewer):
     def __init__(self, vertex: list, landmark: list, faces: list, file_obj_for_color: list = None,
                  show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True,
-                 other_objects: list = None):
+                 other_objects: list = None, device=Config.device):
         """
         Args:
             vertex (list): array of all vertex
@@ -24,9 +25,7 @@ class Viewer(pyrender.Viewer):
             other_objects (list): list of all others objects. one object represented by : [vertices, faces]
                 but the triangles may be empty : []
         """
-        config = get_config()
-        self._nbFace = config.number_faces
-        self._device = config.device
+        self._device = device
 
         self._vertex = vertex
         self._landmark = landmark
@@ -203,7 +202,7 @@ class Viewer(pyrender.Viewer):
         Switch to the next visage or close
         Returns: None
         """
-        if self._index < self._nbFace - 1:
+        if self._index < len(self._vertex) - 1:
             self._index = self._index + 1
             self.render_lock.acquire()
             self._scene.remove_node(self._visage)

@@ -69,9 +69,9 @@ class VisageGenerator():
         Returns: None
         """
         file_obj = []
-        for i in range(self._nbFace):
+        for i in range(len(self._vertex)):
             file_obj.append('output/visage' + str(i) + '.obj')
-        Viewer(self._vertex, self._landmark, self._faces, file_obj, other_objects=other_objects)
+        Viewer(self._vertex, self._landmark, self._faces, file_obj, other_objects=other_objects, device=self.device)
 
     def get_vertices(self, i: int) -> list:
         """
