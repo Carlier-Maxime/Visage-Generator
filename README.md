@@ -30,47 +30,50 @@ The information necessary for the download is indecate in the readme.md of the m
 ```
 python VisageGenerator.py
 ```
-they are advised to go into the **config.py** file and **set** the **device** variable to "**cuda**" if you have a **graphics card**,
-or specify the device used for the launch :
-```
-python VisageGenerator.py --device=cuda
-```
 
 ***
 ## Config
 
 Here are the different settings you can change:
-- ```--lmk2d_format``` : format used for save lmk2d. (npy and pts is supported)
-- ```--texturing``` : enable texture
-- ```--save_obj``` : enable save into file obj
-- ```--save_png``` : enable save into file png
-- ```--save_lmks3d``` : enable save landmarks 3D into file npy
-- ```--save_lmks2d``` : enable save landmarks 2D into file npy
-- ```--min_shape_param``` : minimum value of shape param.
-- ```--max_shape_param``` : maximum value of shape param.
-- ```--min_expression_param``` : minimum value of expression param.
-- ```--max_expression_param``` : maximum value of expression param.
-- ```--global_pose_param_1``` : value of first global pose param.
-- ```--global_pose_param_2``` : value of second global pose param.
-- ```--global_pose_param_3``` : value of third global pose param.
-- ```--device``` : choice your device for generate face.
-- ```--number_faces``` : the number of face to generate.
-- ```--flame_model_path``` : path to model flame.
-- ```--static_landmark_embedding_path``` : path to static landmark embedding for FLAME.
-- ```--dynamic_landmark_embedding_path``` : path to dynamic landmark embedding for FLAME.
-- ```--shape_params``` : the number of shape parameters.
-- ```--expression_params``` : the number of expression parameters.
-...
+- ```--nb-faces``` : number faces generate
+- ```--lmk2D-format``` : format used for save lmk2d. (npy and pts is supported)
+- ```--not-texturing``` : enable texture
+- ```--save-obj``` : enable save into file obj
+- ```--save-png``` : enable save into file png
+- ```--save-lmks3D-npy``` : enable save landmarks 3D into file npy
+- ```--save-lmks3D-png``` : enable save landmarks 3D with visage into file png
+- ```--save-lmks2D``` : enable save landmarks 2D into file npy
+- ```--min-shape-param``` : minimum value for shape param
+- ```--max-shape-param``` : maximum value for shape param
+- ```--min-expression-param``` : minimum value for expression param
+- ```--max-expression-param``` : maximum value for expression param
+- ```--global-pose-param1``` : value of first global pose param
+- ```--global-pose-param2``` : value of second global pose param
+- ```--global-pose-param3``` : value of third global pose param
+- ```--device``` : choice your device for generate face. ("cpu" or "cuda")
+- ```--view``` : enable view
+- ```--flame-model-path``` : path for acess flame model
+- ```--batch-size``` : number of visage generate in the same time
+- ```--not-use-face-contour``` : not use face contour for generate visage
+- ```--not-use-3D-translation``` : not use 3D translation for generate visage
+- ```--shape-params``` : a number of shape parameter used
+- ```--expression-params``` : a number of expression parameter used
+- ```--static-landmark-embedding-path``` : path for static landmark embedding file
+- ```--dynamic-landmark-embedding-path``` : path for dynamic landmark embedding file
+- ```--not-optimize-eyeballpose``` : not optimize eyeballpose for generate visage
+- ```--not-optimize-neckpose``` : not optimise neckpoes for generate visage
+- ```--texture-batch-size``` : number of texture generate in same time
+- ```--save-markers``` : enable save markers into png file
 
-For more information check config.py
-You can define the parameters either by modifying the default values ​​in my config.py file 
+You can define the parameters either by modifying the default values ​​in config.py file 
 or by launching the program, for example:
 ```
-python ./VisageGenerator.py --device=cuda --number_faces=10
+python ./VisageGenerator.py --nb-faces=1 --view --save-png --save-markers
 ```
 
 ***
 ## Keys
+If you use parameter ```--view``` you have different keys for manipulation view and data :
 - **V** : Show Vertices
 - **B** : Show Marker/Balises (Not default marker)
 - **J** : Show Joints
