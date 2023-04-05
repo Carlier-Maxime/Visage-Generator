@@ -159,59 +159,60 @@ class VisageGenerator():
 
 
     def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks3D_png:bool=Config.save_lmks3D_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D_npy:bool=Config.save_lmks3D_npy, lmk2D_format:str=Config.lmk2D_format, save_markers:bool=Config.save_markers):
-        for folder in ['output', 'tmp']:
-            if not os.path.isdir(folder):
-                os.mkdir(folder)
-        lmks_paths = ""
-        visage_paths = ""
-        save_paths = ""
+        out = 'output'
+        tmp = 'tmp'
+        outObj = (out if save_obj else tmp)+"/obj"
+        outLmk3D_npy = (out if save_lmks3D_npy else tmp)+"/lmks/3D"
+        outLmk2D = (out if save_lmks2D else tmp)+"/lmks/2D"
+        outVisagePNG = (out if save_png else tmp)+"/png/default"
+        outLmks3D_PNG = (out if save_lmks3D_png else tmp)+"/png/lmks"
+        outMarkersPNG = (out if save_markers else tmp)+"/png/markers"
+        for folder in [out, tmp, outObj, outLmk3D_npy, outLmk2D, outVisagePNG, outLmks3D_PNG, outMarkersPNG]: os.makedirs(folder, exist_ok=True)
+        if save_lmks2D:
+            lmks_paths = ""
+            visage_paths = ""
+            save_paths = ""
         if save_markers: markers = np.load("markers.npy")
+        save_any_png = save_png or save_lmks3D_png or save_markers
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)
             if self._textures is None: texture=None
             else: texture = self._textures[i].to(self.device)
-            if save_obj:
-                self.save_obj(f'output/visage{str(i)}.obj', vertices, texture=texture)
-            if save_lmks3D_npy:
-                np.save(f'output/visage{str(i)}.npy', lmk)
+            basename=f"visage{str(i)}"
+            visage_path = f'{outObj}/{basename}.obj'
+            lmks3Dnpy_path = f'{outLmk3D_npy}/{basename}.npy'
+            if save_obj or save_any_png or save_lmks2D:
+                self.save_obj(visage_path, vertices, texture=texture)
+            if save_lmks3D_npy or save_lmks2D:
+                np.save(lmks3Dnpy_path, lmk)
             if save_lmks2D:
-                lmks_path = f'output/visage{str(i)}.npy'
-                if not save_lmks3D_npy:
-                    np.save(f'tmp/visage{str(i)}.npy', lmk)
-                    lmks_path = f'tmp/visage{str(i)}.npy'
-                visage_path = f'output/visage{str(i)}.obj'
-                if not save_obj:
-                    visage_path = f'tmp/visage{str(i)}.obj'
-                    self.save_obj(visage_path, vertices, texture=texture)
                 if i != 0:
                     lmks_paths += ";"
                     visage_paths += ";"
                     save_paths += ";"
-                lmks_paths += lmks_path
+                lmks_paths += lmks3Dnpy_path
                 visage_paths += visage_path
-                save_paths += f'output/visage{str(i)}_lmks2d.{lmk2D_format}'
-            elif save_png or save_lmks3D_png or save_markers:
-                if not save_obj:
-                    visage_path = f'tmp/visage{str(i)}.obj'
-                    self.save_obj(visage_path, vertices, texture=texture)
-                else: visage_path = f'output/visage{str(i)}.obj'
+                save_paths += f'{outLmk2D}/{basename}.{lmk2D_format}'
+            if save_any_png:
                 scene = trimesh.Scene()
-                scene.camera_transform = [[-0.11912993, -0.59791899,  0.79265437,  0.30183245],
+                scene.camera_transform = [
+                    [-0.11912993, -0.59791899,  0.79265437,  0.30183245],
                     [ 0.99086974, -0.12235528,  0.05662456, -0.13695809],
                     [ 0.06312855,  0.79216291,  0.60703601,  0.29561023],
-                    [ 0.,          0.,          0.,          1.        ]]
+                    [ 0.,          0.,          0.,          1.        ]
+                ]
                 mesh = trimesh.load(visage_path)
                 scene.add_geometry(mesh)
                 if save_png:
-                    with open(f'output/visage{str(i)}.png',"wb") as f:
+                    with open(f'{outVisagePNG}/{basename}.png',"wb") as f:
                         f.write(scene.save_image((256,256), visible=False))
                 if save_lmks3D_png:
                     for index,p in enumerate(lmk.cpu().numpy()):
                         sm = trimesh.primitives.Sphere(radius=0.0019, center=p)
                         sm.visual.vertex_colors = [0.2, 1., 0.2, 1.]
                         scene.add_geometry(sm, geom_name=f"sm{index}")
-                    with open(f'output/visage{str(i)}_lmk.png',"wb") as f:
+                    with open(f'{outLmks3D_PNG}/{basename}.png',"wb") as f:
                         f.write(scene.save_image((256,256), visible=False))
                     scene.delete_geometry([f"sm{index}" for index in range(lmk.size()[0])])
                 if save_markers:
@@ -219,7 +220,7 @@ class VisageGenerator():
                         m = trimesh.primitives.Sphere(radius=0.0019, center=util.read_index_opti_tri(vertices, self._faces, im))
                         m.visual.vertex_colors = [0.2, 1., 0., 1.]
                         scene.add_geometry(m)
-                    with open(f'output/visage{str(i)}_markers.png',"wb") as f:
+                    with open(f'{outMarkersPNG}/{basename}.png',"wb") as f:
                         f.write(scene.save_image((256,256), visible=False))
         if save_lmks2D:
             getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
