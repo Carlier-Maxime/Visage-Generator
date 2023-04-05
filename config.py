@@ -27,3 +27,4 @@ class Config:
     optimize_eyeballpose=True
     optimize_neckpose=True
     texture_batch_size=16
+    save_markers=False

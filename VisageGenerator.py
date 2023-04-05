@@ -20,6 +20,7 @@ from Viewer import Viewer
 from renderer import Renderer
 from config import Config
 from tqdm import trange
+import util
 
 class VisageGenerator():
     def __init__(self, device:str = Config.device, min_shape_param:float = Config.min_shape_param, max_shape_param:float = Config.max_shape_param,
@@ -157,13 +158,14 @@ class VisageGenerator():
                 else: self._textures = torch.cat((self._textures, texture.cpu()))
 
 
-    def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks3D_png:bool=Config.save_lmks3D_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D_npy:bool=Config.save_lmks3D_npy, lmk2D_format:str=Config.lmk2D_format):
+    def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks3D_png:bool=Config.save_lmks3D_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D_npy:bool=Config.save_lmks3D_npy, lmk2D_format:str=Config.lmk2D_format, save_markers:bool=Config.save_markers):
         for folder in ['output', 'tmp']:
             if not os.path.isdir(folder):
                 os.mkdir(folder)
         lmks_paths = ""
         visage_paths = ""
         save_paths = ""
+        if save_markers: markers = np.load("markers.npy")
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)
@@ -189,7 +191,7 @@ class VisageGenerator():
                 lmks_paths += lmks_path
                 visage_paths += visage_path
                 save_paths += f'output/visage{str(i)}_lmks2d.{lmk2D_format}'
-            elif save_png or save_lmks3D_png:
+            elif save_png or save_lmks3D_png or save_markers:
                 if not save_obj:
                     visage_path = f'tmp/visage{str(i)}.obj'
                     self.save_obj(visage_path, vertices, texture=texture)
@@ -205,11 +207,19 @@ class VisageGenerator():
                     with open(f'output/visage{str(i)}.png',"wb") as f:
                         f.write(scene.save_image((256,256), visible=False))
                 if save_lmks3D_png:
-                    for p in lmk.cpu().numpy():
+                    for index,p in enumerate(lmk.cpu().numpy()):
                         sm = trimesh.primitives.Sphere(radius=0.0019, center=p)
                         sm.visual.vertex_colors = [0.2, 1., 0.2, 1.]
-                        scene.add_geometry(sm)
+                        scene.add_geometry(sm, geom_name=f"sm{index}")
                     with open(f'output/visage{str(i)}_lmk.png',"wb") as f:
+                        f.write(scene.save_image((256,256), visible=False))
+                    scene.delete_geometry([f"sm{index}" for index in range(lmk.size()[0])])
+                if save_markers:
+                    for im in markers:
+                        m = trimesh.primitives.Sphere(radius=0.0019, center=util.read_index_opti_tri(vertices, self._faces, im))
+                        m.visual.vertex_colors = [0.2, 1., 0., 1.]
+                        scene.add_geometry(m)
+                    with open(f'output/visage{str(i)}_markers.png',"wb") as f:
                         f.write(scene.save_image((256,256), visible=False))
         if save_lmks2D:
             getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
@@ -244,6 +254,7 @@ class VisageGenerator():
 @click.option('--not-optimize-eyeballpose', 'optimize_eyeballpose', type=bool, default=Config.optimize_eyeballpose, is_flag=True)
 @click.option('--not-optimize-neckpose', 'optimize_neckpose', type=bool, default=Config.optimize_neckpose, is_flag=True)
 @click.option('--texture-batch-size', type=int, default=Config.texture_batch_size)
+@click.option('--save-markers', type=bool,  default=Config.save_markers,  help='enable save markers into png file', is_flag=True)
 def main(
     nb_faces,
     lmk2d_format,
@@ -272,11 +283,12 @@ def main(
     dynamic_landmark_embedding_path,
     optimize_eyeballpose,
     optimize_neckpose,
-    texture_batch_size
+    texture_batch_size,
+    save_markers
 ):
     vg = VisageGenerator(device, min_shape_param, max_shape_param, min_expression_param, max_expression_param, global_pose_param1, global_pose_param2, global_pose_param3, flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path)
     vg.generate(nb_faces, texturing, optimize_eyeballpose, optimize_neckpose, texture_batch_size)
-    vg.save(save_obj, save_png, save_lmks3D_png, save_lmks2D, save_lmks3D_npy, lmk2d_format)
+    vg.save(save_obj, save_png, save_lmks3D_png, save_lmks2D, save_lmks3D_npy, lmk2d_format, save_markers)
     if view:
         vg.view()
 
