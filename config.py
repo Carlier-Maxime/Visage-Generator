@@ -28,3 +28,4 @@ class Config:
     optimize_neckpose=True
     texture_batch_size=16
     save_markers=False
+    img_resolution=[256,256]
