@@ -158,7 +158,7 @@ class VisageGenerator():
                 else: self._textures = torch.cat((self._textures, texture.cpu()))
 
 
-    def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks3D_png:bool=Config.save_lmks3D_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D_npy:bool=Config.save_lmks3D_npy, lmk2D_format:str=Config.lmk2D_format, save_markers:bool=Config.save_markers, img_resolution:list=Config.img_resolution):
+    def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks3D_png:bool=Config.save_lmks3D_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D_npy:bool=Config.save_lmks3D_npy, lmk2D_format:str=Config.lmk2D_format, save_markers:bool=Config.save_markers, img_resolution:list=Config.img_resolution, show_window=Config.show_window):
         out = 'output'
         tmp = 'tmp'
         outObj = (out if save_obj else tmp)+"/obj"
@@ -206,14 +206,14 @@ class VisageGenerator():
                 scene.add_geometry(mesh)
                 if save_png:
                     with open(f'{outVisagePNG}/{basename}.png',"wb") as f:
-                        f.write(scene.save_image(img_resolution, visible=False))
+                        f.write(scene.save_image(img_resolution, visible=show_window))
                 if save_lmks3D_png:
                     for index,p in enumerate(lmk.cpu().numpy()):
                         sm = trimesh.primitives.Sphere(radius=0.0019, center=p)
                         sm.visual.vertex_colors = [0.2, 1., 0.2, 1.]
                         scene.add_geometry(sm, geom_name=f"sm{index}")
                     with open(f'{outLmks3D_PNG}/{basename}.png',"wb") as f:
-                        f.write(scene.save_image(img_resolution, visible=False))
+                        f.write(scene.save_image(img_resolution, visible=show_window))
                     scene.delete_geometry([f"sm{index}" for index in range(lmk.size()[0])])
                 if save_markers:
                     for im in markers:
@@ -221,7 +221,7 @@ class VisageGenerator():
                         m.visual.vertex_colors = [0.2, 1., 0., 1.]
                         scene.add_geometry(m)
                     with open(f'{outMarkersPNG}/{basename}.png',"wb") as f:
-                        f.write(scene.save_image(img_resolution, visible=False))
+                        f.write(scene.save_image(img_resolution, visible=show_window))
         if save_lmks2D:
             getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
 
@@ -257,6 +257,7 @@ class VisageGenerator():
 @click.option('--texture-batch-size', type=int, default=Config.texture_batch_size, help='number of texture generate in same time')
 @click.option('--save-markers', type=bool,  default=Config.save_markers,  help='enable save markers into png file', is_flag=True)
 @click.option('--img-resolution', type=str, default=Config.img_resolution, help='resolution of image')
+@click.option('--show-window', type=bool,  default=Config.show_window,  help='show window during save png (enable if images is the screenshot)', is_flag=True)
 def main(
     nb_faces,
     lmk2d_format,
@@ -287,13 +288,14 @@ def main(
     optimize_neckpose,
     texture_batch_size,
     save_markers,
-    img_resolution
+    img_resolution,
+    show_window
 ):
     img_resolution = img_resolution[1:-1].split(",")
     for i in range(len(img_resolution)): img_resolution[i] = int(img_resolution[i])
     vg = VisageGenerator(device, min_shape_param, max_shape_param, min_expression_param, max_expression_param, global_pose_param1, global_pose_param2, global_pose_param3, flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path)
     vg.generate(nb_faces, texturing, optimize_eyeballpose, optimize_neckpose, texture_batch_size)
-    vg.save(save_obj, save_png, save_lmks3D_png, save_lmks2D, save_lmks3D_npy, lmk2d_format, save_markers, img_resolution)
+    vg.save(save_obj, save_png, save_lmks3D_png, save_lmks2D, save_lmks3D_npy, lmk2d_format, save_markers, img_resolution, show_window)
     if view:
         vg.view()
 

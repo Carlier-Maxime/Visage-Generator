@@ -29,3 +29,4 @@ class Config:
     texture_batch_size=16
     save_markers=False
     img_resolution=[256,256]
+    show_window=False

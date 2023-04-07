@@ -65,6 +65,7 @@ Here are the different settings you can change:
 - ```--texture-batch-size``` : number of texture generate in same time
 - ```--save-markers``` : enable save markers into png file
 - ```--img-resolution``` : resolution of image
+- ```--show-window``` : show window during save png (enable if images is the screenshot)
 
 You can define the parameters either by modifying the default values ​​in config.py file 
 or by launching the program, for example:
