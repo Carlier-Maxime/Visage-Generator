@@ -31,7 +31,7 @@ class VisageGenerator():
                  static_landmark_embedding_path=Config.static_landmark_embedding_path, dynamic_landmark_embedding_path=Config.dynamic_landmark_embedding_path
         ):
         self.flame_layer = FLAME(flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path).to(device)
-        self.render = Renderer(512, "visage.obj", 512).to(device)
+        self.render = Renderer(512, "visage.obj", 512)
         self.device = device
         self.min_shape_param = min_shape_param
         self.max_shape_param = max_shape_param
