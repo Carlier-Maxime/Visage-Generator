@@ -59,8 +59,8 @@ class VisageGenerator():
         if texture is not None:
             img = PIL.Image.fromarray(texture)
             img.save(basename+"_texture.png")
-            uvcoords = self.render.uvcoords[0].cpu().numpy().reshape((-1, 2))
-            uvfaces=self.render.uvfaces[0]
+            uvcoords = self.render.uvcoords.cpu().numpy().reshape((-1, 2))
+            uvfaces=self.render.uvfaces
             with open(basename+".mtl","w") as f:
                 f.write(f'newmtl material_0\nmap_Kd {basename.split("/")[-1]}_texture.png\n')
         with open(path, 'w') as f:

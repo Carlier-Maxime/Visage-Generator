@@ -10,14 +10,16 @@ from pygame.constants import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 import PIL.Image
+import torch
 
 class Renderer():
     def __init__(self, obj_filename, width, height):
         warnings.filterwarnings("ignore",'No mtl file provided')
         verts, faces, aux = load_obj(obj_filename)
-        self.uvcoords = aux.verts_uvs[None, ...]  # (N, V, 2)
-        self.uvfaces = faces.textures_idx[None, ...]  # (N, F, 3)
-        self.faces = faces.verts_idx[None, ...]
+        self.uvcoords = aux.verts_uvs # (N, V, 2)
+        self.uvfaces = faces.textures_idx  # (N, F, 3)
+        self.faces = faces.verts_idx
+        self.texcoords = self.uvcoords[self.uvfaces]
 
         pygame.init()
         self.width = width
@@ -130,6 +132,66 @@ class Renderer():
         glMatrixMode(GL_MODELVIEW)
         self.__render(gl_list)
         PIL.Image.frombytes('RGB', (self.width, self.height), glReadPixels(0,0,self.width,self.height, GL_RGB, GL_UNSIGNED_BYTE)).transpose(PIL.Image.FLIP_TOP_BOTTOM).save(filename)
+
+    def __create_GL_List_bufferVersion(self, vertices, faces, texture):
+        # Permute les coordonnées pour les rendre compatibles avec OpenGL
+        vertices = vertices[:, [0, 2, 1]]
+        vertices *= 10
+        faces = torch.tensor(faces.astype('int32'))
+        vertices = vertices[faces]
+        faces = torch.arange(faces.numel()).reshape(faces.shape)
+        #print(vertices.shape, faces.shape, self.texcoords.shape)
+        vertices = vertices.cpu().numpy()
+        texcoords = self.texcoords.cpu().numpy()
+
+        # Créer les tampons de tableau pour les sommets, les indices de faces, et les indices de coordonnées de texture
+        vbo = glGenBuffers(1)
+        glBindBuffer(GL_ARRAY_BUFFER, vbo)
+        glBufferData(GL_ARRAY_BUFFER, vertices, GL_STATIC_DRAW)
+
+        tbo = glGenBuffers(1)
+        glBindBuffer(GL_ARRAY_BUFFER, tbo)
+        glBufferData(GL_ARRAY_BUFFER, texcoords, GL_STATIC_DRAW)
+
+        ebo = glGenBuffers(1)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, faces.cpu().numpy().astype('uint32'), GL_STATIC_DRAW)
+
+        # Créer la liste d'affichage
+        gl_list = glGenLists(1)
+        glNewList(gl_list, GL_COMPILE)
+
+        # Activer la texture et la face avant
+        glEnable(GL_TEXTURE_2D)
+        glFrontFace(GL_CCW)
+
+        # Créer la texture OpenGL
+        glBindTexture(GL_TEXTURE_2D, self.__create_GL_texture(texture))
+
+        # Activer le tampon de sommets et le tampon d'indices de coordonnées de texture
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glBindBuffer(GL_ARRAY_BUFFER, vbo)
+        glVertexPointer(3, GL_FLOAT, 0, None)
+
+        glEnableClientState(GL_TEXTURE_COORD_ARRAY)
+        glBindBuffer(GL_ARRAY_BUFFER, tbo)
+        glTexCoordPointer(2, GL_FLOAT, 0, None)
+
+        # Dessiner les faces en utilisant le tampon d'indices de faces
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo)
+        glDrawElements(GL_TRIANGLES, faces.shape[0], GL_UNSIGNED_INT, None)
+
+        # Désactiver la texture et la face avant
+        glDisable(GL_TEXTURE_2D)
+        glDisableClientState(GL_VERTEX_ARRAY)
+        glDisableClientState(GL_TEXTURE_COORD_ARRAY)
+
+        glEndList()
+
+        # Supprimer les tampons de tableau
+        glDeleteBuffers(3, [vbo, ebo, tbo])
+        
+        return gl_list
 
 if __name__ == '__main__':
     import ObjLoader, sys
