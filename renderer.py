@@ -68,12 +68,12 @@ class Renderer():
         glEnable(GL_TEXTURE_2D)
         glFrontFace(GL_CCW)
         glBindTexture(GL_TEXTURE_2D, self.__create_GL_texture(texture))
-        for face, uvface in zip(faces, self.uvfaces[0]):
+        for face, uvface in zip(faces, self.uvfaces):
             glBegin(GL_POLYGON)
             for i in range(len(face)):
                 #if normals[i] > 0:
                 #    pass glNormal3fv(self.normals[normals[i] - 1])
-                tex_coo = self.uvcoords[0][uvface[i]].detach().cpu().numpy()
+                tex_coo = self.uvcoords[uvface[i]].detach().cpu().numpy()
                 glTexCoord2fv(tex_coo)
                 glVertex3fv(vertices[face[i]].detach().cpu().numpy())
             glEnd()
