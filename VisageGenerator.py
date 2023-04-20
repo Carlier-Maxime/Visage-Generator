@@ -12,7 +12,6 @@ import numpy as np
 import torch
 import click
 import PIL
-import trimesh
 
 import getLandmark2D
 from FLAME import FLAME
@@ -31,7 +30,6 @@ class VisageGenerator():
                  static_landmark_embedding_path=Config.static_landmark_embedding_path, dynamic_landmark_embedding_path=Config.dynamic_landmark_embedding_path
         ):
         self.flame_layer = FLAME(flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path).to(device)
-        self.render = Renderer(512, "visage.obj", 512)
         self.device = device
         self.min_shape_param = min_shape_param
         self.max_shape_param = max_shape_param
@@ -59,11 +57,9 @@ class VisageGenerator():
         basename = path.split(".obj")[0]
         if faces is None: faces = self.render.faces[0].detach().cpu().numpy()
         if texture is not None:
-            texture_image = texture.detach().cpu().numpy().transpose(1, 2, 0).clip(0,1)
-            texture_image = (texture_image * 255).astype('uint8')
-            img = PIL.Image.fromarray(texture_image)
+            img = PIL.Image.fromarray(texture)
             img.save(basename+"_texture.png")
-            uvcoords = self.render.raw_uvcoords[0].cpu().numpy().reshape((-1, 2))
+            uvcoords = self.render.uvcoords[0].cpu().numpy().reshape((-1, 2))
             uvfaces=self.render.uvfaces[0]
             with open(basename+".mtl","w") as f:
                 f.write(f'newmtl material_0\nmap_Kd {basename.split("/")[-1]}_texture.png\n')
@@ -174,15 +170,19 @@ class VisageGenerator():
             save_paths = ""
         if save_markers: markers = np.load("markers.npy")
         save_any_png = save_png or save_lmks3D_png or save_markers
+        self.render = Renderer("visage.obj", img_resolution[0], img_resolution[1])
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)
             if self._textures is None: texture=None
-            else: texture = self._textures[i].to(self.device)
+            else: 
+                texture = self._textures[i].to(self.device)
+                texture = texture * 255
+                texture = texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
             basename=f"visage{str(i)}"
             visage_path = f'{outObj}/{basename}.obj'
             lmks3Dnpy_path = f'{outLmk3D_npy}/{basename}.npy'
-            if save_obj or save_any_png or save_lmks2D:
+            if save_obj or save_lmks2D:
                 self.save_obj(visage_path, vertices, texture=texture)
             if save_lmks3D_npy or save_lmks2D:
                 np.save(lmks3Dnpy_path, lmk)
@@ -195,7 +195,8 @@ class VisageGenerator():
                 visage_paths += visage_path
                 save_paths += f'{outLmk2D}/{basename}.{lmk2D_format}'
             if save_any_png:
-                scene = trimesh.Scene()
+                self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, self._faces, texture)
+                """scene = trimesh.Scene()
                 scene.camera_transform = [
                     [-0.11912993, -0.59791899,  0.79265437,  0.30183245],
                     [ 0.99086974, -0.12235528,  0.05662456, -0.13695809],
@@ -221,7 +222,7 @@ class VisageGenerator():
                         m.visual.vertex_colors = [0.2, 1., 0., 1.]
                         scene.add_geometry(m)
                     with open(f'{outMarkersPNG}/{basename}.png',"wb") as f:
-                        f.write(scene.save_image(img_resolution, visible=show_window))
+                        f.write(scene.save_image(img_resolution, visible=show_window))"""
         if save_lmks2D:
             getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
 
