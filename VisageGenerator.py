@@ -144,14 +144,14 @@ class VisageGenerator():
             texture_basis = tex_space['tex_dir'].reshape(-1, 200)
             texture_mean = torch.from_numpy(texture_mean).float()[None, ...].to(self.device)
             texture_basis = torch.from_numpy(texture_basis[:, :50]).float()[None, ...].to(self.device)
+            self._textures = torch.zeros((nb_faces, 3, 512, 512), dtype=torch.float32, device='cpu')
             for i in trange(nb_faces//texture_batch_size+(1 if nb_faces%texture_batch_size>0 else 0), desc='texturing', unit='step'):
                 tp = texture_params[i*texture_batch_size:(i+1)*texture_batch_size]
                 texture = texture_mean + (texture_basis * tp[:, None, :]).sum(-1)
                 texture = texture.reshape(tp.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
                 texture = texture[:, [2, 1, 0], :, :]
                 texture = texture / 255
-                if self._textures is None: self._textures = texture.cpu()
-                else: self._textures = torch.cat((self._textures, texture.cpu()))
+                self._textures[i*texture_batch_size:(i+1)*texture_batch_size] = texture.cpu()
 
 
     def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks3D_png:bool=Config.save_lmks3D_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D_npy:bool=Config.save_lmks3D_npy, lmk2D_format:str=Config.lmk2D_format, save_markers:bool=Config.save_markers, img_resolution:list=Config.img_resolution, show_window=Config.show_window):
@@ -170,7 +170,7 @@ class VisageGenerator():
             save_paths = ""
         if save_markers: markers = np.load("markers.npy")
         save_any_png = save_png or save_lmks3D_png or save_markers
-        self.render = Renderer("visage.obj", img_resolution[0], img_resolution[1], device=self.device)
+        self.render = Renderer("visage.obj", img_resolution[0], img_resolution[1], device=self.device, show=show_window)
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)

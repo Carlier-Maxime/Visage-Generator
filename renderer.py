@@ -14,7 +14,7 @@ import torch
 import numpy as np
 
 class Renderer():
-    def __init__(self, obj_filename:str, width:int, height:int, device:torch.device):
+    def __init__(self, obj_filename:str, width:int, height:int, device:torch.device, show:bool=True):
         warnings.filterwarnings("ignore",'No mtl file provided')
         self.device = torch.device(device)
         _, faces, aux = load_obj(obj_filename, device=device)
@@ -26,7 +26,7 @@ class Renderer():
         pygame.init()
         self.width = width
         self.height = height
-        pygame.display.set_mode([width, height], pygame.constants.OPENGL | pygame.constants.DOUBLEBUF)
+        pygame.display.set_mode([width, height], pygame.constants.OPENGL | pygame.constants.DOUBLEBUF | pygame.SHOWN if show else pygame.HIDDEN)
 
         glLightfv(GL_LIGHT0, GL_POSITION,  (-40, 200, 100, 0.0))
         glLightfv(GL_LIGHT0, GL_AMBIENT, (0.2, 0.2, 0.2, 1.0))
