@@ -170,7 +170,7 @@ class VisageGenerator():
             save_paths = ""
         if save_markers: markers = np.load("markers.npy")
         save_any_png = save_png or save_lmks3D_png or save_markers
-        self.render = Renderer("visage.obj", img_resolution[0], img_resolution[1])
+        self.render = Renderer("visage.obj", img_resolution[0], img_resolution[1], device=self.device)
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)
@@ -199,7 +199,7 @@ class VisageGenerator():
                 if save_lmks3D_png: self.render.save_to_image(f'{outLmks3D_PNG}/{basename}.png', vertices, texture, pts=lmk)
                 if save_markers:
                     mks = util.read_all_index_opti_tri(vertices, self._faces, markers)
-                    self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks)))
+                    self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks), device=self.device))
         if save_lmks2D:
             getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
 

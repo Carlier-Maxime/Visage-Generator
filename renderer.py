@@ -14,13 +14,14 @@ import torch
 import numpy as np
 
 class Renderer():
-    def __init__(self, obj_filename, width, height):
+    def __init__(self, obj_filename:str, width:int, height:int, device:torch.device):
         warnings.filterwarnings("ignore",'No mtl file provided')
-        _, faces, aux = load_obj(obj_filename)
+        self.device = torch.device(device)
+        _, faces, aux = load_obj(obj_filename, device=device)
         self.uvcoords = aux.verts_uvs # (N, V, 2)
         self.uvfaces = faces.textures_idx  # (N, F, 3)
         self.order_indexs = torch.cat([self.uvfaces, faces.verts_idx],dim=1)[:,[0,3,1,4,2,5]].reshape([self.uvfaces.shape[0]*3,2]).unique(dim=0)
-        self.raw_sphere = Renderer.create_sphere(0.02, 30, 30)
+        self.raw_sphere = self.create_sphere(0.02, 30, 30)
 
         pygame.init()
         self.width = width
@@ -60,10 +61,6 @@ class Renderer():
         glBindBuffer(GL_ARRAY_BUFFER, self.buffers[2])
         glTexCoordPointer(2, GL_FLOAT, 0, None)
 
-        glEnableClientState(GL_VERTEX_ARRAY)
-        glBindBuffer(GL_ARRAY_BUFFER, self.buffers[1])
-        glVertexPointer(3, GL_FLOAT, 0, None)
-
         self.texid = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.texid)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR)
@@ -88,8 +85,10 @@ class Renderer():
 
         gl_list = glGenLists(1)
         glNewList(gl_list, GL_COMPILE)
+        glEnableClientState(GL_VERTEX_ARRAY)
         glBindBuffer(GL_ARRAY_BUFFER, self.buffers[1])
         glBufferData(GL_ARRAY_BUFFER, vertices, GL_STREAM_DRAW)
+        glVertexPointer(3, GL_FLOAT, 0, None)
         self.__change_GL_texture(texture)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.buffers[0])
         glDrawElements(GL_TRIANGLES, self.uvfaces.numel(), GL_UNSIGNED_INT, None)
@@ -153,46 +152,52 @@ class Renderer():
         self.__render(lists)
         PIL.Image.frombytes('RGB', (self.width, self.height), glReadPixels(0,0,self.width,self.height, GL_RGB, GL_UNSIGNED_BYTE)).transpose(PIL.Image.FLIP_TOP_BOTTOM).save(filename)
 
-    def create_sphere(radius, slices, stacks):
-        vertex_array = []
+    def create_sphere(self, radius, slices, stacks):
+        vertex_array = torch.zeros(((stacks + 1) * (slices + 1), 3), dtype=torch.float32)
         for i in range(stacks + 1):
-            theta = i * np.pi / stacks
-            sin_theta = np.sin(theta)
-            cos_theta = np.cos(theta)
+            theta = i * torch.tensor(torch.pi) / stacks
+            sin_theta = torch.sin(theta)
+            cos_theta = torch.cos(theta)
 
             for j in range(slices + 1):
-                phi = j * 2 * np.pi / slices
-                sin_phi = np.sin(phi)
-                cos_phi = np.cos(phi)
+                phi = j * 2 * torch.tensor(torch.pi) / slices
+                sin_phi = torch.sin(phi)
+                cos_phi = torch.cos(phi)
 
                 x = radius * cos_phi * sin_theta
                 y = radius * cos_theta
                 z = radius * sin_phi * sin_theta
 
-                vertex_array.append([x, y, z])
+                vertex_array[i * (slices + 1) + j] = torch.tensor([x, y, z])
 
-        indices = np.zeros((stacks, slices, 6), dtype=np.uint32)
+        indices = torch.zeros((stacks, slices, 6), dtype=torch.int64)
         for i in range(stacks):
             for j in range(slices):
                 p1 = i * (slices + 1) + j
                 p2 = p1 + slices + 1
-                indices[i, j] = [p1, p2, p1 + 1, p1 + 1, p2, p2 + 1]
+                indices[i, j] = torch.tensor([p1, p2, p1 + 1, p1 + 1, p2, p2 + 1], dtype=torch.int64)
 
         return vertex_array, indices
 
 
     def create_sphere_gl_list(raw_sphere, position):
         vertex_array, indices = raw_sphere
+        vertex_array += position
         list_id = glGenLists(1)
         glNewList(list_id, GL_COMPILE)
         glDisable(GL_TEXTURE_2D)
-        glColor(0,1.,0)
-        glBegin(GL_TRIANGLES)
-        for index in indices.flatten():
-            vertex = vertex_array[index]
-            glVertex3f(vertex[0]+position[0], vertex[1]+position[1], vertex[2]+position[2])
-        glEnd()
-        glColor(1.,1.,1.)
+        glColor(0, 1., 0)
+        vbo = glGenBuffers(1)
+        glBindBuffer(GL_ARRAY_BUFFER, vbo)
+        glBufferData(GL_ARRAY_BUFFER, vertex_array.numpy(), GL_STATIC_DRAW)
+        glEnableClientState(GL_VERTEX_ARRAY)
+        glBindBuffer(GL_ARRAY_BUFFER, vbo)
+        glVertexPointer(3, GL_FLOAT, 0, None)
+        ibo = glGenBuffers(1)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.flatten().numpy().astype('uint32'), GL_STATIC_DRAW)
+        glDrawElements(GL_TRIANGLES, indices.numel(), GL_UNSIGNED_INT, None)
+        glColor(1., 1., 1.)
         glEnable(GL_TEXTURE_2D)
         glEndList()
         return list_id
