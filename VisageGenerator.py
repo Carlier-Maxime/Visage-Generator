@@ -205,14 +205,15 @@ class VisageGenerator():
 
 
 @click.command()
+# General
 @click.option('--nb-faces', type=int, default=Config.nb_faces, help='number faces generate')
-@click.option('--lmk2D-format', type=str, default=Config.lmk2D_format, help='format used for save lmk2d. (npy and pts is supported)')
-@click.option('--not-texturing', 'texturing', type=bool,  default=Config.texturing,  help='enable texture', is_flag=True)
-@click.option('--save-obj',  type=bool,  default=Config.save_obj,  help='enable save into file obj', is_flag=True)
-@click.option('--save-png',  type=bool,  default=Config.save_png,  help='enable save into file png', is_flag=True)
-@click.option('--save-lmks3D-npy', 'save_lmks3D_npy', type=bool,  default=Config.save_lmks3D_npy,  help='enable save landmarks 3D into file npy', is_flag=True)
-@click.option('--save-lmks3D-png', 'save_lmks3D_png', type=bool,  default=Config.save_lmks3D_png,  help='enable save landmarks 3D with visage into file png', is_flag=True)
-@click.option('--save-lmks2D', 'save_lmks2D',  type=bool,  default=Config.save_lmks2D,  help='enable save landmarks 2D into file npy', is_flag=True)
+@click.option('--not-texturing', 'texturing', type=bool,  default=Config.texturing,  help='disable texture', is_flag=True)
+@click.option('--device',  type=str,  default=Config.device,  help='choice your device for generate face. ("cpu" or "cuda")')
+@click.option('--view',  type=bool,  default=Config.view,  help='enable view', is_flag=True)
+@click.option('--batch-size', type=int, default=Config.batch_size, help='number of visage generate in the same time')
+@click.option('--texture-batch-size', type=int, default=Config.texture_batch_size, help='number of texture generate in same time')
+
+# Generator parameter
 @click.option('--min-shape-param',  type=float,  default=Config.min_shape_param,  help='minimum value for shape param')
 @click.option('--max-shape-param',  type=float,  default=Config.max_shape_param,  help='maximum value for shape param')
 @click.option('--min-expression-param',  type=float,  default=Config.min_expression_param,  help='minimum value for expression param')
@@ -220,22 +221,31 @@ class VisageGenerator():
 @click.option('--global-pose-param1',  type=float,  default=Config.global_pose_param1,  help='value of first global pose param')
 @click.option('--global-pose-param2',  type=float,  default=Config.global_pose_param2,  help='value of second global pose param')
 @click.option('--global-pose-param3',  type=float,  default=Config.global_pose_param3,  help='value of third global pose param')
-@click.option('--device',  type=str,  default=Config.device,  help='choice your device for generate face. ("cpu" or "cuda")')
-@click.option('--view',  type=bool,  default=Config.view,  help='enable view', is_flag=True)
-@click.option('--flame-model-path', type=str, default=Config.flame_model_path, help='path for acess flame model')
-@click.option('--batch-size', type=int, default=Config.batch_size, help='number of visage generate in the same time')
+
+# Flame parameter
 @click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=Config.use_face_contour, is_flag=True, help='not use face contour for generate visage')
 @click.option('--not-use-3D-translation', 'use_3D_translation', type=bool, default=Config.use_3D_translation, is_flag=True, help='not use 3D translation for generate visage')
 @click.option('--shape-params', type=int, default=Config.shape_params, help='a number of shape parameter used')
 @click.option('--expression-params', type=int, default=Config.expression_params, help='a number of expression parameter used')
-@click.option('--static-landmark-embedding-path', type=str, default=Config.static_landmark_embedding_path, help='path for static landmark embedding file')
-@click.option('--dynamic-landmark-embedding-path', type=str, default=Config.dynamic_landmark_embedding_path, help='path for dynamic landmark embedding file')
 @click.option('--not-optimize-eyeballpose', 'optimize_eyeballpose', type=bool, default=Config.optimize_eyeballpose, is_flag=True, help='not optimize eyeballpose for generate visage')
 @click.option('--not-optimize-neckpose', 'optimize_neckpose', type=bool, default=Config.optimize_neckpose, is_flag=True, help='not optimise neckpoes for generate visage')
-@click.option('--texture-batch-size', type=int, default=Config.texture_batch_size, help='number of texture generate in same time')
+
+# Saving
+@click.option('--lmk2D-format', type=str, default=Config.lmk2D_format, help='format used for save lmk2d. (npy and pts is supported)')
+@click.option('--save-obj',  type=bool,  default=Config.save_obj,  help='enable save into file obj', is_flag=True)
+@click.option('--save-png',  type=bool,  default=Config.save_png,  help='enable save into file png', is_flag=True)
+@click.option('--save-lmks3D-npy', 'save_lmks3D_npy', type=bool,  default=Config.save_lmks3D_npy,  help='enable save landmarks 3D into file npy', is_flag=True)
+@click.option('--save-lmks3D-png', 'save_lmks3D_png', type=bool,  default=Config.save_lmks3D_png,  help='enable save landmarks 3D with visage into file png', is_flag=True)
+@click.option('--save-lmks2D', 'save_lmks2D',  type=bool,  default=Config.save_lmks2D,  help='enable save landmarks 2D into file npy', is_flag=True)
 @click.option('--save-markers', type=bool,  default=Config.save_markers,  help='enable save markers into png file', is_flag=True)
 @click.option('--img-resolution', type=str, default=Config.img_resolution, help='resolution of image')
-@click.option('--show-window', type=bool,  default=Config.show_window,  help='show window during save png (enable if images is the screenshot)', is_flag=True)
+@click.option('--show-window', type=bool,  default=Config.show_window,  help='show window during save png (enable if images is the screenshot or full black)', is_flag=True)
+
+# Path
+@click.option('--flame-model-path', type=str, default=Config.flame_model_path, help='path for acess flame model')
+@click.option('--static-landmark-embedding-path', type=str, default=Config.static_landmark_embedding_path, help='path for static landmark embedding file')
+@click.option('--dynamic-landmark-embedding-path', type=str, default=Config.dynamic_landmark_embedding_path, help='path for dynamic landmark embedding file')
+
 def main(
     nb_faces,
     lmk2d_format,
