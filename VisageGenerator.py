@@ -195,7 +195,7 @@ class VisageGenerator():
                 visage_paths += visage_path
                 save_paths += f'{outLmk2D}/{basename}.{lmk2D_format}'
             if save_any_png:
-                self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, self._faces, texture)
+                self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, texture)
                 """scene = trimesh.Scene()
                 scene.camera_transform = [
                     [-0.11912993, -0.59791899,  0.79265437,  0.30183245],
