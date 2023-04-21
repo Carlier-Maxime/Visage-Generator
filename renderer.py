@@ -148,19 +148,20 @@ class Renderer():
             pts = pts[:, [0, 2, 1]]
             pts *= 10
             for p in pts:
-                lists.append(Renderer.create_sphere_gl_list(self.raw_sphere, p.cpu().numpy()))
+                lists.append(Renderer.create_sphere_gl_list(self.raw_sphere, p))
         self.__render(lists)
         PIL.Image.frombytes('RGB', (self.width, self.height), glReadPixels(0,0,self.width,self.height, GL_RGB, GL_UNSIGNED_BYTE)).transpose(PIL.Image.FLIP_TOP_BOTTOM).save(filename)
 
     def create_sphere(self, radius, slices, stacks):
-        vertex_array = torch.zeros(((stacks + 1) * (slices + 1), 3), dtype=torch.float32)
+        vertex_array = torch.zeros(((stacks + 1) * (slices + 1), 3), dtype=torch.float32, device=self.device)
+        tpi = torch.tensor(torch.pi, device=self.device)
         for i in range(stacks + 1):
-            theta = i * torch.tensor(torch.pi) / stacks
+            theta = i * tpi / stacks
             sin_theta = torch.sin(theta)
             cos_theta = torch.cos(theta)
 
             for j in range(slices + 1):
-                phi = j * 2 * torch.tensor(torch.pi) / slices
+                phi = j * 2 * tpi / slices
                 sin_phi = torch.sin(phi)
                 cos_phi = torch.cos(phi)
 
@@ -168,34 +169,34 @@ class Renderer():
                 y = radius * cos_theta
                 z = radius * sin_phi * sin_theta
 
-                vertex_array[i * (slices + 1) + j] = torch.tensor([x, y, z])
+                vertex_array[i * (slices + 1) + j] = torch.tensor([x, y, z], device=self.device)
 
-        indices = torch.zeros((stacks, slices, 6), dtype=torch.int64)
+        indices = torch.zeros((stacks, slices, 6), dtype=torch.int64, device=self.device)
         for i in range(stacks):
             for j in range(slices):
                 p1 = i * (slices + 1) + j
                 p2 = p1 + slices + 1
-                indices[i, j] = torch.tensor([p1, p2, p1 + 1, p1 + 1, p2, p2 + 1], dtype=torch.int64)
+                indices[i, j] = torch.tensor([p1, p2, p1 + 1, p1 + 1, p2, p2 + 1], dtype=torch.int64, device=self.device)
 
         return vertex_array, indices
 
 
     def create_sphere_gl_list(raw_sphere, position):
         vertex_array, indices = raw_sphere
-        vertex_array += position
+        vertex_array = vertex_array.clone() + position
         list_id = glGenLists(1)
         glNewList(list_id, GL_COMPILE)
         glDisable(GL_TEXTURE_2D)
         glColor(0, 1., 0)
         vbo = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, vbo)
-        glBufferData(GL_ARRAY_BUFFER, vertex_array.numpy(), GL_STATIC_DRAW)
+        glBufferData(GL_ARRAY_BUFFER, vertex_array.cpu().numpy(), GL_STATIC_DRAW)
         glEnableClientState(GL_VERTEX_ARRAY)
         glBindBuffer(GL_ARRAY_BUFFER, vbo)
         glVertexPointer(3, GL_FLOAT, 0, None)
         ibo = glGenBuffers(1)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo)
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.flatten().numpy().astype('uint32'), GL_STATIC_DRAW)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.flatten().cpu().numpy().astype('uint32'), GL_STATIC_DRAW)
         glDrawElements(GL_TRIANGLES, indices.numel(), GL_UNSIGNED_INT, None)
         glColor(1., 1., 1.)
         glEnable(GL_TEXTURE_2D)
