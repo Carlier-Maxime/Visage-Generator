@@ -195,34 +195,11 @@ class VisageGenerator():
                 visage_paths += visage_path
                 save_paths += f'{outLmk2D}/{basename}.{lmk2D_format}'
             if save_any_png:
-                self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, texture)
-                """scene = trimesh.Scene()
-                scene.camera_transform = [
-                    [-0.11912993, -0.59791899,  0.79265437,  0.30183245],
-                    [ 0.99086974, -0.12235528,  0.05662456, -0.13695809],
-                    [ 0.06312855,  0.79216291,  0.60703601,  0.29561023],
-                    [ 0.,          0.,          0.,          1.        ]
-                ]
-                mesh = trimesh.load(visage_path)
-                scene.add_geometry(mesh)
-                if save_png:
-                    with open(f'{outVisagePNG}/{basename}.png',"wb") as f:
-                        f.write(scene.save_image(img_resolution, visible=show_window))
-                if save_lmks3D_png:
-                    for index,p in enumerate(lmk.cpu().numpy()):
-                        sm = trimesh.primitives.Sphere(radius=0.0019, center=p)
-                        sm.visual.vertex_colors = [0.2, 1., 0.2, 1.]
-                        scene.add_geometry(sm, geom_name=f"sm{index}")
-                    with open(f'{outLmks3D_PNG}/{basename}.png',"wb") as f:
-                        f.write(scene.save_image(img_resolution, visible=show_window))
-                    scene.delete_geometry([f"sm{index}" for index in range(lmk.size()[0])])
+                if save_png: self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, texture)
+                if save_lmks3D_png: self.render.save_to_image(f'{outLmks3D_PNG}/{basename}.png', vertices, texture, pts=lmk)
                 if save_markers:
-                    for im in markers:
-                        m = trimesh.primitives.Sphere(radius=0.0019, center=util.read_index_opti_tri(vertices, self._faces, im))
-                        m.visual.vertex_colors = [0.2, 1., 0., 1.]
-                        scene.add_geometry(m)
-                    with open(f'{outMarkersPNG}/{basename}.png',"wb") as f:
-                        f.write(scene.save_image(img_resolution, visible=show_window))"""
+                    mks = util.read_all_index_opti_tri(vertices, self._faces, markers)
+                    self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks)))
         if save_lmks2D:
             getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
 

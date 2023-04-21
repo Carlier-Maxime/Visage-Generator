@@ -11,6 +11,7 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 import PIL.Image
 import torch
+import numpy as np
 
 class Renderer():
     def __init__(self, obj_filename, width, height):
@@ -19,6 +20,7 @@ class Renderer():
         self.uvcoords = aux.verts_uvs # (N, V, 2)
         self.uvfaces = faces.textures_idx  # (N, F, 3)
         self.order_indexs = torch.cat([self.uvfaces, faces.verts_idx],dim=1)[:,[0,3,1,4,2,5]].reshape([self.uvfaces.shape[0]*3,2]).unique(dim=0)
+        self.raw_sphere = Renderer.create_sphere(0.02, 30, 30)
 
         pygame.init()
         self.width = width
@@ -127,7 +129,9 @@ class Renderer():
                     print(f'rx: {self.rx}, ry: {self.ry}, tx: {self.tx}, ty: {self.ty}, zpos: {self.zpos}')
             self.__render(gl_list)
 
-    def __render(self,gl_list):
+    def __render(self,gl_lists):
+        glEnable(GL_DEPTH_TEST)
+        glMatrixMode(GL_MODELVIEW)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
 
@@ -135,15 +139,64 @@ class Renderer():
         glTranslate(self.tx/20., self.ty/20., - self.zpos)
         glRotate(self.ry, 1, 0, 0)
         glRotate(self.rx, 0, 1, 0)
-        glCallList(gl_list)
+        glCallLists(gl_lists)
         pygame.display.flip()
 
-    def save_to_image(self, filename, vertices, texture):
+    def save_to_image(self, filename, vertices, texture, pts=None):
         gl_list = self.__create_GL_List(vertices, texture)
-        glEnable(GL_DEPTH_TEST)
-        glMatrixMode(GL_MODELVIEW)
-        self.__render(gl_list)
+        lists = [gl_list]
+        if pts is not None:
+            pts = pts[:, [0, 2, 1]]
+            pts *= 10
+            for p in pts:
+                lists.append(Renderer.create_sphere_gl_list(self.raw_sphere, p.cpu().numpy()))
+        self.__render(lists)
         PIL.Image.frombytes('RGB', (self.width, self.height), glReadPixels(0,0,self.width,self.height, GL_RGB, GL_UNSIGNED_BYTE)).transpose(PIL.Image.FLIP_TOP_BOTTOM).save(filename)
+
+    def create_sphere(radius, slices, stacks):
+        vertex_array = []
+        for i in range(stacks + 1):
+            theta = i * np.pi / stacks
+            sin_theta = np.sin(theta)
+            cos_theta = np.cos(theta)
+
+            for j in range(slices + 1):
+                phi = j * 2 * np.pi / slices
+                sin_phi = np.sin(phi)
+                cos_phi = np.cos(phi)
+
+                x = radius * cos_phi * sin_theta
+                y = radius * cos_theta
+                z = radius * sin_phi * sin_theta
+
+                vertex_array.append([x, y, z])
+
+        indices = np.zeros((stacks, slices, 6), dtype=np.uint32)
+        for i in range(stacks):
+            for j in range(slices):
+                p1 = i * (slices + 1) + j
+                p2 = p1 + slices + 1
+                indices[i, j] = [p1, p2, p1 + 1, p1 + 1, p2, p2 + 1]
+
+        return vertex_array, indices
+
+
+    def create_sphere_gl_list(raw_sphere, position):
+        vertex_array, indices = raw_sphere
+        list_id = glGenLists(1)
+        glNewList(list_id, GL_COMPILE)
+        glDisable(GL_TEXTURE_2D)
+        glColor(0,1.,0)
+        glBegin(GL_TRIANGLES)
+        for index in indices.flatten():
+            vertex = vertex_array[index]
+            glVertex3f(vertex[0]+position[0], vertex[1]+position[1], vertex[2]+position[2])
+        glEnd()
+        glColor(1.,1.,1.)
+        glEnable(GL_TEXTURE_2D)
+        glEndList()
+        return list_id
+
 
 if __name__ == '__main__':
     import ObjLoader, sys
