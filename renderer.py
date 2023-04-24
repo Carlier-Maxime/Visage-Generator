@@ -11,7 +11,6 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 import PIL.Image
 import torch
-import numpy as np
 
 class Renderer():
     def __init__(self, obj_filename:str, width:int, height:int, device:torch.device, show:bool=True):
@@ -192,7 +191,7 @@ class Renderer():
         list_id = glGenLists(1)
         glNewList(list_id, GL_COMPILE)
         glDisable(GL_TEXTURE_2D)
-        glColor(0, 1., 0)
+        glColor(0, 255., 0)
         vbo = glGenBuffers(1)
         glBindBuffer(GL_ARRAY_BUFFER, vbo)
         glBufferData(GL_ARRAY_BUFFER, vertex_array.cpu().numpy(), GL_STATIC_DRAW)
