@@ -148,8 +148,7 @@ class Renderer():
         if pts is not None:
             pts = pts[:, [0, 2, 1]]
             pts *= 10
-            for p in pts:
-                lists.append(Renderer.create_sphere_gl_list(self.raw_sphere, p))
+            lists.append(Renderer.create_spheres_gl_list(self.raw_sphere, pts))
         self.__render(lists)
         for i in range(len(lists)-1): glDeleteLists(lists[i+1],1)
         PIL.Image.frombytes('RGB', (self.width, self.height), glReadPixels(0,0,self.width,self.height, GL_RGB, GL_UNSIGNED_BYTE)).transpose(PIL.Image.FLIP_TOP_BOTTOM).save(filename)
@@ -183,9 +182,13 @@ class Renderer():
         return vertex_array, indices
 
 
-    def create_sphere_gl_list(raw_sphere, position):
+    def create_spheres_gl_list(raw_sphere, positions):
         vertex_array, indices = raw_sphere
-        vertex_array = vertex_array.clone() + position
+        nb_spheres = positions.shape[0]
+        indices = indices.clone().flatten()
+        a=torch.arange(0,vertex_array.shape[0]*nb_spheres,vertex_array.shape[0], device=indices.device)
+        indices  = (indices.reshape([indices.shape[0]//3,3]).repeat(nb_spheres,1,1).permute(1,2,0) + a).permute(2,0,1)
+        vertex_array = (vertex_array.clone().repeat(nb_spheres,1,1).permute(1,0,2) + positions).permute(1,0,2)
         list_id = glGenLists(1)
         glNewList(list_id, GL_COMPILE)
         glDisable(GL_TEXTURE_2D)
@@ -198,7 +201,7 @@ class Renderer():
         glVertexPointer(3, GL_FLOAT, 0, None)
         ibo = glGenBuffers(1)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo)
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.flatten().cpu().numpy().astype('uint32'), GL_STATIC_DRAW)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.cpu().numpy().astype('uint32'), GL_STATIC_DRAW)
         glDrawElements(GL_TRIANGLES, indices.numel(), GL_UNSIGNED_INT, None)
         glColor(1., 1., 1.)
         glEnable(GL_TEXTURE_2D)
