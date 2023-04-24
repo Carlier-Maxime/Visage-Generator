@@ -14,6 +14,10 @@ class Config:
     global_pose_param1=45
     global_pose_param2=45
     global_pose_param3=90
+    min_jaw_param1=0
+    max_jaw_param1=30
+    min_jaw_param2_3=-10
+    max_jaw_param2_3=10
     min_texture_param=-2
     max_texture_param=2
     device="cuda"
