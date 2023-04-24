@@ -30,8 +30,6 @@ class Config:
     expression_params=100
     static_landmark_embedding_path='./model/flame_static_embedding.pkl'
     dynamic_landmark_embedding_path='./model/flame_dynamic_embedding.npy'
-    optimize_eyeballpose=True
-    optimize_neckpose=True
     texture_batch_size=16
     save_markers=False
     img_resolution=[256,256]
