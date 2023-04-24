@@ -106,13 +106,10 @@ class VisageGenerator():
     def genParams(self, nb_faces:int = Config.nb_faces, texturing:bool = Config.texturing):
         print('Generate random parameters')
         radian = np.pi / 180.0
-        shape_params = torch.tensor(np.random.uniform(self.min_shape_param, self.max_shape_param, [nb_faces, 300]),dtype=torch.float32).to(self.device)
-        pose_params_numpy = np.array(
-            [[self.global_pose_param1 * radian, self.global_pose_param2 * radian, self.global_pose_param3 * radian, 0.0, 0.0, 0.0]] * nb_faces,
-            dtype=np.float32)
-        pose_params = torch.tensor(pose_params_numpy, dtype=torch.float32).to(self.device)
-        expression_params = torch.tensor(np.random.uniform(self.min_expression_param, self.max_expression_param, [nb_faces, 100]),dtype=torch.float32).to(self.device)
-        if texturing: texture_params = torch.tensor(np.random.uniform(-2, 2, [nb_faces, 50])).float().to(self.device)
+        shape_params = torch.rand(nb_faces, 300, dtype=torch.float32, device=self.device) * (self.max_shape_param - self.min_shape_param) + self.min_shape_param
+        pose_params = torch.tensor([[self.global_pose_param1 * radian, self.global_pose_param2 * radian, self.global_pose_param3 * radian, 0.0*radian, 0.0*radian, 0.0*radian]], dtype=torch.float32, device=self.device).repeat(nb_faces, 1)
+        expression_params = torch.rand(nb_faces, 100, dtype=torch.float32, device=self.device) * (self.max_expression_param - self.min_expression_param) + self.min_expression_param
+        if texturing: texture_params = torch.rand(nb_faces, 50, dtype=torch.float32, device=self.device) * 4 - 2
         else: texture_params = None
         return shape_params, pose_params, expression_params, texture_params
 
