@@ -20,6 +20,8 @@ class Config:
     max_jaw_param2_3=10
     min_texture_param=-2
     max_texture_param=2
+    min_neck_param = -30
+    max_neck_param = 30
     device="cuda"
     view=False
     flame_model_path='./model/generic_model.pkl'

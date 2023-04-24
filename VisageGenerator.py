@@ -26,7 +26,8 @@ class VisageGenerator():
                  min_expression_param:float = Config.min_expression_param, max_expression_param:float = Config.max_expression_param,
                  global_pose_param1:float = Config.global_pose_param1, global_pose_param2:float = Config.global_pose_param2, global_pose_param3:float = Config.global_pose_param3,
                  min_jaw_param1:float = Config.min_jaw_param1, max_jaw_param1:float = Config.max_jaw_param1, min_jaw_param2_3:float = Config.min_jaw_param2_3, max_jaw_param2_3:float = Config.max_jaw_param2_3,
-                 min_texture_param:float = Config.min_texture_param, max_texture_param:float = Config.max_texture_param, flame_model_path=Config.flame_model_path, batch_size=Config.batch_size, use_face_contour=Config.use_face_contour,
+                 min_texture_param:float = Config.min_texture_param, max_texture_param:float = Config.max_texture_param, min_neck_param:float = Config.min_neck_param, max_neck_param:float = Config.max_neck_param,
+                 flame_model_path=Config.flame_model_path, batch_size=Config.batch_size, use_face_contour=Config.use_face_contour,
                  use_3D_translation=Config.use_3D_translation, shape_params=Config.shape_params, expression_params=Config.expression_params, 
                  static_landmark_embedding_path=Config.static_landmark_embedding_path, dynamic_landmark_embedding_path=Config.dynamic_landmark_embedding_path
         ):
@@ -45,6 +46,8 @@ class VisageGenerator():
         self.max_jaw_param2_3 = max_jaw_param2_3
         self.min_texture_param = min_texture_param
         self.max_texture_param = max_texture_param
+        self.min_neck_param = min_neck_param
+        self.max_neck_param = max_neck_param
         self.batch_size = batch_size
 
     def save_obj(self, path: str, vertices: list, faces=None, texture=None) -> None:
@@ -118,7 +121,7 @@ class VisageGenerator():
         pose_params[:,3] = (torch.rand(nb_faces, dtype=torch.float32, device=self.device) * (self.max_jaw_param1 - self.min_jaw_param1) + self.min_jaw_param1) * radian
         pose_params[:,4:6] = (torch.rand(nb_faces, 2, dtype=torch.float32, device=self.device) * (self.max_jaw_param2_3 - self.min_jaw_param2_3) + self.min_jaw_param2_3) * radian
         expression_params = torch.rand(nb_faces, 100, dtype=torch.float32, device=self.device) * (self.max_expression_param - self.min_expression_param) + self.min_expression_param
-        neck_pose = torch.zeros(nb_faces, 3).to(self.device)
+        neck_pose = (torch.rand(nb_faces, 3, dtype=torch.float32, device=self.device) * (self.max_neck_param - self.min_neck_param) + self.min_neck_param) * radian
         eye_pose = torch.zeros(nb_faces, 6).to(self.device)
         if texturing: texture_params = torch.rand(nb_faces, 50, dtype=torch.float32, device=self.device) * (self.max_texture_param - self.min_texture_param) + self.min_texture_param
         else: texture_params = None
@@ -232,6 +235,8 @@ class VisageGenerator():
 @click.option('--max-jaw-param2-3',  type=float,  default=Config.max_jaw_param2_3,  help='maximum value for jaw param 2-3')
 @click.option('--min-texture-param',  type=float,  default=Config.min_texture_param,  help='minimum value for texture param')
 @click.option('--max-texture-param',  type=float,  default=Config.max_texture_param,  help='maximum value for texture param')
+@click.option('--min-neck-param',  type=float,  default=Config.min_neck_param,  help='minimum value for neck param')
+@click.option('--max-neck-param',  type=float,  default=Config.max_neck_param,  help='maximum value for neck param')
 
 # Flame parameter
 @click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=Config.use_face_contour, is_flag=True, help='not use face contour for generate visage')
@@ -277,6 +282,8 @@ def main(
     max_jaw_param2_3,
     min_texture_param,
     max_texture_param,
+    min_neck_param,
+    max_neck_param,
     device,
     view,
     flame_model_path,
@@ -295,7 +302,7 @@ def main(
     img_resolution = img_resolution[1:-1].split(",")
     for i in range(len(img_resolution)): img_resolution[i] = int(img_resolution[i])
     vg = VisageGenerator(device, min_shape_param, max_shape_param, min_expression_param, max_expression_param, global_pose_param1, global_pose_param2, global_pose_param3, min_jaw_param1, max_jaw_param1, min_jaw_param2_3, max_jaw_param2_3,
-                         min_texture_param, max_texture_param, flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path)
+                         min_texture_param, max_texture_param, min_neck_param, max_neck_param, flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path)
     vg.generate(nb_faces, texturing, texture_batch_size)
     vg.save(save_obj, save_png, save_lmks3D_png, save_lmks2D, save_lmks3D_npy, lmk2d_format, save_markers, img_resolution, show_window)
     if view:
