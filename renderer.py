@@ -66,25 +66,27 @@ class Renderer():
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,GL_LINEAR)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,GL_LINEAR)
 
+        self.gl_list_visage = glGenLists(1)
+
     def __del__(self):
         glDisable(GL_TEXTURE_2D)
         glDisableClientState(GL_VERTEX_ARRAY)
         glDisableClientState(GL_TEXTURE_COORD_ARRAY)
         glDeleteBuffers(3, self.buffers)
+        glDeleteLists(self.gl_list_visage,1)
 
     def __change_GL_texture(self, texture):
         size = texture.shape
         image = PIL.Image.fromarray(texture,'RGB').transpose(PIL.Image.FLIP_TOP_BOTTOM).tobytes()
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size[0], size[1], 0, GL_RGB,GL_UNSIGNED_BYTE, image)
     
-    def __create_GL_List(self, vertices, texture):
+    def __edit_GL_List(self, vertices, texture):
         vertices = vertices[:, [0, 2, 1]]
         vertices *= 10
         vertices = vertices[self.order_indexs[:,1]]
         vertices = vertices.cpu().numpy()
 
-        gl_list = glGenLists(1)
-        glNewList(gl_list, GL_COMPILE)
+        glNewList(self.gl_list_visage, GL_COMPILE)
         glEnableClientState(GL_VERTEX_ARRAY)
         glBindBuffer(GL_ARRAY_BUFFER, self.buffers[1])
         glBufferData(GL_ARRAY_BUFFER, vertices, GL_STREAM_DRAW)
@@ -93,7 +95,6 @@ class Renderer():
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.buffers[0])
         glDrawElements(GL_TRIANGLES, self.uvfaces.numel(), GL_UNSIGNED_INT, None)
         glEndList()
-        return gl_list
 
     def test(self, gl_list):
         run=1
@@ -142,14 +143,15 @@ class Renderer():
         pygame.display.flip()
 
     def save_to_image(self, filename, vertices, texture, pts=None):
-        gl_list = self.__create_GL_List(vertices, texture)
-        lists = [gl_list]
+        self.__edit_GL_List(vertices, texture)
+        lists = [self.gl_list_visage]
         if pts is not None:
             pts = pts[:, [0, 2, 1]]
             pts *= 10
             for p in pts:
                 lists.append(Renderer.create_sphere_gl_list(self.raw_sphere, p))
         self.__render(lists)
+        for i in range(len(lists)-1): glDeleteLists(lists[i+1],1)
         PIL.Image.frombytes('RGB', (self.width, self.height), glReadPixels(0,0,self.width,self.height, GL_RGB, GL_UNSIGNED_BYTE)).transpose(PIL.Image.FLIP_TOP_BOTTOM).save(filename)
 
     def create_sphere(self, radius, slices, stacks):
@@ -201,6 +203,7 @@ class Renderer():
         glColor(1., 1., 1.)
         glEnable(GL_TEXTURE_2D)
         glEndList()
+        glDeleteBuffers(2, [vbo, ibo])
         return list_id
 
 
