@@ -7,6 +7,7 @@ class Config:
     save_lmks3D_npy=False
     save_lmks3D_png=False
     save_lmks2D=False
+    ptsInAlpha=True
     min_shape_param=-2
     max_shape_param=2
     min_expression_param=-2

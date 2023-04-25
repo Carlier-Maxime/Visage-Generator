@@ -162,7 +162,7 @@ class VisageGenerator():
                 self._textures[i*texture_batch_size:(i+1)*texture_batch_size] = texture.cpu()
 
 
-    def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks3D_png:bool=Config.save_lmks3D_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D_npy:bool=Config.save_lmks3D_npy, lmk2D_format:str=Config.lmk2D_format, save_markers:bool=Config.save_markers, img_resolution:list=Config.img_resolution, show_window=Config.show_window):
+    def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks3D_png:bool=Config.save_lmks3D_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D_npy:bool=Config.save_lmks3D_npy, lmk2D_format:str=Config.lmk2D_format, save_markers:bool=Config.save_markers, img_resolution:list=Config.img_resolution, show_window=Config.show_window, ptsInAlpha:bool=True):
         out = 'output'
         tmp = 'tmp'
         outObj = (out if save_obj else tmp)+"/obj"
@@ -204,10 +204,10 @@ class VisageGenerator():
                 save_paths += f'{outLmk2D}/{basename}.{lmk2D_format}'
             if save_any_png:
                 if save_png: self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, texture)
-                if save_lmks3D_png: self.render.save_to_image(f'{outLmks3D_PNG}/{basename}.png', vertices, texture, pts=lmk)
+                if save_lmks3D_png: self.render.save_to_image(f'{outLmks3D_PNG}/{basename}.png', vertices, texture, pts=lmk, ptsInAlpha=ptsInAlpha)
                 if save_markers:
                     mks = util.read_all_index_opti_tri(vertices, self._faces, markers)
-                    self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks), device=self.device))
+                    self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks), device=self.device), ptsInAlpha=ptsInAlpha)
         if save_lmks2D:
             getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
 
@@ -254,6 +254,7 @@ class VisageGenerator():
 @click.option('--save-markers', type=bool,  default=Config.save_markers,  help='enable save markers into png file', is_flag=True)
 @click.option('--img-resolution', type=str, default=Config.img_resolution, help='resolution of image')
 @click.option('--show-window', type=bool,  default=Config.show_window,  help='show window during save png (enable if images is the screenshot or full black)', is_flag=True)
+@click.option('--not-pts-in-alpha', 'pts_in_alpha', type=bool, default=Config.ptsInAlpha, help='not save landmarks/markers png version to channel alpha', is_flag=True)
 
 # Path
 @click.option('--flame-model-path', type=str, default=Config.flame_model_path, help='path for acess flame model')
@@ -297,14 +298,15 @@ def main(
     texture_batch_size,
     save_markers,
     img_resolution,
-    show_window
+    show_window,
+    pts_in_alpha
 ):
     img_resolution = img_resolution[1:-1].split(",")
     for i in range(len(img_resolution)): img_resolution[i] = int(img_resolution[i])
     vg = VisageGenerator(device, min_shape_param, max_shape_param, min_expression_param, max_expression_param, global_pose_param1, global_pose_param2, global_pose_param3, min_jaw_param1, max_jaw_param1, min_jaw_param2_3, max_jaw_param2_3,
                          min_texture_param, max_texture_param, min_neck_param, max_neck_param, flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path)
     vg.generate(nb_faces, texturing, texture_batch_size)
-    vg.save(save_obj, save_png, save_lmks3D_png, save_lmks2D, save_lmks3D_npy, lmk2d_format, save_markers, img_resolution, show_window)
+    vg.save(save_obj, save_png, save_lmks3D_png, save_lmks2D, save_lmks3D_npy, lmk2d_format, save_markers, img_resolution, show_window, pts_in_alpha)
     if view:
         vg.view()
 

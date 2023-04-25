@@ -67,6 +67,15 @@ class Renderer():
 
         self.gl_list_visage = glGenLists(1)
 
+        glEnable(GL_DEPTH_TEST)
+        glMatrixMode(GL_MODELVIEW)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        glLoadIdentity()
+
+        glTranslate(self.tx/20., self.ty/20., - self.zpos)
+        glRotate(self.ry, 1, 0, 0)
+        glRotate(self.rx, 0, 1, 0)
+
     def __del__(self):
         glDisable(GL_TEXTURE_2D)
         glDisableClientState(GL_VERTEX_ARRAY)
@@ -129,28 +138,37 @@ class Renderer():
             self.__render(gl_list)
 
     def __render(self,gl_lists):
-        glEnable(GL_DEPTH_TEST)
-        glMatrixMode(GL_MODELVIEW)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        glLoadIdentity()
-
-        # RENDER OBJECT
-        glTranslate(self.tx/20., self.ty/20., - self.zpos)
-        glRotate(self.ry, 1, 0, 0)
-        glRotate(self.rx, 0, 1, 0)
         glCallLists(gl_lists)
         pygame.display.flip()
 
-    def save_to_image(self, filename, vertices, texture, pts=None):
+    def save_to_image(self, filename, vertices, texture, pts=None, ptsInAlpha:bool=True):
         self.__edit_GL_List(vertices, texture)
-        lists = [self.gl_list_visage]
         if pts is not None:
             pts = pts[:, [0, 2, 1]]
             pts *= 10
-            lists.append(Renderer.create_spheres_gl_list(self.raw_sphere, pts))
-        self.__render(lists)
-        for i in range(len(lists)-1): glDeleteLists(lists[i+1],1)
-        PIL.Image.frombytes('RGB', (self.width, self.height), glReadPixels(0,0,self.width,self.height, GL_RGB, GL_UNSIGNED_BYTE)).transpose(PIL.Image.FLIP_TOP_BOTTOM).save(filename)
+            pts_gl_list = Renderer.create_spheres_gl_list(self.raw_sphere, pts)
+            if ptsInAlpha:
+                self.__render([self.gl_list_visage])
+                img_visage = torch.frombuffer(bytearray(glReadPixels(0,0,self.width,self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+                glColor(0.,0.,0.)
+                glCallList(self.gl_list_visage)
+                glColor(1.,1.,1.)
+                glCallList(pts_gl_list)
+                pygame.display.flip()
+                img_pts = torch.frombuffer(bytearray(glReadPixels(0,0,self.width,self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
+                green_mask = (img_pts == torch.tensor([0, 255, 0, 255], device=self.device)).all(dim=2)
+                new_colors = img_visage[green_mask]
+                new_colors[:,3] = 0
+                img_visage[green_mask] = new_colors
+            else: 
+                self.__render([self.gl_list_visage, pts_gl_list])
+                img_visage = torch.frombuffer(bytearray(glReadPixels(0,0,self.width,self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
+        else:
+            self.__render([self.gl_list_visage])
+            img_visage = torch.frombuffer(bytearray(glReadPixels(0,0,self.width,self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
+        PIL.Image.fromarray(img_visage.cpu().numpy()).transpose(PIL.Image.FLIP_TOP_BOTTOM).save(filename)
 
     def create_sphere(self, radius, slices, stacks):
         vertex_array = torch.zeros(((stacks + 1) * (slices + 1), 3), dtype=torch.float32, device=self.device)
