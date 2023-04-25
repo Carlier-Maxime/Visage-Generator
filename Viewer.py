@@ -1,18 +1,16 @@
 from os.path import exists
 
 import numpy as np
-import pyrender
 import torch
-import trimesh
+import pygame
+from pygame.constants import *
+from OpenGL.GL import glDeleteLists
 
-from util import read_index_opti_tri
-from config import Config
+from util import read_all_index_opti_tri
+from renderer import Renderer
 
-
-class Viewer(pyrender.Viewer):
-    def __init__(self, vertex: list, landmark: list, faces: list, file_obj_for_color: list = None,
-                 show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True,
-                 other_objects: list = None, device="cuda"):
+class Viewer(Renderer):
+    def __init__(self, vertex: list, textures, landmark: list, faces: list, show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True, other_objects: list = None, device="cuda"):
         """
         Args:
             vertex (list): array of all vertex
@@ -25,159 +23,81 @@ class Viewer(pyrender.Viewer):
             other_objects (list): list of all others objects. one object represented by : [vertices, faces]
                 but the triangles may be empty : []
         """
+        Renderer.__init__(self, 1024, 1024, device)
         self._device = device
-
         self._vertex = vertex
+        self._textures = textures
         self._landmark = landmark
         self._faces = faces
-        self._fileObjForColor = file_obj_for_color
-        self._show_vertices = False
-        self._show_joints = False
-        self._show_markers = False
+        self._show_vertices = show_vertices
+        self._show_joints = show_joints
+        self._show_markers = show_markers
         self._edit_markers = False
         self._ctrl = False
         self._directionalMatrix = []
-        self._scene = pyrender.Scene(ambient_light=[1.0, 1.0, 1.0, 1.0])
+        self._joints_glList = self._vertices_glList = self._markers_glList = self._select_glList = None
 
+        self.oobj_gl_list = []
         if other_objects is not None:
             for obj in other_objects:
                 vertices = obj[0]
                 triangles = obj[1]
-                vertices = torch.tensor(vertices).detach().cpu().numpy().squeeze()
-                triangles = np.array(triangles)
+                vertices = torch.tensor(vertices, device=device)
+                triangles = torch.tensor(triangles, device=device)
                 if len(triangles) == 0:
-                    sm = trimesh.creation.uv_sphere(radius=0.001)
-                    sm.visual.vertex_colors = [1.0, 0.0, 0.0, 1.0]
-                    tfs = np.tile(np.eye(4), (len(vertices), 1, 1))
-                    tfs[:, :3, 3] = vertices
-                    mesh = pyrender.Mesh.from_trimesh(sm, poses=tfs)
-                    self._scene.add(mesh)
+                    self.oobj_gl_list.append(self.create_spheres_gl_list(vertices))
                 else:
-                    tri_mesh = trimesh.Trimesh(vertices, faces=triangles)
-                    mesh = pyrender.Mesh.from_trimesh(tri_mesh)
-                    self._scene.add(mesh)
+                    self._create_GL_List(vertices, triangles)
 
         self._index = 0
         self._slcIndex = 0
         self._markersIndex = self.load_marker()
-        self._visage = pyrender.Node()
-        self.set_visage(0)
-        self._scene.add_node(self._visage)
+        self.large_raw_sphere = self.create_sphere(0.03, 30, 30)
+        self.small_raw_sphere = self.create_sphere(0.01, 30, 30)
+        self.set_visage(self._index)
+        self.loop()
 
-        self._verticesNode, self._tfs_vertices = self.gen_vertices_node()
-        if landmark is not None:
-            self._jointsNode, self._tfs_joints = self.gen_joints_node()
-        self._markersNode, self._tfs_markers = self.gen_markers_node()
+    def __del__(self):
+        if self._joints_glList is not None: glDeleteLists(self._joints_glList, 1)
+        if self._markers_glList is not None: glDeleteLists(self._markers_glList, 1)
+        if self._vertices_glList is not None: glDeleteLists(self._vertices_glList, 1)
+        if self._select_glList is not None: glDeleteLists(self._select_glList, 1)
+        Renderer.__del__(self)
 
-        # select marker node
-        sm = trimesh.creation.uv_sphere(radius=0.002)
-        sm.visual.vertex_colors = [1.0, 1.0, 0.0, 1.0]
-        self._selectNode = pyrender.Node("select", mesh=pyrender.Mesh.from_trimesh(sm))
+    def loop(self):
+        clock = pygame.time.Clock()
+        while 1:
+            clock.tick(60)
+            lists = [self.gl_list_visage]
+            if self._show_joints and self._landmark is not None: lists.append(self._joints_glList)
+            if self._show_markers: lists.append(self._markers_glList)
+            if self._show_vertices: lists.append(self._vertices_glList)
+            if self._edit_markers and self._select_glList is not None: lists.append(self._select_glList)
+            self._render(lists)
+            if not self._poll_events(): break
 
-        pyrender.Viewer.__init__(self, self._scene, run_in_thread=True)
-
-        if show_joints:
-            self.show_joints()
-        if show_vertices:
-            self.show_vertices()
-        if show_markers:
-            self.show_markers()
-
-    def on_key_press(self, symbol: int, modifiers) -> None:
-        """
-        This function call when key is pressed.
-        Args:
-            symbol (int): int value for key pressed
-            modifiers:
-
-        Returns: None
-        """
-        if self._ctrl:  # Ctrl On
-            if symbol == 115:  # save markers (S)
-                self.save_marker()
-            if symbol == 108:  # load markers (L)
-                self.load_marker()
-        else:
-            pyrender.Viewer.on_key_press(self, symbol, modifiers)
-
-        if symbol == 118:  # show vertices (V)
-            self.show_vertices()
-        if symbol == 98:  # show markers (B)
-            self.show_markers()
-        if symbol == 106:  # show joints (J)
-            self.show_joints()
-        if symbol == 101:  # edit markers (E)
-            self.edit_markers()
-        if symbol == 65507:  # Ctrl
-            self._ctrl = not self._ctrl
-            if self._ctrl:
-                self._message_text = "Ctrl On"
-            else:
-                self._message_text = "Ctrl Off"
-
+    def _poll_event(self, e):
+        if not Renderer._poll_event(self, e): return 0
+        if e.type != KEYDOWN: return 1
+        if e.key == K_v: self._show_vertices = not self._show_vertices
+        if e.key == K_b: self._show_markers = not self._show_markers
+        if e.key == K_j: self._show_joints = not self._show_joints
+        if e.key == K_e: self.edit_markers()
         if self._edit_markers:
-            if symbol == 65535:  # Delete
-                self.remove_marker()
-            if symbol == 65293:  # Enter
-                self.add_marker()
-            if symbol == 65362:  # Up Arrow
-                self.next_marker(6)
-            if symbol == 65364:  # Down Arrow
-                self.next_marker(5)
-            if symbol == 65361:  # Left Arrow
-                self.next_marker(3)
-            if symbol == 65363:  # Right Arrow
-                self.next_marker(4)
-            if symbol == 65365:  # Up Page
-                self.next_marker(2)
-            if symbol == 65366:  # Down Page
-                self.next_marker(1)
-
-    def show_vertices(self) -> None:
-        """
-        enable / disable display vertices
-        Returns: None
-        """
-        self.render_lock.acquire()
-        if not self._show_vertices:
-            self._scene.add_node(self._verticesNode)
-            self._show_vertices = True
+            if e.key == K_DELETE: self.remove_marker()
+            if e.key == K_KP_ENTER: self.add_marker()
+            if e.key == K_UP: self.next_marker(6)
+            if e.key == K_DOWN: self.next_marker(5)
+            if e.key == K_LEFT: self.next_marker(4)
+            if e.key == K_RIGHT: self.next_marker(3)
+            if e.key == K_PAGEUP: self.next_marker(2)
+            if e.key == K_PAGEDOWN: self.next_marker(1)
         else:
-            self._scene.remove_node(self._verticesNode)
-            self._show_vertices = False
-        self.render_lock.release()
-
-    def show_joints(self) -> None:
-        """
-        enable / disable display joints
-        Returns: None
-        """
-        self.render_lock.acquire()
-        if not self._show_joints:
-            self._scene.add_node(self._jointsNode)
-            self._show_joints = True
-        else:
-            self._scene.remove_node(self._jointsNode)
-            self._show_joints = False
-        self.render_lock.release()
-
-    def show_markers(self) -> None:
-        """
-        enable / disable display markers
-        Returns: None
-        """
-        self.render_lock.acquire()
-        if len(self._tfs_markers) <= 0:
-            self._show_markers = False
-            self.render_lock.release()
-            return
-        if not self._show_markers:
-            self._scene.add_node(self._markersNode)
-            self._show_markers = True
-        else:
-            self._scene.remove_node(self._markersNode)
-            self._show_markers = False
-        self.render_lock.release()
+            if e.key == K_UP: self.set_visage(self._index+1)
+            if e.key == K_DOWN: self.set_visage(self._index-1)
+        if e.key == K_s: self.save_marker()
+        if e.key == K_l: self.load_marker()
+        return 1
 
     def set_visage(self, i) -> None:
         """
@@ -187,31 +107,14 @@ class Viewer(pyrender.Viewer):
 
         Returns: None
         """
-        if self._fileObjForColor is not None:
-            mesh = pyrender.Mesh.from_trimesh(trimesh.load(self._fileObjForColor[self._index]))
-        else:
-            vertices = self._vertex[i].detach().to(self._device).numpy().squeeze()
-            vertex_colors = np.ones([vertices.shape[0], 4]) * [0.925, 0.72, 0.519, 1.0]
-            tri_mesh = trimesh.Trimesh(vertices, self._faces, vertex_colors=vertex_colors)
-            mesh = pyrender.Mesh.from_trimesh(tri_mesh)
-        self._visage = pyrender.Node("Visage", mesh=mesh)
-
-    def on_close(self) -> None:
-        """
-        This function call when the app is closed.
-        Switch to the next visage or close
-        Returns: None
-        """
-        if self._index < len(self._vertex) - 1:
-            self._index = self._index + 1
-            self.render_lock.acquire()
-            self._scene.remove_node(self._visage)
-            self.set_visage(self._index)
-            self._scene.add_node(self._visage)
-            self.update_tfs()
-            self.render_lock.release()
-        else:
-            pyrender.Viewer.on_close(self)
+        if i >= self._vertex.shape[0]: i=0
+        elif i < 0: i=self._vertex.shape[0]-1
+        self._index = i
+        texture = self._textures[self._index].to(self.device)
+        texture = texture * 255
+        texture = texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
+        self._edit_GL_List(self._vertex[i].to(self._device), texture)
+        self.update_pts()
 
     def edit_markers(self) -> None:
         """
@@ -219,21 +122,12 @@ class Viewer(pyrender.Viewer):
         Returns: None
         """
         if not self._edit_markers:
-            if len(self._directionalMatrix) == 0:
-                self._directionalMatrix = np.load("directionalMatrix.npy")
-            vert = self._vertex[self._index][self._directionalMatrix[self._slcIndex][0]]
-            tfs = np.tile(np.eye(4), (1, 1, 1))[0]
-            tfs[:3, 3] = vert
-            self._scene.add_node(self._selectNode)
-            self._scene.set_pose(self._selectNode, tfs)
-            if not self._show_markers:
-                self.show_markers()
+            if len(self._directionalMatrix) == 0: self._directionalMatrix = np.load("directionalMatrix.npy")
+            self._select_glList = self.gen_select_glList()
+            self._show_markers = True
             self._edit_markers = True
-            self._message_text = 'Enable edit markers'
         else:
-            self._scene.remove_node(self._selectNode)
             self._edit_markers = False
-            self._message_text = 'Disable edit markers'
 
     def next_marker(self, direction: int) -> None:
         """
@@ -244,86 +138,44 @@ class Viewer(pyrender.Viewer):
         Returns: None
         """
         i = self._directionalMatrix[self._slcIndex][direction]
-        if i == -1:
-            return
+        if i == -1: return
         self._slcIndex = i
-        vert = self._vertex[self._index][self._directionalMatrix[self._slcIndex][0]]
-        tfs = np.tile(np.eye(4), (1, 1, 1))[0]
-        tfs[:3, 3] = vert
-        self._scene.set_pose(self._selectNode, tfs)
+        self._select_glList = self.gen_select_glList()
 
-    def update_tfs(self) -> None:
+    def update_pts(self) -> None:
         """
         Update all position for all points based on face
         Returns: None
         """
-        if self._show_vertices:
-            self._scene.remove_node(self._verticesNode)
-            self._verticesNode, self._tfs_vertices = self.gen_vertices_node()
-            self._scene.add_node(self._verticesNode)
-        else:
-            self._verticesNode, self._tfs_vertices = self.gen_vertices_node()
-        if self._show_joints:
-            self._scene.remove_node(self._jointsNode)
-            self._jointsNode, self._tfs_joints = self.gen_joints_node()
-            self._scene.add_node(self._jointsNode)
-        else:
-            self._jointsNode, self._tfs_joints = self.gen_joints_node()
-        if self._show_markers and len(self._tfs_markers) > 0:
-            self._scene.remove_node(self._markersNode)
-            self._markersNode, self._tfs_markers = self.gen_markers_node()
-            self._scene.add_node(self._markersNode)
-        else:
-            self.gen_markers_node()
-        if self._edit_markers:
-            tfs = self._tfs_vertices[self._slcIndex]
-            self._scene.set_pose(self._selectNode, tfs)
+        self._vertices_glList = self.gen_vertices_glList()
+        if self._landmark is not None: self._joints_glList = self.gen_joints_glList()
+        self._markers_glList = self.gen_markers_glList()
 
-    def gen_vertices_node(self):
-        """
-        Generate vertices Node and return result and tfs
-        Returns: vertices node, tfs
-        """
-        vertices = self._vertex[self._index]
-        sm = trimesh.creation.uv_sphere(radius=0.0019)
-        sm.visual.vertex_colors = [0.7, 0.1, 0.1, 1.0]
-        tfs = np.tile(np.eye(4), (len(vertices), 1, 1))
-        tfs[:, :3, 3] = vertices.cpu().numpy()
-        vertices_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
-        return pyrender.Node("vertices", mesh=vertices_pcl), tfs
+    def gen_select_glList(self):
+        vert = self._vertex[self._index][self._directionalMatrix[self._slcIndex][0]]
+        vert = vert.to(self.device)[None]
+        vert = vert[:, [0, 2, 1]]
+        vert *= 10
+        self._select_glList = Renderer.create_spheres_gl_list(self.large_raw_sphere, vert, self._select_glList, [255, 255, 0.1])
+        return self._select_glList
 
-    def gen_joints_node(self):
-        """
-        Generate joints Node and return result and tfs
-        Returns: joints node, tfs
-        """
-        joints = self._landmark[self._index]
-        sm = trimesh.creation.uv_sphere(radius=0.0019)
-        sm.visual.vertex_colors = [0.0, 0.5, 0.0, 1.0]
-        tfs = np.tile(np.eye(4), (len(joints), 1, 1))
-        tfs[:, :3, 3] = joints.cpu().numpy()
-        joints_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs)
-        return pyrender.Node("joints", mesh=joints_pcl), tfs
+    def gen_vertices_glList(self):
+        vts = self._vertex[self._index].to(self._device)
+        vts = vts[:, [0, 2, 1]]
+        vts *= 10
+        return Renderer.create_spheres_gl_list(self.small_raw_sphere, vts, self._vertices_glList, [255, 0.2, 0.2])
 
-    def gen_markers_node(self):
-        """
-        Generate markers Node and return result and tfs
-        Returns: markers node, tfs
-        """
-        sm = trimesh.creation.uv_sphere(radius=0.0015)
-        sm.visual.vertex_colors = [0.0, 1.0, 0.0, 1.0]
-        t = []
-        for marker in self._markersIndex:
-            t.append(read_index_opti_tri(self._vertex[self._index], self._faces, marker))
-        if len(t) > 0:
-            tfs_markers = np.tile(np.eye(4), (len(t), 1, 1))
-            for i in range(len(t)):
-                tfs_markers[i, :3, 3] = t[i]
-            markers_pcl = pyrender.Mesh.from_trimesh(sm, poses=tfs_markers)
-        else:
-            tfs_markers = []
-            markers_pcl = pyrender.Mesh.from_trimesh(sm)
-        return pyrender.Node("markers", mesh=markers_pcl), tfs_markers
+    def gen_joints_glList(self):
+        lmk = self._landmark[self._index].to(self._device)
+        lmk = lmk[:, [0, 2, 1]]
+        lmk *= 10
+        return Renderer.create_spheres_gl_list(self.raw_sphere, lmk, self._joints_glList, [0.2, 0.2, 255])
+
+    def gen_markers_glList(self):
+        mks = torch.tensor(np.array(read_all_index_opti_tri(self._vertex[self._index], self._faces, self._markersIndex)), device=self._device)
+        mks = mks[:, [0, 2, 1]]
+        mks *= 10
+        return Renderer.create_spheres_gl_list(self.raw_sphere, mks, self._markers_glList, [0.2, 255, 0.2])
 
     def add_marker(self) -> None:
         """
@@ -331,9 +183,8 @@ class Viewer(pyrender.Viewer):
         The marker added is the selected marker
         Returns: None
         """
-        self._markersIndex = np.append(self._markersIndex, [[self._directionalMatrix[self._slcIndex][0], -1, 0, 0]],
-                                       axis=0)
-        self.update_marker()
+        self._markersIndex = np.append(self._markersIndex, [[self._directionalMatrix[self._slcIndex][0], -1, 0, 0]], axis=0)
+        self._markers_glList = self.gen_markers_glList()
 
     def save_marker(self) -> None:
         """
@@ -364,18 +215,4 @@ class Viewer(pyrender.Viewer):
                 self._markersIndex = np.delete(self._markersIndex, [i * 4 + j for j in range(4)])
                 self._markersIndex = self._markersIndex.reshape(int(len(self._markersIndex) / 4), 4)
                 break
-        self.update_marker()
-
-    def update_marker(self) -> None:
-        """
-        Update marker view and print number of markers
-        Returns: None
-        """
-        if self._show_markers:
-            self._scene.remove_node(self._markersNode)
-        self.gen_markers_node()
-        if not self._show_markers:
-            self.show_markers()
-        else:
-            self._scene.add_node(self._markersNode)
-        self._message_text = "Nb markers = " + str(len(self._markersIndex))
+        self._markers_glList = self.gen_markers_glList()

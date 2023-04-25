@@ -83,10 +83,7 @@ class VisageGenerator():
 
         Returns: None
         """
-        file_obj = []
-        for i in range(len(self._vertex)):
-            file_obj.append('output/visage' + str(i) + '.obj')
-        Viewer(self._vertex, self._landmark, self._faces, file_obj, other_objects=other_objects, device=self.device)
+        Viewer(self._vertex, self._textures, self._landmark, self._faces, other_objects=other_objects, device=self.device)
 
     def get_vertices(self, i: int) -> list:
         """
@@ -170,7 +167,7 @@ class VisageGenerator():
             save_paths = ""
         if cfg.save_markers: markers = np.load("markers.npy")
         save_any_png = cfg.save_png or cfg.save_lmks3D_png or cfg.save_markers
-        self.render = Renderer("visage.obj", cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window)
+        self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window)
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)
