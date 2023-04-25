@@ -12,7 +12,7 @@ from config import Config
 class Viewer(pyrender.Viewer):
     def __init__(self, vertex: list, landmark: list, faces: list, file_obj_for_color: list = None,
                  show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True,
-                 other_objects: list = None, device=Config.device):
+                 other_objects: list = None, device="cuda"):
         """
         Args:
             vertex (list): array of all vertex

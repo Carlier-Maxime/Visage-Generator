@@ -22,33 +22,25 @@ from tqdm import trange
 import util
 
 class VisageGenerator():
-    def __init__(self, device:str = Config.device, min_shape_param:float = Config.min_shape_param, max_shape_param:float = Config.max_shape_param,
-                 min_expression_param:float = Config.min_expression_param, max_expression_param:float = Config.max_expression_param,
-                 global_pose_param1:float = Config.global_pose_param1, global_pose_param2:float = Config.global_pose_param2, global_pose_param3:float = Config.global_pose_param3,
-                 min_jaw_param1:float = Config.min_jaw_param1, max_jaw_param1:float = Config.max_jaw_param1, min_jaw_param2_3:float = Config.min_jaw_param2_3, max_jaw_param2_3:float = Config.max_jaw_param2_3,
-                 min_texture_param:float = Config.min_texture_param, max_texture_param:float = Config.max_texture_param, min_neck_param:float = Config.min_neck_param, max_neck_param:float = Config.max_neck_param,
-                 flame_model_path=Config.flame_model_path, batch_size=Config.batch_size, use_face_contour=Config.use_face_contour,
-                 use_3D_translation=Config.use_3D_translation, shape_params=Config.shape_params, expression_params=Config.expression_params, 
-                 static_landmark_embedding_path=Config.static_landmark_embedding_path, dynamic_landmark_embedding_path=Config.dynamic_landmark_embedding_path
-        ):
-        self.flame_layer = FLAME(flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path).to(device)
-        self.device = device
-        self.min_shape_param = min_shape_param
-        self.max_shape_param = max_shape_param
-        self.min_expression_param = min_expression_param
-        self.max_expression_param = max_expression_param
-        self.global_pose_param1 = global_pose_param1
-        self.global_pose_param2 = global_pose_param2
-        self.global_pose_param3 = global_pose_param3
-        self.min_jaw_param1 = min_jaw_param1
-        self.max_jaw_param1 = max_jaw_param1
-        self.min_jaw_param2_3 = min_jaw_param2_3
-        self.max_jaw_param2_3 = max_jaw_param2_3
-        self.min_texture_param = min_texture_param
-        self.max_texture_param = max_texture_param
-        self.min_neck_param = min_neck_param
-        self.max_neck_param = max_neck_param
-        self.batch_size = batch_size
+    def __init__(self, cfg):
+        self.flame_layer = FLAME(cfg.flame_model_path, cfg.batch_size, cfg.use_face_contour, cfg.use_3D_translation, cfg.shape_params, cfg.expression_params, cfg.static_landmark_embedding_path, cfg.dynamic_landmark_embedding_path).to(cfg.device)
+        self.device = cfg.device
+        self.min_shape_param = cfg.min_shape_param
+        self.max_shape_param = cfg.max_shape_param
+        self.min_expression_param = cfg.min_expression_param
+        self.max_expression_param = cfg.max_expression_param
+        self.global_pose_param1 = cfg.global_pose_param1
+        self.global_pose_param2 = cfg.global_pose_param2
+        self.global_pose_param3 = cfg.global_pose_param3
+        self.min_jaw_param1 = cfg.min_jaw_param1
+        self.max_jaw_param1 = cfg.max_jaw_param1
+        self.min_jaw_param2_3 = cfg.min_jaw_param2_3
+        self.max_jaw_param2_3 = cfg.max_jaw_param2_3
+        self.min_texture_param = cfg.min_texture_param
+        self.max_texture_param = cfg.max_texture_param
+        self.min_neck_param = cfg.min_neck_param
+        self.max_neck_param = cfg.max_neck_param
+        self.batch_size = cfg.batch_size
 
     def save_obj(self, path: str, vertices: list, faces=None, texture=None) -> None:
         """
@@ -113,26 +105,26 @@ class VisageGenerator():
         """
         return self._faces
 
-    def genParams(self, nb_faces:int = Config.nb_faces, texturing:bool = Config.texturing):
+    def genParams(self, cfg):
         print('Generate random parameters')
         radian = torch.pi / 180.0
-        shape_params = torch.rand(nb_faces, 300, dtype=torch.float32, device=self.device) * (self.max_shape_param - self.min_shape_param) + self.min_shape_param
-        pose_params = torch.tensor([[self.global_pose_param1 * radian, self.global_pose_param2 * radian, self.global_pose_param3 * radian, 0, 0, 0]], dtype=torch.float32, device=self.device).repeat(nb_faces, 1)
-        pose_params[:,3] = (torch.rand(nb_faces, dtype=torch.float32, device=self.device) * (self.max_jaw_param1 - self.min_jaw_param1) + self.min_jaw_param1) * radian
-        pose_params[:,4:6] = (torch.rand(nb_faces, 2, dtype=torch.float32, device=self.device) * (self.max_jaw_param2_3 - self.min_jaw_param2_3) + self.min_jaw_param2_3) * radian
-        expression_params = torch.rand(nb_faces, 100, dtype=torch.float32, device=self.device) * (self.max_expression_param - self.min_expression_param) + self.min_expression_param
-        neck_pose = (torch.rand(nb_faces, 3, dtype=torch.float32, device=self.device) * (self.max_neck_param - self.min_neck_param) + self.min_neck_param) * radian
-        eye_pose = torch.zeros(nb_faces, 6).to(self.device)
-        if texturing: texture_params = torch.rand(nb_faces, 50, dtype=torch.float32, device=self.device) * (self.max_texture_param - self.min_texture_param) + self.min_texture_param
+        shape_params = torch.rand(cfg.nb_faces, 300, dtype=torch.float32, device=self.device) * (self.max_shape_param - self.min_shape_param) + self.min_shape_param
+        pose_params = torch.tensor([[self.global_pose_param1 * radian, self.global_pose_param2 * radian, self.global_pose_param3 * radian, 0, 0, 0]], dtype=torch.float32, device=self.device).repeat(cfg.nb_faces, 1)
+        pose_params[:,3] = (torch.rand(cfg.nb_faces, dtype=torch.float32, device=self.device) * (self.max_jaw_param1 - self.min_jaw_param1) + self.min_jaw_param1) * radian
+        pose_params[:,4:6] = (torch.rand(cfg.nb_faces, 2, dtype=torch.float32, device=self.device) * (self.max_jaw_param2_3 - self.min_jaw_param2_3) + self.min_jaw_param2_3) * radian
+        expression_params = torch.rand(cfg.nb_faces, 100, dtype=torch.float32, device=self.device) * (self.max_expression_param - self.min_expression_param) + self.min_expression_param
+        neck_pose = (torch.rand(cfg.nb_faces, 3, dtype=torch.float32, device=self.device) * (self.max_neck_param - self.min_neck_param) + self.min_neck_param) * radian
+        eye_pose = torch.zeros(cfg.nb_faces, 6).to(self.device)
+        if cfg.texturing: texture_params = torch.rand(cfg.nb_faces, 50, dtype=torch.float32, device=self.device) * (self.max_texture_param - self.min_texture_param) + self.min_texture_param
         else: texture_params = None
         return shape_params, pose_params, expression_params, texture_params, neck_pose, eye_pose
 
-    def generate(self, nb_faces:int = Config.nb_faces, texturing:bool = Config.texturing, texture_batch_size:int=Config.texture_batch_size):
-        shape_params, pose_params, expression_params, texture_params, neck_pose, eye_pose = self.genParams(nb_faces, texturing)
+    def generate(self, cfg):
+        shape_params, pose_params, expression_params, texture_params, neck_pose, eye_pose = self.genParams(cfg)
 
         self._vertex = None
         self._landmark = None
-        for i in trange(nb_faces//self.batch_size+(1 if nb_faces%self.batch_size>0 else 0), desc='generate visages', unit='step'):
+        for i in trange(cfg.nb_faces//self.batch_size+(1 if cfg.nb_faces%self.batch_size>0 else 0), desc='generate visages', unit='step'):
             sp = shape_params[i*self.batch_size:(i+1)*self.batch_size]
             ep = expression_params[i*self.batch_size:(i+1)*self.batch_size]
             pp = pose_params[i*self.batch_size:(i+1)*self.batch_size]
@@ -146,39 +138,39 @@ class VisageGenerator():
         self._faces = self.flame_layer.faces
 
         self._textures = None
-        if texturing:
+        if cfg.texturing:
             tex_space = np.load("model/FLAME_texture.npz")
             texture_mean = tex_space['mean'].reshape(1, -1)
             texture_basis = tex_space['tex_dir'].reshape(-1, 200)
             texture_mean = torch.from_numpy(texture_mean).float()[None, ...].to(self.device)
             texture_basis = torch.from_numpy(texture_basis[:, :50]).float()[None, ...].to(self.device)
-            self._textures = torch.zeros((nb_faces, 3, 512, 512), dtype=torch.float32, device='cpu')
-            for i in trange(nb_faces//texture_batch_size+(1 if nb_faces%texture_batch_size>0 else 0), desc='texturing', unit='step'):
-                tp = texture_params[i*texture_batch_size:(i+1)*texture_batch_size]
+            self._textures = torch.zeros((cfg.nb_faces, 3, 512, 512), dtype=torch.float32, device='cpu')
+            for i in trange(cfg.nb_faces//cfg.texture_batch_size+(1 if cfg.nb_faces%cfg.texture_batch_size>0 else 0), desc='texturing', unit='step'):
+                tp = texture_params[i*cfg.texture_batch_size:(i+1)*cfg.texture_batch_size]
                 texture = texture_mean + (texture_basis * tp[:, None, :]).sum(-1)
                 texture = texture.reshape(tp.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
                 texture = texture[:, [2, 1, 0], :, :]
                 texture = texture / 255
-                self._textures[i*texture_batch_size:(i+1)*texture_batch_size] = texture.cpu()
+                self._textures[i*cfg.texture_batch_size:(i+1)*cfg.texture_batch_size] = texture.cpu()
 
 
-    def save(self, save_obj:bool = Config.save_obj, save_png:bool = Config.save_png, save_lmks3D_png:bool=Config.save_lmks3D_png, save_lmks2D:bool = Config.save_lmks2D, save_lmks3D_npy:bool=Config.save_lmks3D_npy, lmk2D_format:str=Config.lmk2D_format, save_markers:bool=Config.save_markers, img_resolution:list=Config.img_resolution, show_window=Config.show_window, ptsInAlpha:bool=True):
+    def save(self, cfg):
         out = 'output'
         tmp = 'tmp'
-        outObj = (out if save_obj else tmp)+"/obj"
-        outLmk3D_npy = (out if save_lmks3D_npy else tmp)+"/lmks/3D"
-        outLmk2D = (out if save_lmks2D else tmp)+"/lmks/2D"
-        outVisagePNG = (out if save_png else tmp)+"/png/default"
-        outLmks3D_PNG = (out if save_lmks3D_png else tmp)+"/png/lmks"
-        outMarkersPNG = (out if save_markers else tmp)+"/png/markers"
+        outObj = (out if cfg.save_obj else tmp)+"/obj"
+        outLmk3D_npy = (out if cfg.save_lmks3D_npy else tmp)+"/lmks/3D"
+        outLmk2D = (out if cfg.save_lmks2D else tmp)+"/lmks/2D"
+        outVisagePNG = (out if cfg.save_png else tmp)+"/png/default"
+        outLmks3D_PNG = (out if cfg.save_lmks3D_png else tmp)+"/png/lmks"
+        outMarkersPNG = (out if cfg.save_markers else tmp)+"/png/markers"
         for folder in [out, tmp, outObj, outLmk3D_npy, outLmk2D, outVisagePNG, outLmks3D_PNG, outMarkersPNG]: os.makedirs(folder, exist_ok=True)
-        if save_lmks2D:
+        if cfg.save_lmks2D:
             lmks_paths = ""
             visage_paths = ""
             save_paths = ""
-        if save_markers: markers = np.load("markers.npy")
-        save_any_png = save_png or save_lmks3D_png or save_markers
-        self.render = Renderer("visage.obj", img_resolution[0], img_resolution[1], device=self.device, show=show_window)
+        if cfg.save_markers: markers = np.load("markers.npy")
+        save_any_png = cfg.save_png or cfg.save_lmks3D_png or cfg.save_markers
+        self.render = Renderer("visage.obj", cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window)
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)
@@ -190,124 +182,86 @@ class VisageGenerator():
             basename=f"visage{str(i)}"
             visage_path = f'{outObj}/{basename}.obj'
             lmks3Dnpy_path = f'{outLmk3D_npy}/{basename}.npy'
-            if save_obj or save_lmks2D:
+            if cfg.save_obj or cfg.save_lmks2D:
                 self.save_obj(visage_path, vertices, texture=texture)
-            if save_lmks3D_npy or save_lmks2D:
+            if cfg.save_lmks3D_npy or cfg.save_lmks2D:
                 np.save(lmks3Dnpy_path, lmk)
-            if save_lmks2D:
+            if cfg.save_lmks2D:
                 if i != 0:
                     lmks_paths += ";"
                     visage_paths += ";"
                     save_paths += ";"
                 lmks_paths += lmks3Dnpy_path
                 visage_paths += visage_path
-                save_paths += f'{outLmk2D}/{basename}.{lmk2D_format}'
+                save_paths += f'{outLmk2D}/{basename}.{cfg.lmk2D_format}'
             if save_any_png:
-                if save_png: self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, texture)
-                if save_lmks3D_png: self.render.save_to_image(f'{outLmks3D_PNG}/{basename}.png', vertices, texture, pts=lmk, ptsInAlpha=ptsInAlpha)
-                if save_markers:
+                if cfg.save_png: self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, texture)
+                if cfg.save_lmks3D_png: self.render.save_to_image(f'{outLmks3D_PNG}/{basename}.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha)
+                if cfg.save_markers:
                     mks = util.read_all_index_opti_tri(vertices, self._faces, markers)
-                    self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks), device=self.device), ptsInAlpha=ptsInAlpha)
-        if save_lmks2D:
-            getLandmark2D.run(visage_paths, lmks_paths, save_paths, save_png)
+                    self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks), device=self.device), ptsInAlpha=cfg.pts_in_alpha)
+        if cfg.save_lmks2D:
+            getLandmark2D.run(visage_paths, lmks_paths, save_paths, cfg.save_png)
 
-
+cfg = Config()
 @click.command()
 # General
-@click.option('--nb-faces', type=int, default=Config.nb_faces, help='number faces generate')
-@click.option('--not-texturing', 'texturing', type=bool,  default=Config.texturing,  help='disable texture', is_flag=True)
-@click.option('--device',  type=str,  default=Config.device,  help='choice your device for generate face. ("cpu" or "cuda")')
-@click.option('--view',  type=bool,  default=Config.view,  help='enable view', is_flag=True)
-@click.option('--batch-size', type=int, default=Config.batch_size, help='number of visage generate in the same time')
-@click.option('--texture-batch-size', type=int, default=Config.texture_batch_size, help='number of texture generate in same time')
+@click.option('--nb-faces', type=int, default=cfg.nb_faces, help='number faces generate')
+@click.option('--not-texturing', 'texturing', type=bool,  default=cfg.texturing,  help='disable texture', is_flag=True)
+@click.option('--device',  type=str,  default=cfg.device,  help='choice your device for generate face. ("cpu" or "cuda")')
+@click.option('--view',  type=bool,  default=cfg.view,  help='enable view', is_flag=True)
+@click.option('--batch-size', type=int, default=cfg.batch_size, help='number of visage generate in the same time')
+@click.option('--texture-batch-size', type=int, default=cfg.texture_batch_size, help='number of texture generate in same time')
 
 # Generator parameter
-@click.option('--min-shape-param',  type=float,  default=Config.min_shape_param,  help='minimum value for shape param')
-@click.option('--max-shape-param',  type=float,  default=Config.max_shape_param,  help='maximum value for shape param')
-@click.option('--min-expression-param',  type=float,  default=Config.min_expression_param,  help='minimum value for expression param')
-@click.option('--max-expression-param',  type=float,  default=Config.min_expression_param,  help='maximum value for expression param')
-@click.option('--global-pose-param1',  type=float,  default=Config.global_pose_param1,  help='value of first global pose param')
-@click.option('--global-pose-param2',  type=float,  default=Config.global_pose_param2,  help='value of second global pose param')
-@click.option('--global-pose-param3',  type=float,  default=Config.global_pose_param3,  help='value of third global pose param')
-@click.option('--min-jaw-param1',  type=float,  default=Config.min_jaw_param1,  help='minimum value for jaw param 1')
-@click.option('--max-jaw-param1',  type=float,  default=Config.max_jaw_param1,  help='maximum value for jaw param 1')
-@click.option('--min-jaw-param2-3',  type=float,  default=Config.min_jaw_param2_3,  help='minimum value for jaw param 2-3')
-@click.option('--max-jaw-param2-3',  type=float,  default=Config.max_jaw_param2_3,  help='maximum value for jaw param 2-3')
-@click.option('--min-texture-param',  type=float,  default=Config.min_texture_param,  help='minimum value for texture param')
-@click.option('--max-texture-param',  type=float,  default=Config.max_texture_param,  help='maximum value for texture param')
-@click.option('--min-neck-param',  type=float,  default=Config.min_neck_param,  help='minimum value for neck param')
-@click.option('--max-neck-param',  type=float,  default=Config.max_neck_param,  help='maximum value for neck param')
+@click.option('--min-shape-param',  type=float,  default=cfg.min_shape_param,  help='minimum value for shape param')
+@click.option('--max-shape-param',  type=float,  default=cfg.max_shape_param,  help='maximum value for shape param')
+@click.option('--min-expression-param',  type=float,  default=cfg.min_expression_param,  help='minimum value for expression param')
+@click.option('--max-expression-param',  type=float,  default=cfg.min_expression_param,  help='maximum value for expression param')
+@click.option('--global-pose-param1',  type=float,  default=cfg.global_pose_param1,  help='value of first global pose param')
+@click.option('--global-pose-param2',  type=float,  default=cfg.global_pose_param2,  help='value of second global pose param')
+@click.option('--global-pose-param3',  type=float,  default=cfg.global_pose_param3,  help='value of third global pose param')
+@click.option('--min-jaw-param1',  type=float,  default=cfg.min_jaw_param1,  help='minimum value for jaw param 1')
+@click.option('--max-jaw-param1',  type=float,  default=cfg.max_jaw_param1,  help='maximum value for jaw param 1')
+@click.option('--min-jaw-param2-3',  type=float,  default=cfg.min_jaw_param2_3,  help='minimum value for jaw param 2-3')
+@click.option('--max-jaw-param2-3',  type=float,  default=cfg.max_jaw_param2_3,  help='maximum value for jaw param 2-3')
+@click.option('--min-texture-param',  type=float,  default=cfg.min_texture_param,  help='minimum value for texture param')
+@click.option('--max-texture-param',  type=float,  default=cfg.max_texture_param,  help='maximum value for texture param')
+@click.option('--min-neck-param',  type=float,  default=cfg.min_neck_param,  help='minimum value for neck param')
+@click.option('--max-neck-param',  type=float,  default=cfg.max_neck_param,  help='maximum value for neck param')
 
 # Flame parameter
-@click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=Config.use_face_contour, is_flag=True, help='not use face contour for generate visage')
-@click.option('--not-use-3D-translation', 'use_3D_translation', type=bool, default=Config.use_3D_translation, is_flag=True, help='not use 3D translation for generate visage')
-@click.option('--shape-params', type=int, default=Config.shape_params, help='a number of shape parameter used')
-@click.option('--expression-params', type=int, default=Config.expression_params, help='a number of expression parameter used')
+@click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=cfg.use_face_contour, is_flag=True, help='not use face contour for generate visage')
+@click.option('--not-use-3D-translation', 'use_3D_translation', type=bool, default=cfg.use_3D_translation, is_flag=True, help='not use 3D translation for generate visage')
+@click.option('--shape-params', type=int, default=cfg.shape_params, help='a number of shape parameter used')
+@click.option('--expression-params', type=int, default=cfg.expression_params, help='a number of expression parameter used')
 
 # Saving
-@click.option('--lmk2D-format', type=str, default=Config.lmk2D_format, help='format used for save lmk2d. (npy and pts is supported)')
-@click.option('--save-obj',  type=bool,  default=Config.save_obj,  help='enable save into file obj', is_flag=True)
-@click.option('--save-png',  type=bool,  default=Config.save_png,  help='enable save into file png', is_flag=True)
-@click.option('--save-lmks3D-npy', 'save_lmks3D_npy', type=bool,  default=Config.save_lmks3D_npy,  help='enable save landmarks 3D into file npy', is_flag=True)
-@click.option('--save-lmks3D-png', 'save_lmks3D_png', type=bool,  default=Config.save_lmks3D_png,  help='enable save landmarks 3D with visage into file png', is_flag=True)
-@click.option('--save-lmks2D', 'save_lmks2D',  type=bool,  default=Config.save_lmks2D,  help='enable save landmarks 2D into file npy', is_flag=True)
-@click.option('--save-markers', type=bool,  default=Config.save_markers,  help='enable save markers into png file', is_flag=True)
-@click.option('--img-resolution', type=str, default=Config.img_resolution, help='resolution of image')
-@click.option('--show-window', type=bool,  default=Config.show_window,  help='show window during save png (enable if images is the screenshot or full black)', is_flag=True)
-@click.option('--not-pts-in-alpha', 'pts_in_alpha', type=bool, default=Config.ptsInAlpha, help='not save landmarks/markers png version to channel alpha', is_flag=True)
+@click.option('--lmk2D-format', 'lmk2D_format', type=str, default=cfg.lmk2D_format, help='format used for save lmk2d. (npy and pts is supported)')
+@click.option('--save-obj',  type=bool,  default=cfg.save_obj,  help='enable save into file obj', is_flag=True)
+@click.option('--save-png',  type=bool,  default=cfg.save_png,  help='enable save into file png', is_flag=True)
+@click.option('--save-lmks3D-npy', 'save_lmks3D_npy', type=bool,  default=cfg.save_lmks3D_npy,  help='enable save landmarks 3D into file npy', is_flag=True)
+@click.option('--save-lmks3D-png', 'save_lmks3D_png', type=bool,  default=cfg.save_lmks3D_png,  help='enable save landmarks 3D with visage into file png', is_flag=True)
+@click.option('--save-lmks2D', 'save_lmks2D',  type=bool,  default=cfg.save_lmks2D,  help='enable save landmarks 2D into file npy', is_flag=True)
+@click.option('--save-markers', type=bool,  default=cfg.save_markers,  help='enable save markers into png file', is_flag=True)
+@click.option('--img-resolution', type=str, default=cfg.img_resolution, help='resolution of image')
+@click.option('--show-window', type=bool,  default=cfg.show_window,  help='show window during save png (enable if images is the screenshot or full black)', is_flag=True)
+@click.option('--not-pts-in-alpha', 'pts_in_alpha', type=bool, default=cfg.pts_in_alpha, help='not save landmarks/markers png version to channel alpha', is_flag=True)
 
 # Path
-@click.option('--flame-model-path', type=str, default=Config.flame_model_path, help='path for acess flame model')
-@click.option('--static-landmark-embedding-path', type=str, default=Config.static_landmark_embedding_path, help='path for static landmark embedding file')
-@click.option('--dynamic-landmark-embedding-path', type=str, default=Config.dynamic_landmark_embedding_path, help='path for dynamic landmark embedding file')
+@click.option('--flame-model-path', type=str, default=cfg.flame_model_path, help='path for acess flame model')
+@click.option('--static-landmark-embedding-path', type=str, default=cfg.static_landmark_embedding_path, help='path for static landmark embedding file')
+@click.option('--dynamic-landmark-embedding-path', type=str, default=cfg.dynamic_landmark_embedding_path, help='path for dynamic landmark embedding file')
 
-def main(
-    nb_faces,
-    lmk2d_format,
-    texturing,
-    save_obj,
-    save_png,
-    save_lmks3D_npy,
-    save_lmks3D_png,
-    save_lmks2D,
-    min_shape_param,
-    max_shape_param,
-    min_expression_param,
-    max_expression_param,
-    global_pose_param1,
-    global_pose_param2,
-    global_pose_param3,
-    min_jaw_param1,
-    max_jaw_param1,
-    min_jaw_param2_3,
-    max_jaw_param2_3,
-    min_texture_param,
-    max_texture_param,
-    min_neck_param,
-    max_neck_param,
-    device,
-    view,
-    flame_model_path,
-    batch_size,
-    use_face_contour,
-    use_3D_translation,
-    shape_params,
-    expression_params,
-    static_landmark_embedding_path,
-    dynamic_landmark_embedding_path,
-    texture_batch_size,
-    save_markers,
-    img_resolution,
-    show_window,
-    pts_in_alpha
-):
-    img_resolution = img_resolution[1:-1].split(",")
+def main(**kwargs):
+    cfg.set(**kwargs)
+    img_resolution = cfg.img_resolution[1:-1].split(",")
     for i in range(len(img_resolution)): img_resolution[i] = int(img_resolution[i])
-    vg = VisageGenerator(device, min_shape_param, max_shape_param, min_expression_param, max_expression_param, global_pose_param1, global_pose_param2, global_pose_param3, min_jaw_param1, max_jaw_param1, min_jaw_param2_3, max_jaw_param2_3,
-                         min_texture_param, max_texture_param, min_neck_param, max_neck_param, flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path)
-    vg.generate(nb_faces, texturing, texture_batch_size)
-    vg.save(save_obj, save_png, save_lmks3D_png, save_lmks2D, save_lmks3D_npy, lmk2d_format, save_markers, img_resolution, show_window, pts_in_alpha)
-    if view:
+    cfg.img_resolution = img_resolution
+    vg = VisageGenerator(cfg)
+    vg.generate(cfg)
+    vg.save(cfg)
+    if cfg.view:
         vg.view()
 
 if __name__ == "__main__":
