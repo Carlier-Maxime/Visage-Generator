@@ -119,8 +119,8 @@ class VisageGenerator():
     def generate(self, cfg):
         shape_params, pose_params, expression_params, texture_params, neck_pose, eye_pose = self.genParams(cfg)
 
-        self._vertex = None
-        self._landmark = None
+        self._vertex = []
+        self._landmark = []
         for i in trange(cfg.nb_faces//self.batch_size+(1 if cfg.nb_faces%self.batch_size>0 else 0), desc='generate visages', unit='step'):
             sp = shape_params[i*self.batch_size:(i+1)*self.batch_size]
             ep = expression_params[i*self.batch_size:(i+1)*self.batch_size]
@@ -128,10 +128,10 @@ class VisageGenerator():
             neck = neck_pose[i*self.batch_size:(i+1)*self.batch_size]
             eye = eye_pose[i*self.batch_size:(i+1)*self.batch_size]
             vertices, lmks = self.flame_layer(sp, ep, pp, neck, eye)
-            if self._vertex is None: self._vertex = vertices.cpu()
-            else: self._vertex = torch.cat((self._vertex, vertices.cpu()))
-            if self._landmark is None: self._landmark = lmks.cpu()
-            else: self._landmark = torch.cat((self._landmark, lmks.cpu()))
+            self._vertex.append(vertices.cpu())
+            self._landmark.append(lmks.cpu())
+        self._vertex = torch.cat(self._vertex)
+        self._landmark = torch.cat(self._landmark)
         self._faces = self.flame_layer.faces
 
         self._textures = None
