@@ -43,6 +43,7 @@ class Config:
         self.save_markers=False
         self.img_resolution=[256,256]
         self.show_window=False
+        self.outdir = 'output'
 
     def set(self, **kwargs):
         d = dict(kwargs)
@@ -89,3 +90,4 @@ class Config:
         self.save_markers=d['save_markers']
         self.img_resolution=d['img_resolution']
         self.show_window=d['show_window']
+        self.outdir=d['outdir']

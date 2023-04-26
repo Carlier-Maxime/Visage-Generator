@@ -160,7 +160,7 @@ class VisageGenerator():
 
 
     def save(self, cfg):
-        out = 'output'
+        out = cfg.outdir
         tmp = 'tmp'
         outObj = (out if cfg.save_obj else tmp)+"/obj"
         outLmk3D_npy = (out if cfg.save_lmks3D_npy else tmp)+"/lmks/3D"
@@ -247,6 +247,7 @@ cfg = Config()
 @click.option('--expression-params', type=int, default=cfg.expression_params, help='a number of expression parameter used')
 
 # Saving
+@click.option('--outdir', type=str, default=cfg.outdir, help='path directory for output')
 @click.option('--lmk2D-format', 'lmk2D_format', type=str, default=cfg.lmk2D_format, help='format used for save lmk2d. (npy and pts is supported)')
 @click.option('--save-obj',  type=bool,  default=cfg.save_obj,  help='enable save into file obj', is_flag=True)
 @click.option('--save-png',  type=bool,  default=cfg.save_png,  help='enable save into file png', is_flag=True)
