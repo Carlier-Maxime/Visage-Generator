@@ -34,6 +34,7 @@ class Renderer():
         glEnable(GL_LIGHTING)
         glEnable(GL_COLOR_MATERIAL)
         glEnable(GL_DEPTH_TEST)
+        glEnable(GL_NORMALIZE)
         glShadeModel(GL_SMOOTH)
 
         glMatrixMode(GL_PROJECTION)
@@ -124,9 +125,11 @@ class Renderer():
         glBindBuffer(GL_ARRAY_BUFFER, self.buffers[1])
         glBufferData(GL_ARRAY_BUFFER, vertices, GL_STREAM_DRAW)
         glVertexPointer(3, GL_FLOAT, 0, None)
-        self._change_GL_texture(texture)
+        if texture is not None: self._change_GL_texture(texture)
+        else: glDisable(GL_TEXTURE_2D)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.buffers[0])
         glDrawElements(GL_TRIANGLES, self.uvfaces.numel(), GL_UNSIGNED_INT, None)
+        if texture is None: glEnable(GL_TEXTURE_2D)
         glEndList()
 
     def test(self, gl_list):
@@ -135,7 +138,7 @@ class Renderer():
         clock = pygame.time.Clock()
         while 1:
             clock.tick(60)
-            if not self.poll_event(): break
+            if not self._poll_events(): break
             self._render(gl_list)
         PIL.Image.frombytes('RGB', (self.width, self.height), glReadPixels(0,0,self.width,self.height, GL_RGB, GL_UNSIGNED_BYTE)).transpose(PIL.Image.FLIP_TOP_BOTTOM).save("test.jpg")
 
@@ -264,6 +267,6 @@ class Renderer():
 
 if __name__ == '__main__':
     import ObjLoader, sys
-    render = Renderer("visage.obj", 1024, 1024)
+    render = Renderer(1024, 1024, "cuda")
     obj = ObjLoader.OBJ(sys.argv[1], swapyz=True)
     render.test(obj.gl_list)

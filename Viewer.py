@@ -110,9 +110,11 @@ class Viewer(Renderer):
         if i >= self._vertex.shape[0]: i=0
         elif i < 0: i=self._vertex.shape[0]-1
         self._index = i
-        texture = self._textures[self._index].to(self.device)
-        texture = texture * 255
-        texture = texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
+        if self._textures is not None:
+            texture = self._textures[self._index].to(self.device)
+            texture = texture * 255
+            texture = texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
+        else: texture = None
         self._edit_GL_List(self._vertex[i].to(self._device), texture)
         self.update_pts()
 
