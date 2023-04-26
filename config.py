@@ -24,6 +24,11 @@ class Config:
         self.max_texture_param=2
         self.min_neck_param = -30
         self.max_neck_param = 30
+        self.fixed_shape = False
+        self.fixed_expression = False
+        self.fixed_jaw = False
+        self.fixed_texture = False
+        self.fixed_neck = False
         self.device="cuda"
         self.view=False
         self.flame_model_path='./model/generic_model.pkl'
@@ -65,6 +70,11 @@ class Config:
         self.max_texture_param=d['max_texture_param']
         self.min_neck_param=d['min_neck_param']
         self.max_neck_param=d['max_neck_param']
+        self.fixed_shape=d['fixed_shape']
+        self.fixed_expression=d['fixed_expression']
+        self.fixed_jaw=d['fixed_jaw']
+        self.fixed_texture=d['fixed_texture']
+        self.fixed_neck=d['fixed_neck']
         self.device=d['device']
         self.view=d['view']
         self.flame_model_path=d['flame_model_path']

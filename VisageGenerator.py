@@ -105,14 +105,22 @@ class VisageGenerator():
     def genParams(self, cfg):
         print('Generate random parameters')
         radian = torch.pi / 180.0
-        shape_params = torch.rand(cfg.nb_faces, 300, dtype=torch.float32, device=self.device) * (self.max_shape_param - self.min_shape_param) + self.min_shape_param
+        shape_params = torch.rand(1 if cfg.fixed_shape else cfg.nb_faces, 300, dtype=torch.float32, device=self.device) * (self.max_shape_param - self.min_shape_param) + self.min_shape_param
+        if cfg.fixed_shape: shape_params = shape_params.repeat(cfg.nb_faces, 1)
         pose_params = torch.tensor([[self.global_pose_param1 * radian, self.global_pose_param2 * radian, self.global_pose_param3 * radian, 0, 0, 0]], dtype=torch.float32, device=self.device).repeat(cfg.nb_faces, 1)
-        pose_params[:,3] = (torch.rand(cfg.nb_faces, dtype=torch.float32, device=self.device) * (self.max_jaw_param1 - self.min_jaw_param1) + self.min_jaw_param1) * radian
-        pose_params[:,4:6] = (torch.rand(cfg.nb_faces, 2, dtype=torch.float32, device=self.device) * (self.max_jaw_param2_3 - self.min_jaw_param2_3) + self.min_jaw_param2_3) * radian
-        expression_params = torch.rand(cfg.nb_faces, 100, dtype=torch.float32, device=self.device) * (self.max_expression_param - self.min_expression_param) + self.min_expression_param
-        neck_pose = (torch.rand(cfg.nb_faces, 3, dtype=torch.float32, device=self.device) * (self.max_neck_param - self.min_neck_param) + self.min_neck_param) * radian
+        jaw1_param = (torch.rand(1 if cfg.fixed_jaw else cfg.nb_faces, dtype=torch.float32, device=self.device) * (self.max_jaw_param1 - self.min_jaw_param1) + self.min_jaw_param1) * radian
+        jaw2_3_param = (torch.rand(1 if cfg.fixed_jaw else cfg.nb_faces, 2, dtype=torch.float32, device=self.device) * (self.max_jaw_param2_3 - self.min_jaw_param2_3) + self.min_jaw_param2_3) * radian 
+        jaw_params = torch.cat([jaw1_param[:,None], jaw2_3_param], dim=1)
+        if cfg.fixed_jaw: jaw_params = jaw_params.repeat(cfg.nb_faces, 1)
+        pose_params[:,3:6] = jaw_params
+        expression_params = torch.rand(1 if cfg.fixed_expression else cfg.nb_faces, 100, dtype=torch.float32, device=self.device) * (self.max_expression_param - self.min_expression_param) + self.min_expression_param
+        if cfg.fixed_expression: expression_params = expression_params.repeat(cfg.nb_faces, 1)
+        neck_pose = (torch.rand(1 if cfg.fixed_neck else cfg.nb_faces, 3, dtype=torch.float32, device=self.device) * (self.max_neck_param - self.min_neck_param) + self.min_neck_param) * radian
+        if cfg.fixed_neck: neck_pose = neck_pose.repeat(cfg.nb_faces, 1)
         eye_pose = torch.zeros(cfg.nb_faces, 6).to(self.device)
-        if cfg.texturing: texture_params = torch.rand(cfg.nb_faces, 50, dtype=torch.float32, device=self.device) * (self.max_texture_param - self.min_texture_param) + self.min_texture_param
+        if cfg.texturing: 
+            texture_params = torch.rand(1 if cfg.fixed_texture else cfg.nb_faces, 50, dtype=torch.float32, device=self.device) * (self.max_texture_param - self.min_texture_param) + self.min_texture_param
+            if cfg.fixed_texture: texture_params = texture_params.repeat(cfg.nb_faces, 1)
         else: texture_params = None
         return shape_params, pose_params, expression_params, texture_params, neck_pose, eye_pose
 
@@ -226,6 +234,11 @@ cfg = Config()
 @click.option('--max-texture-param',  type=float,  default=cfg.max_texture_param,  help='maximum value for texture param')
 @click.option('--min-neck-param',  type=float,  default=cfg.min_neck_param,  help='minimum value for neck param')
 @click.option('--max-neck-param',  type=float,  default=cfg.max_neck_param,  help='maximum value for neck param')
+@click.option('--fixed-shape', type=bool, default=cfg.fixed_shape, help='fixed the same shape for all visage generated', is_flag=True)
+@click.option('--fixed-expression', type=bool, default=cfg.fixed_expression, help='fixed the same expression for all visage generated', is_flag=True)
+@click.option('--fixed-jaw', type=bool, default=cfg.fixed_jaw, help='fixed the same jaw for all visage generated', is_flag=True)
+@click.option('--fixed-texture', type=bool, default=cfg.fixed_texture, help='fixed the same texture for all visage generated', is_flag=True)
+@click.option('--fixed-neck', type=bool, default=cfg.fixed_neck, help='fixed the same neck for all visage generated', is_flag=True)
 
 # Flame parameter
 @click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=cfg.use_face_contour, is_flag=True, help='not use face contour for generate visage')
