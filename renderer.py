@@ -263,7 +263,14 @@ class Renderer():
         glEndList()
         glDeleteBuffers(2, [vbo, ibo])
         return list_id
-
+    
+    def getCoord2D(self, point3D):
+        viewport = glGetIntegerv(GL_VIEWPORT)
+        modelview = glGetDoublev(GL_MODELVIEW_MATRIX)
+        projection = glGetDoublev(GL_PROJECTION_MATRIX)
+        winX, winY, winZ = gluProject(point3D[0], point3D[1], point3D[2], modelview, projection, viewport)
+        if 0 <= winZ <= 1: return int(winX), int(winY)
+        return None
 
 if __name__ == '__main__':
     import ObjLoader, sys

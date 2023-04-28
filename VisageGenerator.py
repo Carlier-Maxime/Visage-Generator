@@ -13,7 +13,6 @@ import torch
 import click
 import PIL
 
-import getLandmark2D
 from FLAME import FLAME
 from Viewer import Viewer
 from renderer import Renderer
@@ -57,7 +56,7 @@ class VisageGenerator():
         uvcoords = []
         uvfaces = []
         basename = path.split(".obj")[0]
-        if faces is None: faces = self.render.faces[0].detach().cpu().numpy()
+        if faces is None: faces = self._faces
         if texture is not None:
             img = PIL.Image.fromarray(texture)
             img.save(basename+"_texture.png")
@@ -159,7 +158,7 @@ class VisageGenerator():
                 self._textures[i*cfg.texture_batch_size:(i+1)*cfg.texture_batch_size] = texture.cpu()
 
 
-    def save(self, cfg):
+    def save(self, cfg:Config):
         out = cfg.outdir
         tmp = 'tmp'
         outObj = (out if cfg.save_obj else tmp)+"/obj"
@@ -169,10 +168,6 @@ class VisageGenerator():
         outLmks3D_PNG = (out if cfg.save_lmks3D_png else tmp)+"/png/lmks"
         outMarkersPNG = (out if cfg.save_markers else tmp)+"/png/markers"
         for folder in [out, tmp, outObj, outLmk3D_npy, outLmk2D, outVisagePNG, outLmks3D_PNG, outMarkersPNG]: os.makedirs(folder, exist_ok=True)
-        if cfg.save_lmks2D:
-            lmks_paths = ""
-            visage_paths = ""
-            save_paths = ""
         if cfg.save_markers: markers = np.load("markers.npy")
         save_any_png = cfg.save_png or cfg.save_lmks3D_png or cfg.save_markers
         self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window)
@@ -187,26 +182,29 @@ class VisageGenerator():
             basename=f"visage{str(i)}"
             visage_path = f'{outObj}/{basename}.obj'
             lmks3Dnpy_path = f'{outLmk3D_npy}/{basename}.npy'
-            if cfg.save_obj or cfg.save_lmks2D:
+            lmks2D_path = f'{outLmk2D}/{basename}.{cfg.lmk2D_format}'
+            if cfg.save_obj :
                 self.save_obj(visage_path, vertices, texture=texture)
-            if cfg.save_lmks3D_npy or cfg.save_lmks2D:
-                np.save(lmks3Dnpy_path, lmk)
+            if cfg.save_lmks3D_npy :
+                np.save(lmks3Dnpy_path, lmk.cpu().numpy())
             if cfg.save_lmks2D:
-                if i != 0:
-                    lmks_paths += ";"
-                    visage_paths += ";"
-                    save_paths += ";"
-                lmks_paths += lmks3Dnpy_path
-                visage_paths += visage_path
-                save_paths += f'{outLmk2D}/{basename}.{cfg.lmk2D_format}'
+                lmks2D = []
+                for p in lmk:
+                    lmks2D.append(self.render.getCoord2D(p))
+                if lmks2D_path.endswith('.npy'):
+                    np.save(lmks2D_path, lmks2D[17:])
+                elif lmks2D_path.endswith('.pts'):
+                    with open(lmks2D_path, 'w') as f:
+                        lmks2D = lmks2D[17:]
+                        for i in range(len(lmks2D)):
+                            f.write(f'{i + 1} {lmks2D[i][0]} {lmks2D[i][1]} False\n')
+                else: raise TypeError("format for saving landmarks 2D is not supported !")
             if save_any_png:
                 if cfg.save_png: self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, texture)
                 if cfg.save_lmks3D_png: self.render.save_to_image(f'{outLmks3D_PNG}/{basename}.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha)
                 if cfg.save_markers:
                     mks = util.read_all_index_opti_tri(vertices, self._faces, markers)
                     self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks), device=self.device), ptsInAlpha=cfg.pts_in_alpha)
-        if cfg.save_lmks2D:
-            getLandmark2D.run(visage_paths, lmks_paths, save_paths, cfg.save_png)
 
 cfg = Config()
 @click.command()
