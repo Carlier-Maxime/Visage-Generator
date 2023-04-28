@@ -1,10 +1,3 @@
-"""
-Author: Yao Feng
-Copyright (c) 2020, Yao Feng
-All rights reserved.
-"""
-import warnings
-from pytorch3d.io import load_obj
 import pygame
 from pygame.constants import *
 from OpenGL.GL import *
@@ -14,12 +7,11 @@ import torch
 
 class Renderer():
     def __init__(self, width:int, height:int, device:torch.device, show:bool=True):
-        warnings.filterwarnings("ignore",'No mtl file provided')
         self.device = torch.device(device)
-        _, faces, aux = load_obj('visage.obj', device=device)
-        self.uvcoords = aux.verts_uvs # (N, V, 2)
-        self.uvfaces = faces.textures_idx  # (N, F, 3)
-        self.order_indexs = torch.cat([self.uvfaces, faces.verts_idx],dim=1)[:,[0,3,1,4,2,5]].reshape([self.uvfaces.shape[0]*3,2]).unique(dim=0)
+        render_data = torch.load('render_data.pt')
+        self.uvcoords = render_data['uvcoords']
+        self.uvfaces = render_data['uvfaces']
+        self.order_indexs = render_data['order_indexs']
         self.raw_sphere = self.create_sphere(0.02, 30, 30)
 
         pygame.init()
