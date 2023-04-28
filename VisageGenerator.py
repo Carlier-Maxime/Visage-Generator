@@ -41,38 +41,39 @@ class VisageGenerator():
         self.max_neck_param = cfg.max_neck_param
         self.batch_size = cfg.batch_size
 
-    def save_obj(self, path: str, vertices: list, faces=None, texture=None) -> None:
+    def save_obj(self, path: str, vertices: np.ndarray, faces: np.ndarray = None, texture: np.ndarray = None) -> None:
         """
         Save 3D object to the obj format
         Args:
             path (str): save path
-            vertices (list): array of all vertex
-            faces (list): array of all face
-            texture: texture
+            vertices (ndarray): array of all vertex
+            faces (ndarray): array of all face
+            texture (ndarray): texture
 
         Returns: None
 
         """
-        uvcoords = []
-        uvfaces = []
         basename = path.split(".obj")[0]
-        if faces is None: faces = self._faces
+        if faces is None:
+            faces = self._faces
         if texture is not None:
             img = PIL.Image.fromarray(texture)
             img.save(basename+"_texture.png")
             uvcoords = self.render.uvcoords.cpu().numpy().reshape((-1, 2))
-            uvfaces=self.render.uvfaces
+            uvfaces = self.render.uvfaces.cpu().numpy()
             with open(basename+".mtl","w") as f:
                 f.write(f'newmtl material_0\nmap_Kd {basename.split("/")[-1]}_texture.png\n')
         with open(path, 'w') as f:
-            if texture is not None: f.write(f'mtllib {basename.split("/")[-1]}.mtl\n')
-            for v in vertices: f.write(f'v {v[0]} {v[1]} {v[2]}\n')
-            for vt in uvcoords: f.write(f'vt {vt[0]} {vt[1]}\n')
+            if texture is not None:
+                f.write(f'mtllib {basename.split("/")[-1]}.mtl\n')
+            np.savetxt(f, vertices, fmt='v %.6f %.6f %.6f')
             if texture is None:
-                for face in faces: f.write(f'f {face[0]+1} {face[1]+1} {face[2]+1}\n')
+                np.savetxt(f, faces + 1, fmt='f %d %d %d')
             else:
+                np.savetxt(f, uvcoords, fmt='vt %.6f %.6f')
                 f.write(f'usemtl material_0\n')
-                for face, ivt in zip(faces, uvfaces): f.write(f'f {face[0]+1}/{ivt[0]+1} {face[1]+1}/{ivt[1]+1} {face[2]+1}/{ivt[2]+1}\n')
+                np.savetxt(f, np.hstack((faces + 1, uvfaces + 1))[:,[0,3,1,4,2,5]], fmt='f %d/%d %d/%d %d/%d')
+
 
     def view(self, other_objects=None) -> None:
         """
@@ -184,7 +185,7 @@ class VisageGenerator():
             lmks3Dnpy_path = f'{outLmk3D_npy}/{basename}.npy'
             lmks2D_path = f'{outLmk2D}/{basename}.{cfg.lmk2D_format}'
             if cfg.save_obj :
-                self.save_obj(visage_path, vertices, texture=texture)
+                self.save_obj(visage_path, vertices.cpu().numpy(), texture=texture)
             if cfg.save_lmks3D_npy :
                 np.save(lmks3Dnpy_path, lmk.cpu().numpy())
             if cfg.save_lmks2D:
