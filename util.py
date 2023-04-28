@@ -4,8 +4,6 @@ from typing import Tuple, List, Any
 import numpy as np
 import torch
 import os
-from skimage.io import imsave
-
 
 def get_vertex_markers(vertex: list, min_x: float = 0.05, min_z: float = -0.03, max_z: float = 0.15,
                        min_eye_distance: float = 0.0139, min_noise_distance: float = 0.0130) \

@@ -18,8 +18,12 @@ The code uses **Python 3.10**
 ```
 git clone https://github.com/Carlier-Maxime/Visage-Generator
 cd Visage-Generator
-pip install -r requirements.txt
+conda env create -f environment.yml
+conda activate vgen
 ```
+
+if you not use anaconda or miniconda then can be install manually package with pip (information for name packages required is in environment.yml, dependencies section)
+if you are any problem during installation with conda, use etc/full_environment.yml instead of environment.yml. (full_environment.yml is complete conda environment detail used for developement Visage-Generator)
 
 ### Download Models
 
