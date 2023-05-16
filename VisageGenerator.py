@@ -20,6 +20,8 @@ from config import Config
 from tqdm import trange
 import util
 
+radian = torch.pi / 180.0
+
 class VisageGenerator():
     def __init__(self, cfg):
         self.flame_layer = FLAME(cfg.flame_model_path, cfg.batch_size, cfg.use_face_contour, cfg.use_3D_translation, cfg.shape_params, cfg.expression_params, cfg.static_landmark_embedding_path, cfg.dynamic_landmark_embedding_path).to(cfg.device)
@@ -102,30 +104,97 @@ class VisageGenerator():
         """
         return self._faces
 
-    def genParams(self, cfg):
-        print('Generate random parameters')
-        radian = torch.pi / 180.0
-        shape_params = torch.rand(1 if cfg.fixed_shape else cfg.nb_faces, 300, dtype=torch.float32, device=self.device) * (self.max_shape_param - self.min_shape_param) + self.min_shape_param
+    def genParamsShape(self, cfg: Config):
+        shape_params = torch.rand(1 if cfg.fixed_shape else cfg.nb_faces, cfg.shape_params, dtype=torch.float32, device=self.device) * (self.max_shape_param - self.min_shape_param) + self.min_shape_param
         if cfg.fixed_shape: shape_params = shape_params.repeat(cfg.nb_faces, 1)
+        return shape_params
+
+    def genParamsPose(self, cfg: Config):
         pose_params = torch.tensor([[self.global_pose_param1 * radian, self.global_pose_param2 * radian, self.global_pose_param3 * radian, 0, 0, 0]], dtype=torch.float32, device=self.device).repeat(cfg.nb_faces, 1)
         jaw1_param = (torch.rand(1 if cfg.fixed_jaw else cfg.nb_faces, dtype=torch.float32, device=self.device) * (self.max_jaw_param1 - self.min_jaw_param1) + self.min_jaw_param1) * radian
         jaw2_3_param = (torch.rand(1 if cfg.fixed_jaw else cfg.nb_faces, 2, dtype=torch.float32, device=self.device) * (self.max_jaw_param2_3 - self.min_jaw_param2_3) + self.min_jaw_param2_3) * radian 
         jaw_params = torch.cat([jaw1_param[:,None], jaw2_3_param], dim=1)
         if cfg.fixed_jaw: jaw_params = jaw_params.repeat(cfg.nb_faces, 1)
         pose_params[:,3:6] = jaw_params
-        expression_params = torch.rand(1 if cfg.fixed_expression else cfg.nb_faces, 100, dtype=torch.float32, device=self.device) * (self.max_expression_param - self.min_expression_param) + self.min_expression_param
+        return pose_params
+
+    def genParamsExpression(self, cfg: Config):
+        expression_params = torch.rand(1 if cfg.fixed_expression else cfg.nb_faces, cfg.expression_params, dtype=torch.float32, device=self.device) * (self.max_expression_param - self.min_expression_param) + self.min_expression_param
         if cfg.fixed_expression: expression_params = expression_params.repeat(cfg.nb_faces, 1)
-        neck_pose = (torch.rand(1 if cfg.fixed_neck else cfg.nb_faces, 3, dtype=torch.float32, device=self.device) * (self.max_neck_param - self.min_neck_param) + self.min_neck_param) * radian
+        return expression_params
+
+    def _genParamsNeckPose(self, size=3):
+        return (torch.rand(size, dtype=torch.float32, device=self.device) * (self.max_neck_param - self.min_neck_param) + self.min_neck_param) * radian
+
+    def genParamsNeckPose(self, cfg: Config):
+        neck_pose = self._genParamsNeckPose((1 if cfg.fixed_neck else cfg.nb_faces, 3))
         if cfg.fixed_neck: neck_pose = neck_pose.repeat(cfg.nb_faces, 1)
-        eye_pose = torch.zeros(cfg.nb_faces, 6).to(self.device)
+        return neck_pose
+    
+    def _genParamsEyePose(self, size=6):
+        return torch.zeros(size).to(self.device)
+
+    def genParamsEyePose(self, cfg: Config):
+        eye_pose = self._genParamsEyePose((cfg.nb_faces, 6))
+        return eye_pose
+    
+    def _genParamsTexture(self, size=50):
+        return torch.rand(size, dtype=torch.float32, device=self.device) * (self.max_texture_param - self.min_texture_param) + self.min_texture_param
+    
+    def genParamsTexture(self, cfg: Config):
         if cfg.texturing: 
-            texture_params = torch.rand(1 if cfg.fixed_texture else cfg.nb_faces, 50, dtype=torch.float32, device=self.device) * (self.max_texture_param - self.min_texture_param) + self.min_texture_param
+            texture_params = self._genParamsTexture((1 if cfg.fixed_texture else cfg.nb_faces, 50))
             if cfg.fixed_texture: texture_params = texture_params.repeat(cfg.nb_faces, 1)
         else: texture_params = None
+        return texture_params
+
+    def genParams(self, cfg: Config):
+        print('Generate random parameters')
+        return (
+            self.genParamsShape(cfg),
+            self.genParamsPose(cfg),
+            self.genParamsExpression(cfg),
+            self.genParamsTexture(cfg),
+            self.genParamsNeckPose(cfg),
+            self.genParamsEyePose(cfg)
+        )
+
+    def load_params(self, cfg: Config):
+        if cfg.nb_faces==-1: cfg.nb_faces = sum(len(files) for _, _, files in os.walk(cfg.input_folder))
+        pbar = trange(cfg.nb_faces, desc='load params', unit='visage')
+        shape_params = []
+        pose_params = []
+        expression_params = []
+        texture_params = [] if cfg.texturing else None
+        neck_pose = []
+        eye_pose = []
+        for root, _, filenames in os.walk(cfg.input_folder):
+            for filename in filenames:
+                file = os.path.join(root, filename)
+                if filename.endswith(('.npy')):
+                    params = np.load(file, allow_pickle=True).item()
+                    shape_params.append(torch.tensor(params['shape'] if 'shape' in params else [], device=cfg.device))
+                    pose_params.append(torch.tensor(params['pose'] if 'pose' in params else [], device=cfg.device))
+                    expression_params.append(torch.tensor(params['expression'] if 'expression' in params else [], device=cfg.device))
+                    if cfg.texturing: texture_params.append(torch.tensor(params['texture'], device=cfg.device) if 'texture' in params else self._genParamsTexture())
+                    neck_pose.append(torch.tensor(params['neck_pose'], device=cfg.device) if 'neck_pose' in params else self._genParamsNeckPose())
+                    eye_pose.append(torch.tensor(params['eye_pose'], device=cfg.device) if 'eye_pose' in params else self._genParamsEyePose())
+                    assert shape_params[-1].shape[0] == cfg.shape_params, f'shape params not a good, expected {cfg.shape_params}, but got {shape_params[-1].shape[0]} ! (file : {filename})'
+                    assert expression_params[-1].shape[0] == cfg.expression_params, f'expression params not a good, expected {cfg.expression_params}, but got {expression_params[-1].shape[0]} ! (file : {filename})'
+                pbar.update(1)
+                if pbar.n >= cfg.nb_faces: break
+            if pbar.n >= cfg.nb_faces: break
+        pbar.close()
+        shape_params = torch.cat(shape_params).reshape(cfg.nb_faces, cfg.shape_params)
+        pose_params = torch.cat(pose_params).reshape(cfg.nb_faces, 6)
+        expression_params = torch.cat(expression_params).reshape(cfg.nb_faces, cfg.expression_params)
+        if cfg.texturing: texture_params = torch.cat(texture_params).reshape(cfg.nb_faces, 50)
+        neck_pose = torch.cat(neck_pose).reshape(cfg.nb_faces, 3)
+        eye_pose = torch.cat(eye_pose).reshape(cfg.nb_faces, 6)
         return shape_params, pose_params, expression_params, texture_params, neck_pose, eye_pose
 
-    def generate(self, cfg):
-        shape_params, pose_params, expression_params, texture_params, neck_pose, eye_pose = self.genParams(cfg)
+    def generate(self, cfg: Config):
+        shape_params, pose_params, expression_params, texture_params, neck_pose, eye_pose = self.genParams(cfg) if cfg.input_folder is None else self.load_params(cfg)
 
         self._vertex = []
         self._landmark = []
@@ -218,6 +287,7 @@ cfg = Config()
 @click.option('--texture-batch-size', type=int, default=cfg.texture_batch_size, help='number of texture generate in same time')
 
 # Generator parameter
+@click.option('--input-folder', type=str, default=cfg.input_folder, help='input folder for load parameter (default : None)')
 @click.option('--min-shape-param',  type=float,  default=cfg.min_shape_param,  help='minimum value for shape param')
 @click.option('--max-shape-param',  type=float,  default=cfg.max_shape_param,  help='maximum value for shape param')
 @click.option('--min-expression-param',  type=float,  default=cfg.min_expression_param,  help='minimum value for expression param')

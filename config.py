@@ -44,6 +44,7 @@ class Config:
         self.img_resolution=[256,256]
         self.show_window=False
         self.outdir = 'output'
+        self.input_folder = None
 
     def set(self, **kwargs):
         d = dict(kwargs)
@@ -91,3 +92,4 @@ class Config:
         self.img_resolution=d['img_resolution']
         self.show_window=d['show_window']
         self.outdir=d['outdir']
+        self.input_folder=d['input_folder']
