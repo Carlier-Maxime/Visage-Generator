@@ -13,9 +13,9 @@ class Config:
         self.max_shape_param=2
         self.min_expression_param=-2
         self.max_expression_param=2
-        self.global_pose_param1=45
-        self.global_pose_param2=45
-        self.global_pose_param3=90
+        self.global_pose_param1=0
+        self.global_pose_param2=0
+        self.global_pose_param3=0
         self.min_jaw_param1=0
         self.max_jaw_param1=30
         self.min_jaw_param2_3=-10

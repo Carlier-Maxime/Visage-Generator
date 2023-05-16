@@ -12,7 +12,7 @@ class Renderer():
         self.uvcoords = render_data['uvcoords']
         self.uvfaces = render_data['uvfaces']
         self.order_indexs = render_data['order_indexs']
-        self.raw_sphere = self.create_sphere(0.02, 30, 30)
+        self.raw_sphere = self.create_sphere(0.002, 30, 30)
 
         pygame.init()
         self.width = width
@@ -31,15 +31,15 @@ class Renderer():
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(45.0, width/float(height), 1, 100.0)
+        gluPerspective(10.0, width/float(height), 0.1, 100.0)
         glEnable(GL_DEPTH_TEST)
         glMatrixMode(GL_MODELVIEW)
 
         self.rotate = False
         self.move = False
-        self.rx, self.ry = (-79,41)
-        self.tx, self.ty = (-29,-14)
-        self.zpos = 4
+        self.rx, self.ry = (0,0)
+        self.tx, self.ty = (0,0)
+        self.zpos = 2
 
         glEnable(GL_TEXTURE_2D)
         glFrontFace(GL_CCW)
@@ -86,8 +86,6 @@ class Renderer():
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size[0], size[1], 0, GL_RGB,GL_UNSIGNED_BYTE, image)
     
     def _create_GL_List(self, vertices, triangles):
-        vertices = vertices[:, [0, 2, 1]]
-        vertices *= 10
         vertices = vertices[self.order_indexs[:,1]]
         vertices = vertices.cpu().numpy()
         vbo, fbo = glCreateBuffers(2)
@@ -107,8 +105,6 @@ class Renderer():
         return gl_list
 
     def _edit_GL_List(self, vertices, texture):
-        vertices = vertices[:, [0, 2, 1]]
-        vertices *= 10
         vertices = vertices[self.order_indexs[:,1]]
         vertices = vertices.cpu().numpy()
 
@@ -175,8 +171,6 @@ class Renderer():
     def save_to_image(self, filename, vertices, texture, pts=None, ptsInAlpha:bool=True):
         self._edit_GL_List(vertices, texture)
         if pts is not None:
-            pts = pts[:, [0, 2, 1]]
-            pts *= 10
             pts_gl_list = Renderer.create_spheres_gl_list(self.raw_sphere, pts)
             if ptsInAlpha:
                 self._render([self.gl_list_visage])

@@ -52,8 +52,8 @@ class Viewer(Renderer):
         self._index = 0
         self._slcIndex = 0
         self._markersIndex = self.load_marker()
-        self.large_raw_sphere = self.create_sphere(0.03, 30, 30)
-        self.small_raw_sphere = self.create_sphere(0.01, 30, 30)
+        self.large_raw_sphere = self.create_sphere(0.003, 30, 30)
+        self.small_raw_sphere = self.create_sphere(0.001, 30, 30)
         self.set_visage(self._index)
         self.loop()
 
@@ -156,27 +156,19 @@ class Viewer(Renderer):
     def gen_select_glList(self):
         vert = self._vertex[self._index][self._directionalMatrix[self._slcIndex][0]]
         vert = vert.to(self.device)[None]
-        vert = vert[:, [0, 2, 1]]
-        vert *= 10
         self._select_glList = Renderer.create_spheres_gl_list(self.large_raw_sphere, vert, self._select_glList, [255, 255, 0.1])
         return self._select_glList
 
     def gen_vertices_glList(self):
         vts = self._vertex[self._index].to(self._device)
-        vts = vts[:, [0, 2, 1]]
-        vts *= 10
         return Renderer.create_spheres_gl_list(self.small_raw_sphere, vts, self._vertices_glList, [255, 0.2, 0.2])
 
     def gen_joints_glList(self):
         lmk = self._landmark[self._index].to(self._device)
-        lmk = lmk[:, [0, 2, 1]]
-        lmk *= 10
         return Renderer.create_spheres_gl_list(self.raw_sphere, lmk, self._joints_glList, [0.2, 0.2, 255])
 
     def gen_markers_glList(self):
         mks = torch.tensor(np.array(read_all_index_opti_tri(self._vertex[self._index], self._faces, self._markersIndex)), device=self._device)
-        mks = mks[:, [0, 2, 1]]
-        mks *= 10
         return Renderer.create_spheres_gl_list(self.raw_sphere, mks, self._markers_glList, [0.2, 255, 0.2])
 
     def add_marker(self) -> None:
