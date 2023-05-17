@@ -110,36 +110,34 @@ class VisageGenerator():
     def load_params(self, cfg: Config):
         if cfg.nb_faces==-1: cfg.nb_faces = sum(len(files) for _, _, files in os.walk(cfg.input_folder))
         pbar = trange(cfg.nb_faces, desc='load params', unit='visage')
-        shape_params = []
-        pose_params = []
-        expression_params = []
-        texture_params = [] if cfg.texturing else None
-        neck_pose = []
-        eye_pose = []
+        generators = [
+            self.shape_params_generator,
+            self.pose_params_generator,
+            self.expression_params_generator,
+            self.texture_params_generator if cfg.texturing else None,
+            self.neck_params_generator,
+            self.eye_params_generator
+        ]
+        all_params = [[] for _ in range(len(generators))]
+        keys = ['shape', 'pose', 'expression', 'texture', 'neck_pose', 'eye_pose']
         for root, _, filenames in os.walk(cfg.input_folder):
             for filename in filenames:
                 file = os.path.join(root, filename)
                 if filename.endswith(('.npy')):
                     params = np.load(file, allow_pickle=True).item()
-                    shape_params.append(torch.tensor(params['shape'], device=cfg.device) if 'shape' in params else self.shape_params_generator.one())
-                    pose_params.append(torch.tensor(params['pose'], device=cfg.device) if 'pose' in params else self.pose_params_generator.one())
-                    expression_params.append(torch.tensor(params['expression'], device=cfg.device) if 'expression' in params else self.expression_params_generator.one())
-                    if cfg.texturing: texture_params.append(torch.tensor(params['texture'], device=cfg.device) if 'texture' in params else self.texture_params_generator.one())
-                    neck_pose.append(torch.tensor(params['neck_pose'], device=cfg.device) if 'neck_pose' in params else self.neck_params_generator.one())
-                    eye_pose.append(torch.tensor(params['eye_pose'], device=cfg.device) if 'eye_pose' in params else self.eye_params_generator.one())
-                    assert shape_params[-1].shape[0] == cfg.shape_params, f'shape params not a good, expected {cfg.shape_params}, but got {shape_params[-1].shape[0]} ! (file : {filename})'
-                    assert expression_params[-1].shape[0] == cfg.expression_params, f'expression params not a good, expected {cfg.expression_params}, but got {expression_params[-1].shape[0]} ! (file : {filename})'
+                    for i, gen in enumerate(generators):
+                        if gen is not None: all_params[i].append(torch.tensor(params[keys[i]], device=cfg.device) if keys[i] in params else gen.one())
+                    all_params[1][-1][0]+=torch.pi
+                    assert all_params[0][-1].shape[0] == cfg.shape_params, f'shape params not a good, expected {cfg.shape_params}, but got {all_params[0][-1].shape[0]} ! (file : {filename})'
+                    assert all_params[2][-1].shape[0] == cfg.expression_params, f'expression params not a good, expected {cfg.expression_params}, but got {all_params[2][-1].shape[0]} ! (file : {filename})'
                 pbar.update(1)
                 if pbar.n >= cfg.nb_faces: break
             if pbar.n >= cfg.nb_faces: break
         pbar.close()
-        shape_params = torch.cat(shape_params).reshape(cfg.nb_faces, cfg.shape_params)
-        pose_params = torch.cat(pose_params).reshape(cfg.nb_faces, 6)
-        expression_params = torch.cat(expression_params).reshape(cfg.nb_faces, cfg.expression_params)
-        if cfg.texturing: texture_params = torch.cat(texture_params).reshape(cfg.nb_faces, 50)
-        neck_pose = torch.cat(neck_pose).reshape(cfg.nb_faces, 3)
-        eye_pose = torch.cat(eye_pose).reshape(cfg.nb_faces, 6)
-        return shape_params, pose_params, expression_params, texture_params, neck_pose, eye_pose
+        for i, element in enumerate(zip(all_params, [cfg.shape_params, 6, cfg.expression_params, 50, 3, 6])):
+            params, nb_params = element
+            all_params[i] = torch.cat(params).reshape(cfg.nb_faces, nb_params)
+        return all_params
 
     def generate(self, cfg: Config):
         shape_params, pose_params, expression_params, texture_params, neck_pose, eye_pose = self.genParams(cfg) if cfg.input_folder is None else self.load_params(cfg)
