@@ -43,6 +43,7 @@ class VisageGenerator():
         ]
         self.batch_size = cfg.batch_size
         self.cameras = None
+        self.filenames = None
 
     def save_obj(self, path: str, vertices: np.ndarray, faces: np.ndarray = None, texture: np.ndarray = None) -> None:
         """
@@ -115,7 +116,8 @@ class VisageGenerator():
         pbar = trange(cfg.nb_faces, desc='load params', unit='visage')
         all_params = [[] for _ in range(len(self.params_generators))]
         keys = ['shape', 'pose', 'expression', 'texture', 'neck_pose', 'eye_pose']
-        cams = []
+        self.cameras = []
+        self.filenames = []
         for root, _, filenames in os.walk(cfg.input_folder):
             for filename in filenames:
                 file = os.path.join(root, filename)
@@ -125,7 +127,8 @@ class VisageGenerator():
                         if gen is not None: all_params[i].append(torch.tensor(params[keys[i]], device=cfg.device) if keys[i] in params else gen.zeros() if cfg.zeros_params else gen.one())
                     assert all_params[0][-1].shape[0] == cfg.shape_params, f'shape params not a good, expected {cfg.shape_params}, but got {all_params[0][-1].shape[0]} ! (file : {filename})'
                     assert all_params[2][-1].shape[0] == cfg.expression_params, f'expression params not a good, expected {cfg.expression_params}, but got {all_params[2][-1].shape[0]} ! (file : {filename})'
-                    if 'cam' in params: cams.append(params['cam'])
+                    if 'cam' in params: self.cameras.append(params['cam'])
+                    self.filenames.append(filename.split('.')[0])
                 pbar.update(1)
                 if pbar.n >= cfg.nb_faces: break
             if pbar.n >= cfg.nb_faces: break
@@ -133,7 +136,6 @@ class VisageGenerator():
         for i, element in enumerate(zip(all_params, [cfg.shape_params, 6, cfg.expression_params, 50, 3, 6])):
             params, nb_params = element
             if all_params[i] is not None: all_params[i] = torch.cat(params).reshape(cfg.nb_faces, nb_params)
-        if cams != []: self.cameras = cams
         return all_params
 
     def generate(self, cfg: Config):
@@ -193,7 +195,7 @@ class VisageGenerator():
                 texture = self._textures[i].to(self.device)
                 texture = texture * 255
                 texture = texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
-            basename=f"visage{str(i)}"
+            basename=f"visage{str(i)}" if self.filenames is None else self.filenames[i]
             visage_path = f'{outObj}/{basename}.obj'
             lmks3Dnpy_path = f'{outLmk3D_npy}/{basename}.npy'
             lmks2D_path = f'{outLmk2D}/{basename}.{cfg.lmk2D_format}'
