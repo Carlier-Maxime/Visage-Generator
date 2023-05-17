@@ -42,6 +42,7 @@ class VisageGenerator():
             self.eye_params_generator
         ]
         self.batch_size = cfg.batch_size
+        self.cameras = None
 
     def save_obj(self, path: str, vertices: np.ndarray, faces: np.ndarray = None, texture: np.ndarray = None) -> None:
         """
@@ -85,7 +86,7 @@ class VisageGenerator():
 
         Returns: None
         """
-        Viewer(self._vertex, self._textures, self._landmark, self._faces, other_objects=other_objects, device=self.device, window_size=cfg.img_resolution)
+        Viewer(self._vertex, self._textures, self._landmark, self._faces, other_objects=other_objects, device=self.device, window_size=cfg.img_resolution, cameras=self.cameras)
 
     def get_vertices(self, i: int) -> list:
         """
@@ -114,6 +115,7 @@ class VisageGenerator():
         pbar = trange(cfg.nb_faces, desc='load params', unit='visage')
         all_params = [[] for _ in range(len(self.params_generators))]
         keys = ['shape', 'pose', 'expression', 'texture', 'neck_pose', 'eye_pose']
+        cams = []
         for root, _, filenames in os.walk(cfg.input_folder):
             for filename in filenames:
                 file = os.path.join(root, filename)
@@ -121,9 +123,9 @@ class VisageGenerator():
                     params = np.load(file, allow_pickle=True).item()
                     for i, gen in enumerate(self.params_generators):
                         if gen is not None: all_params[i].append(torch.tensor(params[keys[i]], device=cfg.device) if keys[i] in params else gen.zeros() if cfg.zeros_params else gen.one())
-                    all_params[1][-1][0]+=torch.pi
                     assert all_params[0][-1].shape[0] == cfg.shape_params, f'shape params not a good, expected {cfg.shape_params}, but got {all_params[0][-1].shape[0]} ! (file : {filename})'
                     assert all_params[2][-1].shape[0] == cfg.expression_params, f'expression params not a good, expected {cfg.expression_params}, but got {all_params[2][-1].shape[0]} ! (file : {filename})'
+                    if 'cam' in params: cams.append(params['cam'])
                 pbar.update(1)
                 if pbar.n >= cfg.nb_faces: break
             if pbar.n >= cfg.nb_faces: break
@@ -131,6 +133,7 @@ class VisageGenerator():
         for i, element in enumerate(zip(all_params, [cfg.shape_params, 6, cfg.expression_params, 50, 3, 6])):
             params, nb_params = element
             if all_params[i] is not None: all_params[i] = torch.cat(params).reshape(cfg.nb_faces, nb_params)
+        if cams != []: self.cameras = cams
         return all_params
 
     def generate(self, cfg: Config):
@@ -184,6 +187,7 @@ class VisageGenerator():
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)
+            camera = None if self.cameras is None else self.cameras[i]
             if self._textures is None: texture=None
             else: 
                 texture = self._textures[i].to(self.device)
@@ -210,11 +214,11 @@ class VisageGenerator():
                             f.write(f'{i + 1} {lmks2D[i][0]} {lmks2D[i][1]} False\n')
                 else: raise TypeError("format for saving landmarks 2D is not supported !")
             if save_any_png:
-                if cfg.save_png: self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, texture)
-                if cfg.save_lmks3D_png: self.render.save_to_image(f'{outLmks3D_PNG}/{basename}.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha)
+                if cfg.save_png: self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, texture, camera=camera)
+                if cfg.save_lmks3D_png: self.render.save_to_image(f'{outLmks3D_PNG}/{basename}.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
                 if cfg.save_markers:
                     mks = util.read_all_index_opti_tri(vertices, self._faces, markers)
-                    self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks), device=self.device), ptsInAlpha=cfg.pts_in_alpha)
+                    self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks), device=self.device), ptsInAlpha=cfg.pts_in_alpha, camera=camera)
 
 cfg = Config()
 @click.command()

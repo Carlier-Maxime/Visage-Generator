@@ -31,7 +31,8 @@ class Renderer():
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(10.0, width/float(height), 0.1, 100.0)
+        self.fov=10.0
+        gluPerspective(self.fov, width/float(height), 0.1, 100.0)
         glEnable(GL_DEPTH_TEST)
         glMatrixMode(GL_MODELVIEW)
 
@@ -74,9 +75,13 @@ class Renderer():
         glDeleteLists(self.gl_list_visage,1)
 
     def _updateCamera(self):
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+        gluPerspective(self.fov, self.width/float(self.height), 0.1, 100.0)
+        glEnable(GL_DEPTH_TEST)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        glTranslate(self.tx/20., self.ty/20., - self.zpos)
+        glTranslate(self.tx, self.ty, - self.zpos)
         glRotate(self.ry, 1, 0, 0)
         glRotate(self.rx, 0, 1, 0)
 
@@ -151,8 +156,8 @@ class Renderer():
                 self.ry += j
                 self._updateCamera()
             if self.move:
-                self.tx += i
-                self.ty -= j
+                self.tx += i/256
+                self.ty -= j/256
                 self._updateCamera()
         elif e.type == KEYDOWN and e.key == K_c:
             print(f'rx: {self.rx}, ry: {self.ry}, tx: {self.tx}, ty: {self.ty}, zpos: {self.zpos}')
@@ -162,18 +167,23 @@ class Renderer():
         for e in pygame.event.get():
             if not self._poll_event(e): return 0
         return 1
+    
+    def _changeCamera(self, camera):
+        self.fov, self.tx, self.ty = camera
+        self._updateCamera()
 
-    def _render(self,gl_lists):
+    def _render(self,gl_lists, camera=None):
+        if camera is not None: self._changeCamera(camera)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glCallLists(gl_lists)
         pygame.display.flip()
 
-    def save_to_image(self, filename, vertices, texture, pts=None, ptsInAlpha:bool=True):
+    def save_to_image(self, filename, vertices, texture, pts=None, ptsInAlpha:bool=True, camera=None):
         self._edit_GL_List(vertices, texture)
         if pts is not None:
             pts_gl_list = Renderer.create_spheres_gl_list(self.raw_sphere, pts)
             if ptsInAlpha:
-                self._render([self.gl_list_visage])
+                self._render([self.gl_list_visage], camera)
                 img_visage = torch.frombuffer(bytearray(glReadPixels(0,0,self.width,self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
                 glColor(0.,0.,0.)
@@ -187,10 +197,10 @@ class Renderer():
                 new_colors[:,3] = 0
                 img_visage[green_mask] = new_colors
             else: 
-                self._render([self.gl_list_visage, pts_gl_list])
+                self._render([self.gl_list_visage, pts_gl_list], camera)
                 img_visage = torch.frombuffer(bytearray(glReadPixels(0,0,self.width,self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
         else:
-            self._render([self.gl_list_visage])
+            self._render([self.gl_list_visage], camera)
             img_visage = torch.frombuffer(bytearray(glReadPixels(0,0,self.width,self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
         PIL.Image.fromarray(img_visage.cpu().numpy()).transpose(PIL.Image.FLIP_TOP_BOTTOM).save(filename)
 

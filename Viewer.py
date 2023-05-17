@@ -10,7 +10,7 @@ from util import read_all_index_opti_tri
 from renderer import Renderer
 
 class Viewer(Renderer):
-    def __init__(self, vertex: list, textures, landmark: list, faces: list, show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True, other_objects: list = None, device="cuda", window_size=[1024,1024]):
+    def __init__(self, vertex: list, textures, landmark: list, faces: list, show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True, other_objects: list = None, device="cuda", window_size=[1024,1024], cameras = None):
         """
         Args:
             vertex (list): array of all vertex
@@ -36,6 +36,7 @@ class Viewer(Renderer):
         self._ctrl = False
         self._directionalMatrix = []
         self._joints_glList = self._vertices_glList = self._markers_glList = self._select_glList = None
+        self.cameras = cameras
 
         self.oobj_gl_list = []
         if other_objects is not None:
@@ -117,6 +118,7 @@ class Viewer(Renderer):
         else: texture = None
         self._edit_GL_List(self._vertex[i].to(self._device), texture)
         self.update_pts()
+        if self.cameras is not None: self._changeCamera(self.cameras[self._index])
 
     def edit_markers(self) -> None:
         """
