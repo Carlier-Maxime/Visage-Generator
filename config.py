@@ -41,7 +41,7 @@ class Config:
         self.dynamic_landmark_embedding_path='./model/flame_dynamic_embedding.npy'
         self.texture_batch_size=16
         self.save_markers=False
-        self.img_resolution=[256,256]
+        self.img_resolution=[512,512]
         self.show_window=False
         self.outdir = 'output'
         self.input_folder = None

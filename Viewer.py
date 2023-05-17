@@ -10,7 +10,7 @@ from util import read_all_index_opti_tri
 from renderer import Renderer
 
 class Viewer(Renderer):
-    def __init__(self, vertex: list, textures, landmark: list, faces: list, show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True, other_objects: list = None, device="cuda"):
+    def __init__(self, vertex: list, textures, landmark: list, faces: list, show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True, other_objects: list = None, device="cuda", window_size=[1024,1024]):
         """
         Args:
             vertex (list): array of all vertex
@@ -23,7 +23,7 @@ class Viewer(Renderer):
             other_objects (list): list of all others objects. one object represented by : [vertices, faces]
                 but the triangles may be empty : []
         """
-        Renderer.__init__(self, 1024, 1024, device)
+        Renderer.__init__(self, window_size[0], window_size[1], device)
         self._device = device
         self._vertex = vertex
         self._textures = textures

@@ -77,7 +77,7 @@ class VisageGenerator():
                 np.savetxt(f, np.hstack((faces + 1, uvfaces + 1))[:,[0,3,1,4,2,5]], fmt='f %d/%d %d/%d %d/%d')
 
 
-    def view(self, other_objects=None) -> None:
+    def view(self, cfg: Config, other_objects=None) -> None:
         """
         View visage generate
         Args:
@@ -85,7 +85,7 @@ class VisageGenerator():
 
         Returns: None
         """
-        Viewer(self._vertex, self._textures, self._landmark, self._faces, other_objects=other_objects, device=self.device)
+        Viewer(self._vertex, self._textures, self._landmark, self._faces, other_objects=other_objects, device=self.device, window_size=cfg.img_resolution)
 
     def get_vertices(self, i: int) -> list:
         """
@@ -283,7 +283,7 @@ def main(**kwargs):
     vg.generate(cfg)
     vg.save(cfg)
     if cfg.view:
-        vg.view()
+        vg.view(cfg)
 
 if __name__ == "__main__":
     main()
