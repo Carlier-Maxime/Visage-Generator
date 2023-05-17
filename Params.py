@@ -26,6 +26,11 @@ class ParamsGenerator(BaseParamsGenerator):
     def one(self) -> torch.Tensor:
         return self.generate(self.nb_params)
     
+    def zeros(self, count:int=-1) -> torch.Tensor:
+        if count==-1: size = self.nb_params
+        else: size = [count, self.nb_params]
+        return torch.zeros(size, device=self.device)
+    
     def get(self, count:int, same:bool=False) -> torch.Tensor:
         params = self.generate((1 if same else count, self.nb_params))
         return params.repeat(count, 1) if same else params

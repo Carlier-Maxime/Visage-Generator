@@ -33,6 +33,14 @@ class VisageGenerator():
         self.texture_params_generator = ParamsGenerator(50, cfg.min_texture_param, cfg.max_texture_param, cfg.device) if cfg.texturing else BaseParamsGenerator(0,0,0,cfg.device)
         self.neck_params_generator = ParamsGenerator(3, cfg.min_neck_param*radian, cfg.max_neck_param*radian, cfg.device)
         self.eye_params_generator = ParamsGenerator(6,0,0,cfg.device)
+        self.params_generators = [
+            self.shape_params_generator,
+            self.pose_params_generator,
+            self.expression_params_generator,
+            self.texture_params_generator,
+            self.neck_params_generator,
+            self.eye_params_generator
+        ]
         self.batch_size = cfg.batch_size
 
     def save_obj(self, path: str, vertices: np.ndarray, faces: np.ndarray = None, texture: np.ndarray = None) -> None:
@@ -98,35 +106,21 @@ class VisageGenerator():
 
     def genParams(self, cfg: Config):
         print('Generate random parameters')
-        return (
-            self.shape_params_generator.get(cfg.nb_faces, cfg.fixed_shape),
-            self.pose_params_generator.get(cfg.nb_faces, cfg.fixed_jaw),
-            self.expression_params_generator.get(cfg.nb_faces, cfg.fixed_expression),
-            self.texture_params_generator.get(cfg.nb_faces, cfg.fixed_texture),
-            self.neck_params_generator.get(cfg.nb_faces, cfg.fixed_neck),
-            self.eye_params_generator.get(cfg.nb_faces)
-        )
+        fixed = [cfg.fixed_shape, cfg.fixed_jaw, cfg.fixed_expression, cfg.fixed_texture, cfg.fixed_neck, False]
+        return [generator.zeros(cfg.nb_faces) if cfg.zeros_params else generator.get(cfg.nb_faces, fix) for generator, fix in zip(self.params_generators, fixed)]
 
     def load_params(self, cfg: Config):
         if cfg.nb_faces==-1: cfg.nb_faces = sum(len(files) for _, _, files in os.walk(cfg.input_folder))
         pbar = trange(cfg.nb_faces, desc='load params', unit='visage')
-        generators = [
-            self.shape_params_generator,
-            self.pose_params_generator,
-            self.expression_params_generator,
-            self.texture_params_generator if cfg.texturing else None,
-            self.neck_params_generator,
-            self.eye_params_generator
-        ]
-        all_params = [[] for _ in range(len(generators))]
+        all_params = [[] for _ in range(len(self.params_generators))]
         keys = ['shape', 'pose', 'expression', 'texture', 'neck_pose', 'eye_pose']
         for root, _, filenames in os.walk(cfg.input_folder):
             for filename in filenames:
                 file = os.path.join(root, filename)
                 if filename.endswith(('.npy')):
                     params = np.load(file, allow_pickle=True).item()
-                    for i, gen in enumerate(generators):
-                        if gen is not None: all_params[i].append(torch.tensor(params[keys[i]], device=cfg.device) if keys[i] in params else gen.one())
+                    for i, gen in enumerate(self.params_generators):
+                        if gen is not None: all_params[i].append(torch.tensor(params[keys[i]], device=cfg.device) if keys[i] in params else gen.zeros() if cfg.zeros_params else gen.one())
                     all_params[1][-1][0]+=torch.pi
                     assert all_params[0][-1].shape[0] == cfg.shape_params, f'shape params not a good, expected {cfg.shape_params}, but got {all_params[0][-1].shape[0]} ! (file : {filename})'
                     assert all_params[2][-1].shape[0] == cfg.expression_params, f'expression params not a good, expected {cfg.expression_params}, but got {all_params[2][-1].shape[0]} ! (file : {filename})'
@@ -136,7 +130,7 @@ class VisageGenerator():
         pbar.close()
         for i, element in enumerate(zip(all_params, [cfg.shape_params, 6, cfg.expression_params, 50, 3, 6])):
             params, nb_params = element
-            all_params[i] = torch.cat(params).reshape(cfg.nb_faces, nb_params)
+            if all_params[i] is not None: all_params[i] = torch.cat(params).reshape(cfg.nb_faces, nb_params)
         return all_params
 
     def generate(self, cfg: Config):
@@ -234,6 +228,7 @@ cfg = Config()
 
 # Generator parameter
 @click.option('--input-folder', type=str, default=cfg.input_folder, help='input folder for load parameter (default : None)')
+@click.option('--zeros-params', type=bool, default=cfg.zeros_params, help='zeros for all params not loaded', is_flag=True)
 @click.option('--min-shape-param',  type=float,  default=cfg.min_shape_param,  help='minimum value for shape param')
 @click.option('--max-shape-param',  type=float,  default=cfg.max_shape_param,  help='maximum value for shape param')
 @click.option('--min-expression-param',  type=float,  default=cfg.min_expression_param,  help='minimum value for expression param')

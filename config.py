@@ -45,6 +45,7 @@ class Config:
         self.show_window=False
         self.outdir = 'output'
         self.input_folder = None
+        self.zeros_params = False
 
     def set(self, **kwargs):
         d = dict(kwargs)
@@ -93,3 +94,4 @@ class Config:
         self.show_window=d['show_window']
         self.outdir=d['outdir']
         self.input_folder=d['input_folder']
+        self.zeros_params=d['zeros_params']
