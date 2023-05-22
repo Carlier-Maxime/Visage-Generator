@@ -29,19 +29,12 @@ class Renderer():
         glEnable(GL_NORMALIZE)
         glShadeModel(GL_SMOOTH)
 
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
         self.fov=10.0
-        gluPerspective(self.fov, width/float(height), 0.1, 100.0)
-        glEnable(GL_DEPTH_TEST)
-        glMatrixMode(GL_MODELVIEW)
-
         self.rotate = False
         self.rotate_z = False
         self.move = False
         self.rx, self.ry, self.rz = rotation
-        self.tx, self.ty = (0,0)
-        self.zpos = 2
+        self.tx, self.ty, self.tz = (0,0,-2)
 
         glEnable(GL_TEXTURE_2D)
         glFrontFace(GL_CCW)
@@ -82,7 +75,7 @@ class Renderer():
         glEnable(GL_DEPTH_TEST)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        glTranslate(self.tx, self.ty, - self.zpos)
+        glTranslate(self.tx, self.ty, self.tz)
         glRotate(self.rx, 1, 0, 0)
         glRotate(self.ry, 0, 1, 0)
         glRotate(self.rz, 0, 0, 1)
@@ -141,10 +134,10 @@ class Renderer():
         if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE): return 0
         elif e.type == MOUSEBUTTONDOWN:
             if e.button == 4: 
-                self.zpos = max(1, self.zpos-0.1)
+                self.tz = max(1, self.tz-0.1)
                 self._updateCamera()
             elif e.button == 5: 
-                self.zpos += 0.1
+                self.tz += 0.1
                 self._updateCamera()
             elif e.button == 1: self.rotate = True
             elif e.button == 3: self.move = True
@@ -167,7 +160,7 @@ class Renderer():
                 self.ty -= j/256
                 self._updateCamera()
         elif e.type == KEYDOWN and e.key == K_c:
-            print(f'rx: {self.rx}, ry: {self.ry}, rz: {self.rz}, tx: {self.tx}, ty: {self.ty}, zpos: {self.zpos}')
+            print(f'rx: {self.rx}, ry: {self.ry}, rz: {self.rz}, tx: {self.tx}, ty: {self.ty}, zpos: {self.tz}')
         return 1
 
     def _poll_events(self):
