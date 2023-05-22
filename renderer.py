@@ -37,8 +37,9 @@ class Renderer():
         glMatrixMode(GL_MODELVIEW)
 
         self.rotate = False
+        self.rotate_z = False
         self.move = False
-        self.rx, self.ry = (0,0)
+        self.rx, self.ry, self.rz = (0,0,0)
         self.tx, self.ty = (0,0)
         self.zpos = 2
 
@@ -82,8 +83,9 @@ class Renderer():
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
         glTranslate(self.tx, self.ty, - self.zpos)
-        glRotate(self.ry, 1, 0, 0)
-        glRotate(self.rx, 0, 1, 0)
+        glRotate(self.rx, 1, 0, 0)
+        glRotate(self.ry, 0, 1, 0)
+        glRotate(self.rz, 0, 0, 1)
 
     def _change_GL_texture(self, texture):
         size = texture.shape
@@ -146,21 +148,26 @@ class Renderer():
                 self._updateCamera()
             elif e.button == 1: self.rotate = True
             elif e.button == 3: self.move = True
+            elif e.button == 2: self.rotate_z = True
         elif e.type == MOUSEBUTTONUP:
             if e.button == 1: self.rotate = False
             elif e.button == 3: self.move = False
+            elif e.button == 2: self.rotate_z = False
         elif e.type == MOUSEMOTION:
             i, j = e.rel
             if self.rotate:
-                self.rx += i
-                self.ry += j
+                self.rx += j
+                self.ry += i
+                self._updateCamera()
+            if self.rotate_z:
+                self.rz += i
                 self._updateCamera()
             if self.move:
                 self.tx += i/256
                 self.ty -= j/256
                 self._updateCamera()
         elif e.type == KEYDOWN and e.key == K_c:
-            print(f'rx: {self.rx}, ry: {self.ry}, tx: {self.tx}, ty: {self.ty}, zpos: {self.zpos}')
+            print(f'rx: {self.rx}, ry: {self.ry}, rz: {self.rz}, tx: {self.tx}, ty: {self.ty}, zpos: {self.zpos}')
         return 1
 
     def _poll_events(self):
