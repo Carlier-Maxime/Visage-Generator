@@ -29,7 +29,7 @@ class VisageGenerator():
         self.device = cfg.device
         self.shape_params_generator = ParamsGenerator(cfg.shape_params, cfg.min_shape_param, cfg.max_shape_param, cfg.device)
         self.expression_params_generator = ParamsGenerator(cfg.expression_params, cfg.min_expression_param, cfg.max_expression_param, cfg.device)
-        self.pose_params_generator = PoseParamsGenerator(cfg.min_jaw_param1 * radian, cfg.max_jaw_param1 * radian, cfg.min_jaw_param2_3 * radian, cfg.max_jaw_param2_3 * radian, cfg.device)
+        self.pose_params_generator = MultiParamsGenerator([3,1,2], [0, cfg.min_jaw_param1 * radian, cfg.min_jaw_param2_3 * radian], [0, cfg.max_jaw_param1 * radian, cfg.max_jaw_param2_3 * radian], cfg.device)
         self.texture_params_generator = ParamsGenerator(50, cfg.min_texture_param, cfg.max_texture_param, cfg.device) if cfg.texturing else BaseParamsGenerator(0,0,0,cfg.device)
         self.neck_params_generator = ParamsGenerator(3, cfg.min_neck_param*radian, cfg.max_neck_param*radian, cfg.device)
         self.eye_params_generator = ParamsGenerator(6,0,0,cfg.device)

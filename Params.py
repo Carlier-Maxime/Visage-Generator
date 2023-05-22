@@ -1,7 +1,7 @@
 import torch
 
 class BaseParamsGenerator():
-    def __init__(self, nb_params, min_value:float, max_value:float, device:torch.device) -> None:
+    def __init__(self, nb_params, min_value, max_value, device:torch.device) -> None:
         self.min_value = min_value
         self.max_value = max_value
         self.nb_params = nb_params
@@ -17,7 +17,7 @@ class BaseParamsGenerator():
         return None
 
 class ParamsGenerator(BaseParamsGenerator):
-    def __init__(self, nb_params, min_value:float, max_value:float, device:torch.device) -> None:
+    def __init__(self, nb_params:int, min_value:float, max_value:float, device:torch.device) -> None:
         BaseParamsGenerator.__init__(self, nb_params, min_value, max_value, device)
 
     def generate(self, size) -> torch.Tensor:
@@ -35,20 +35,32 @@ class ParamsGenerator(BaseParamsGenerator):
         params = self.generate((1 if same else count, self.nb_params))
         return params.repeat(count, 1) if same else params
 
-class PoseParamsGenerator(ParamsGenerator):
-    def __init__(self, min_jaw1_value:float, max_jaw1_value:float, min_jaw2_3_value:float, max_jaw_2_3_value:float, device:torch.device) -> None:
-        ParamsGenerator.__init__(self, 6, min_jaw1_value, max_jaw1_value, device)
-        self.min_jaw2_3_value = min_jaw2_3_value
-        self.max_jaw2_3_value = max_jaw_2_3_value
+class MultiParamsGenerator(BaseParamsGenerator):
+    def __init__(self, nb_params, min_value, max_value, device:torch.device) -> None:
+        BaseParamsGenerator.__init__(self, nb_params, min_value, max_value, device)
+        self.params_generators = []
+        for i in range(len(nb_params)):
+            self.params_generators.append(ParamsGenerator(nb_params[i], min_value[i], max_value[i], device))
 
     def generate(self, size) -> torch.Tensor:
-        if isinstance(size, int): assert size%6==0
-        else: assert size[1]==6
-        pose_params = torch.zeros(6, dtype=torch.float32, device=self.device)
-        if not isinstance(size, int): pose_params = pose_params[None].repeat(size[0],1)
-        jaw1_params = ParamsGenerator.generate(self, 1 if isinstance(size, int) else (size[0], 1))
-        jaw2_3_params = torch.rand(2 if isinstance(size, int) else (size[0], 2), dtype=torch.float32, device=self.device) * (self.max_jaw2_3_value - self.min_jaw2_3_value) + self.min_jaw2_3_value
-        jaw_params = torch.cat([jaw1_params, jaw2_3_params], dim=1)
-        if isinstance(size, int): pose_params[3:6] = jaw_params
-        else: pose_params[:,3:6] = jaw_params
-        return pose_params
+        if isinstance(size, int): assert size%sum(self.nb_params)==0
+        else: assert size[-1]==sum(self.nb_params), f'a size format is not good, size:{size} size[-1]=={sum(self.nb_params)}'
+        params = []
+        size = list(size)
+        for i in range(len(self.nb_params)):
+            if isinstance(size, int): size=self.nb_params[i]
+            else: size[-1]=self.nb_params[i]
+            params.append(self.params_generators[i].generate(size))
+        return torch.cat(params, dim=1)
+    
+    def one(self) -> torch.Tensor:
+        return self.generate(sum(self.nb_params))
+    
+    def zeros(self, count:int=-1) -> torch.Tensor:
+        if count==-1: size = sum(self.nb_params)
+        else: size = [count, sum(self.nb_params)]
+        return torch.zeros(size, device=self.device)
+    
+    def get(self, count:int, same:bool=False) -> torch.Tensor:
+        params = self.generate((1 if same else count, sum(self.nb_params)))
+        return params.repeat(count, 1) if same else params
