@@ -65,6 +65,8 @@ class Config:
         self.rotation=d['rotation']
         self.rotation=self.rotation[1:-1].split(",")
         for i in range(len(self.rotation)): self.rotation[i]=float(self.rotation[i])
+        self.min_rotation_param=d['min_rotation_param']
+        self.max_rotation_param=d['max_rotation_param']
         self.min_jaw_param1=d['min_jaw_param1']
         self.max_jaw_param1=d['max_jaw_param1']
         self.min_jaw_param2_3=d['min_jaw_param2_3']
