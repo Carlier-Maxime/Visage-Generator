@@ -1,9 +1,7 @@
 """
-Author: Soubhik Sanyal
-Copyright (c) 2019, Soubhik Sanyal
+Author: Carlier Maxime
+Copyright (c) 2023, Carlier Maxime
 All rights reserved.
-
-Edited by M_EtOuais for Visage-Generator
 """
 
 import os
