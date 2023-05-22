@@ -9,9 +9,9 @@ class Renderer():
     def __init__(self, width:int, height:int, device:torch.device, show:bool=True, rotation:list=[0,0,0]):
         self.device = torch.device(device)
         render_data = torch.load('render_data.pt')
-        self.uvcoords = render_data['uvcoords']
-        self.uvfaces = render_data['uvfaces']
-        self.order_indexs = render_data['order_indexs']
+        self.uvcoords = render_data['uvcoords'].to(self.device)
+        self.uvfaces = render_data['uvfaces'].to(self.device)
+        self.order_indexs = render_data['order_indexs'].to(self.device)
         self.raw_sphere = self.create_sphere(0.002, 30, 30)
 
         pygame.init()
