@@ -14,6 +14,8 @@ class Config:
         self.min_expression_param=-2
         self.max_expression_param=2
         self.rotation = [0,0,0]
+        self.min_rotation_param = -30
+        self.max_rotation_param = 30
         self.min_jaw_param1=0
         self.max_jaw_param1=30
         self.min_jaw_param2_3=-10
