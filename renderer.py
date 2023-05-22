@@ -17,6 +17,7 @@ class Renderer():
         pygame.init()
         self.width = width
         self.height = height
+        pygame.display.set_icon(pygame.image.load('logo.png'))
         pygame.display.set_mode([width, height], pygame.constants.OPENGL | pygame.constants.DOUBLEBUF | pygame.SHOWN if show else pygame.HIDDEN)
 
         glLightfv(GL_LIGHT0, GL_POSITION,  (-40, 200, 100, 0.0))
