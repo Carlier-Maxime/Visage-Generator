@@ -160,7 +160,7 @@ class Renderer():
                 self.ty -= j/256
                 self._updateCamera()
         elif e.type == KEYDOWN and e.key == K_c:
-            print(f'rx: {self.rx}, ry: {self.ry}, rz: {self.rz}, tx: {self.tx}, ty: {self.ty}, zpos: {self.tz}')
+            print(f'rx: {self.rx}, ry: {self.ry}, rz: {self.rz}, tx: {self.tx}, ty: {self.ty}, tz: {self.tz}')
         return 1
 
     def _poll_events(self):
