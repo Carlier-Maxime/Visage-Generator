@@ -29,7 +29,7 @@ class VisageGenerator():
         self.device = cfg.device
         self.shape_params_generator = ParamsGenerator(cfg.shape_params, cfg.min_shape_param, cfg.max_shape_param, cfg.device)
         self.expression_params_generator = ParamsGenerator(cfg.expression_params, cfg.min_expression_param, cfg.max_expression_param, cfg.device)
-        self.pose_params_generator = PoseParamsGenerator(cfg.global_pose_param1 * radian, cfg.global_pose_param2 * radian, cfg.global_pose_param3 * radian, cfg.min_jaw_param1 * radian, cfg.max_jaw_param1 * radian, cfg.min_jaw_param2_3 * radian, cfg.max_jaw_param2_3 * radian, cfg.device)
+        self.pose_params_generator = PoseParamsGenerator(cfg.min_jaw_param1 * radian, cfg.max_jaw_param1 * radian, cfg.min_jaw_param2_3 * radian, cfg.max_jaw_param2_3 * radian, cfg.device)
         self.texture_params_generator = ParamsGenerator(50, cfg.min_texture_param, cfg.max_texture_param, cfg.device) if cfg.texturing else BaseParamsGenerator(0,0,0,cfg.device)
         self.neck_params_generator = ParamsGenerator(3, cfg.min_neck_param*radian, cfg.max_neck_param*radian, cfg.device)
         self.eye_params_generator = ParamsGenerator(6,0,0,cfg.device)
@@ -87,7 +87,7 @@ class VisageGenerator():
 
         Returns: None
         """
-        Viewer(self._vertex, self._textures, self._landmark, self._faces, other_objects=other_objects, device=self.device, window_size=cfg.img_resolution, cameras=self.cameras)
+        Viewer(self._vertex, self._textures, self._landmark, self._faces, other_objects=other_objects, device=self.device, window_size=cfg.img_resolution, cameras=self.cameras, rotation=cfg.rotation)
 
     def get_vertices(self, i: int) -> list:
         """
@@ -185,7 +185,7 @@ class VisageGenerator():
         for folder in [out, tmp, outObj, outLmk3D_npy, outLmk2D, outVisagePNG, outLmks3D_PNG, outMarkersPNG]: os.makedirs(folder, exist_ok=True)
         if cfg.save_markers: markers = np.load("markers.npy")
         save_any_png = cfg.save_png or cfg.save_lmks3D_png or cfg.save_markers
-        self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window)
+        self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, rotation=cfg.rotation)
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)
@@ -231,6 +231,7 @@ cfg = Config()
 @click.option('--view',  type=bool,  default=cfg.view,  help='enable view', is_flag=True)
 @click.option('--batch-size', type=int, default=cfg.batch_size, help='number of visage generate in the same time')
 @click.option('--texture-batch-size', type=int, default=cfg.texture_batch_size, help='number of texture generate in same time')
+@click.option('--rotation', type=str, default=cfg.rotation, help='default camera rotation for renderer')
 
 # Generator parameter
 @click.option('--input-folder', type=str, default=cfg.input_folder, help='input folder for load parameter (default : None)')
@@ -239,9 +240,6 @@ cfg = Config()
 @click.option('--max-shape-param',  type=float,  default=cfg.max_shape_param,  help='maximum value for shape param')
 @click.option('--min-expression-param',  type=float,  default=cfg.min_expression_param,  help='minimum value for expression param')
 @click.option('--max-expression-param',  type=float,  default=cfg.min_expression_param,  help='maximum value for expression param')
-@click.option('--global-pose-param1',  type=float,  default=cfg.global_pose_param1,  help='value of first global pose param')
-@click.option('--global-pose-param2',  type=float,  default=cfg.global_pose_param2,  help='value of second global pose param')
-@click.option('--global-pose-param3',  type=float,  default=cfg.global_pose_param3,  help='value of third global pose param')
 @click.option('--min-jaw-param1',  type=float,  default=cfg.min_jaw_param1,  help='minimum value for jaw param 1')
 @click.option('--max-jaw-param1',  type=float,  default=cfg.max_jaw_param1,  help='maximum value for jaw param 1')
 @click.option('--min-jaw-param2-3',  type=float,  default=cfg.min_jaw_param2_3,  help='minimum value for jaw param 2-3')

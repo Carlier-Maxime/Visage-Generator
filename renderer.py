@@ -6,7 +6,7 @@ import PIL.Image
 import torch
 
 class Renderer():
-    def __init__(self, width:int, height:int, device:torch.device, show:bool=True):
+    def __init__(self, width:int, height:int, device:torch.device, show:bool=True, rotation:list=[0,0,0]):
         self.device = torch.device(device)
         render_data = torch.load('render_data.pt')
         self.uvcoords = render_data['uvcoords']
@@ -39,7 +39,7 @@ class Renderer():
         self.rotate = False
         self.rotate_z = False
         self.move = False
-        self.rx, self.ry, self.rz = (0,0,0)
+        self.rx, self.ry, self.rz = rotation
         self.tx, self.ty = (0,0)
         self.zpos = 2
 

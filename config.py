@@ -13,9 +13,7 @@ class Config:
         self.max_shape_param=2
         self.min_expression_param=-2
         self.max_expression_param=2
-        self.global_pose_param1=0
-        self.global_pose_param2=0
-        self.global_pose_param3=0
+        self.rotation = [0,0,0]
         self.min_jaw_param1=0
         self.max_jaw_param1=30
         self.min_jaw_param2_3=-10
@@ -62,9 +60,9 @@ class Config:
         self.max_shape_param=d['max_shape_param']
         self.min_expression_param=d['min_expression_param']
         self.max_expression_param=d['max_expression_param']
-        self.global_pose_param1=d['global_pose_param1']
-        self.global_pose_param2=d['global_pose_param2']
-        self.global_pose_param3=d['global_pose_param3']
+        self.rotation=d['rotation']
+        self.rotation=self.rotation[1:-1].split(",")
+        for i in range(len(self.rotation)): self.rotation[i]=float(self.rotation[i])
         self.min_jaw_param1=d['min_jaw_param1']
         self.max_jaw_param1=d['max_jaw_param1']
         self.min_jaw_param2_3=d['min_jaw_param2_3']
