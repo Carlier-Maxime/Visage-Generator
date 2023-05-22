@@ -180,14 +180,16 @@ class VisageGenerator():
         outVisagePNG = (out if cfg.save_png else tmp)+"/png/default"
         outLmks3D_PNG = (out if cfg.save_lmks3D_png else tmp)+"/png/lmks"
         outMarkersPNG = (out if cfg.save_markers else tmp)+"/png/markers"
-        for folder in [out, tmp, outObj, outLmk3D_npy, outLmk2D, outVisagePNG, outLmks3D_PNG, outMarkersPNG]: os.makedirs(folder, exist_ok=True)
+        outCamera = (out if cfg.save_camera else tmp)+"/camera"
+        for folder in [outObj, outLmk3D_npy, outLmk2D, outVisagePNG, outLmks3D_PNG, outMarkersPNG, outCamera]: os.makedirs(folder, exist_ok=True)
         if cfg.save_markers: markers = np.load("markers.npy")
         save_any_png = cfg.save_png or cfg.save_lmks3D_png or cfg.save_markers
         self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, rotation=cfg.rotation)
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)
-            camera = None if self.cameras is None else self.cameras[i]
+            camera = self.render.getCamera()
+            if self.cameras is not None: camera[:3] = self.cameras[i]
             if self._textures is None: texture=None
             else: 
                 texture = self._textures[i].to(self.device)
@@ -219,6 +221,8 @@ class VisageGenerator():
                 if cfg.save_markers:
                     mks = util.read_all_index_opti_tri(vertices, self._faces, markers)
                     self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks), device=self.device), ptsInAlpha=cfg.pts_in_alpha, camera=camera)
+            if cfg.save_camera:
+                np.save(f'{outCamera}/{basename}.npy',np.array(camera))
 
 cfg = Config()
 @click.command()
@@ -272,6 +276,7 @@ cfg = Config()
 @click.option('--img-resolution', type=str, default=cfg.img_resolution, help='resolution of image')
 @click.option('--show-window', type=bool,  default=cfg.show_window,  help='show window during save png (enable if images is the screenshot or full black)', is_flag=True)
 @click.option('--not-pts-in-alpha', 'pts_in_alpha', type=bool, default=cfg.pts_in_alpha, help='not save landmarks/markers png version to channel alpha', is_flag=True)
+@click.option('--save-camera', type=bool, default=cfg.save_camera, help='save camera', is_flag=True)
 
 # Path
 @click.option('--flame-model-path', type=str, default=cfg.flame_model_path, help='path for acess flame model')

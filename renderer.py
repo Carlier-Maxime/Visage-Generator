@@ -169,7 +169,7 @@ class Renderer():
         return 1
     
     def _changeCamera(self, camera):
-        self.fov, self.tx, self.ty = camera
+        self.fov, self.tx, self.ty, self.tz, self.rx, self.ry, self.rz = camera
         self._updateCamera()
 
     def _render(self,gl_lists, camera=None):
@@ -267,6 +267,9 @@ class Renderer():
         winX, winY, winZ = gluProject(point3D[0], point3D[1], point3D[2], modelview, projection, viewport)
         if 0 <= winZ <= 1: return int(winX), int(winY)
         return None
+    
+    def getCamera(self):
+        return [self.fov, self.tx, self.ty, self.tz, self.rx, self.ry, self.rz]
 
 if __name__ == '__main__':
     import ObjLoader, sys
