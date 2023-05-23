@@ -266,6 +266,49 @@ class Renderer():
         winX, winY, winZ = gluProject(point3D[0], point3D[1], point3D[2], modelview, projection, viewport)
         if 0 <= winZ <= 1: return int(winX), int(winY)
         return None
+
+    def getCameraMatrices(self):
+        # Conversion de l'angle de champ (fov) en focale
+        focal_length = 1.0 / torch.tan(torch.deg2rad(self.fov / 2.0))
+
+        # Calcul de la matrice intrinsèque
+        intrinsic_matrix = torch.tensor([
+            [focal_length, 0, 0],
+            [0, focal_length, 0],
+            [0, 0, 1]
+        ], dtype=torch.float32, device=self.device)
+
+        # Calcul de la matrice d'extrinsèques
+        rotation_x = torch.deg2rad(self.rx)
+        rotation_y = torch.deg2rad(self.ry)
+        rotation_z = torch.deg2rad(self.rz)
+        translation = torch.tensor([self.tx, self.ty, self.tz], dtype=torch.float32, device=self.device)
+
+        rotation_matrix_x = torch.tensor([
+            [1, 0, 0],
+            [0, torch.cos(rotation_x), -torch.sin(rotation_x)],
+            [0, torch.sin(rotation_x), torch.cos(rotation_x)]
+        ], dtype=torch.float32, device=self.device)
+
+        rotation_matrix_y = torch.tensor([
+            [torch.cos(rotation_y), 0, torch.sin(rotation_y)],
+            [0, 1, 0],
+            [-torch.sin(rotation_y), 0, torch.cos(rotation_y)]
+        ], dtype=torch.float32, device=self.device)
+
+        rotation_matrix_z = torch.tensor([
+            [torch.cos(rotation_z), -torch.sin(rotation_z), 0],
+            [torch.sin(rotation_z), torch.cos(rotation_z), 0],
+            [0, 0, 1]
+        ], dtype=torch.float32, device=self.device)
+
+        rotation_matrix = torch.matmul(torch.matmul(rotation_matrix_z, rotation_matrix_y), rotation_matrix_x)
+
+        extrinsic_matrix = torch.eye(4, dtype=torch.float32, device=self.device)
+        extrinsic_matrix[:3, :3] = rotation_matrix
+        extrinsic_matrix[:3, 3] = translation
+
+        return intrinsic_matrix, extrinsic_matrix
     
     def getCamera(self):
         return [self.fov, self.tx, self.ty, self.tz, self.rx, self.ry, self.rz]

@@ -48,6 +48,7 @@ class Config:
         self.save_camera = False
         self.camera = [10.,0.,0.,-2.,0.,0.,0.]
         self.pose_for_camera = False
+        self.camera_format = 'default'
 
     def set(self, **kwargs):
         d = dict(kwargs)
@@ -101,3 +102,4 @@ class Config:
         self.zeros_params=d['zeros_params']
         self.save_camera=d['save_camera']
         self.pose_for_camera=d['pose_for_camera']
+        self.camera_format=d['camera_format']

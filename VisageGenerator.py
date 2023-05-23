@@ -192,6 +192,7 @@ class VisageGenerator():
         if cfg.save_markers: markers = np.load("markers.npy")
         save_any_png = cfg.save_png or cfg.save_lmks3D_png or cfg.save_markers
         self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=cfg.camera)
+        if cfg.camera_format=='json': cameras_json = {'labels': []}
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)
@@ -228,7 +229,18 @@ class VisageGenerator():
                     mks = util.read_all_index_opti_tri(vertices, self._faces, markers)
                     self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks), device=self.device), ptsInAlpha=cfg.pts_in_alpha, camera=camera)
             if cfg.save_camera:
-                torch.save(camera, f'{outCamera}/{basename}.pt')
+                match cfg.camera_format:
+                    case 'default': torch.save(camera, f'{outCamera}/{basename}.pt')
+                    case 'matrices': torch.save(self.render.getCameraMatrices(), f'{outCamera}/{basename}.pt')
+                    case 'json': 
+                        intrinsic, extrinsic = self.render.getCameraMatrices()
+                        intrinsic_norm = intrinsic[:3, :3] / intrinsic[2, 2]
+                        cameras_json['labels'].append([basename, torch.cat([extrinsic.flatten(), intrinsic_norm.flatten()]).tolist()])
+                    case _: TypeError('format of camera save is unknow')
+        
+        with open(f'{outCamera}/cameras.json', 'w') as file:
+            import json
+            json.dump(cameras_json, file)
 
 cfg = Config()
 @click.command()
@@ -284,6 +296,7 @@ cfg = Config()
 @click.option('--show-window', type=bool,  default=cfg.show_window,  help='show window during save png (enable if images is the screenshot or full black)', is_flag=True)
 @click.option('--not-pts-in-alpha', 'pts_in_alpha', type=bool, default=cfg.pts_in_alpha, help='not save landmarks/markers png version to channel alpha', is_flag=True)
 @click.option('--save-camera', type=bool, default=cfg.save_camera, help='save camera', is_flag=True)
+@click.option('--camera-format', type=click.Choice(['default', 'matrices', 'json']), default=cfg.camera_format, help='format for saving camera')
 
 # Path
 @click.option('--flame-model-path', type=str, default=cfg.flame_model_path, help='path for acess flame model')
