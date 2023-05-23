@@ -6,7 +6,7 @@ import PIL.Image
 import torch
 
 class Renderer():
-    def __init__(self, width:int, height:int, device:torch.device, show:bool=True, rotation:list=[0,0,0]):
+    def __init__(self, width:int, height:int, device:torch.device, show:bool=True, camera:list=[10,0,0,-2,0,0,0]):
         self.device = torch.device(device)
         render_data = torch.load('render_data.pt')
         self.uvcoords = render_data['uvcoords'].to(self.device)
@@ -30,12 +30,10 @@ class Renderer():
         glEnable(GL_NORMALIZE)
         glShadeModel(GL_SMOOTH)
 
-        self.fov=10.0
         self.rotate = False
         self.rotate_z = False
         self.move = False
-        self.rx, self.ry, self.rz = rotation
-        self.tx, self.ty, self.tz = (0,0,-2)
+        self.fov, self.tx, self.ty, self.tz, self.rx, self.ry, self.rz = camera
 
         glEnable(GL_TEXTURE_2D)
         glFrontFace(GL_CCW)

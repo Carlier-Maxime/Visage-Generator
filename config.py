@@ -13,7 +13,6 @@ class Config:
         self.max_shape_param=2
         self.min_expression_param=-2
         self.max_expression_param=2
-        self.rotation = [0,0,0]
         self.min_rotation_param = -30
         self.max_rotation_param = 30
         self.min_jaw_param1=0
@@ -47,6 +46,7 @@ class Config:
         self.input_folder = None
         self.zeros_params = False
         self.save_camera = False
+        self.camera = [10.,0.,0.,-2.,0.,0.,0.]
 
     def set(self, **kwargs):
         d = dict(kwargs)
@@ -63,9 +63,9 @@ class Config:
         self.max_shape_param=d['max_shape_param']
         self.min_expression_param=d['min_expression_param']
         self.max_expression_param=d['max_expression_param']
-        self.rotation=d['rotation']
-        self.rotation=self.rotation[1:-1].split(",")
-        for i in range(len(self.rotation)): self.rotation[i]=float(self.rotation[i])
+        self.camera=d['camera']
+        self.camera=self.camera[1:-1].split(",")
+        for i in range(len(self.camera)): self.camera[i]=float(self.camera[i])
         self.min_rotation_param=d['min_rotation_param']
         self.max_rotation_param=d['max_rotation_param']
         self.min_jaw_param1=d['min_jaw_param1']

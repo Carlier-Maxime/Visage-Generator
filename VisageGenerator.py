@@ -85,7 +85,7 @@ class VisageGenerator():
 
         Returns: None
         """
-        Viewer(self._vertex, self._textures, self._landmark, self._faces, other_objects=other_objects, device=self.device, window_size=cfg.img_resolution, cameras=self.cameras, rotation=cfg.rotation)
+        Viewer(self._vertex, self._textures, self._landmark, self._faces, other_objects=other_objects, device=self.device, window_size=cfg.img_resolution, cameras=self.cameras)
 
     def get_vertices(self, i: int) -> list:
         """
@@ -114,7 +114,7 @@ class VisageGenerator():
         pbar = trange(cfg.nb_faces, desc='load params', unit='visage')
         all_params = [[] for _ in range(len(self.params_generators))]
         keys = ['shape', 'pose', 'expression', 'texture', 'neck_pose', 'eye_pose']
-        self.cameras = []
+        self.cameras = torch.tensor(cfg.camera, device=self.device).repeat(cfg.nb_faces,1)
         self.filenames = []
         for root, _, filenames in os.walk(cfg.input_folder):
             for filename in filenames:
@@ -125,7 +125,10 @@ class VisageGenerator():
                         if gen is not None: all_params[i].append(torch.tensor(params[keys[i]], device=cfg.device) if keys[i] in params else gen.zeros() if cfg.zeros_params else gen.one())
                     assert all_params[0][-1].shape[0] == cfg.shape_params, f'shape params not a good, expected {cfg.shape_params}, but got {all_params[0][-1].shape[0]} ! (file : {filename})'
                     assert all_params[2][-1].shape[0] == cfg.expression_params, f'expression params not a good, expected {cfg.expression_params}, but got {all_params[2][-1].shape[0]} ! (file : {filename})'
-                    if 'cam' in params: self.cameras.append(params['cam'])
+                    if 'cam' in params: 
+                        cam = params['cam']
+                        if len(cam)==3: self.cameras[pbar.n,:3]=cam
+                        else: self.cameras[pbar.n]=cam
                     self.filenames.append(filename.split('.')[0])
                 pbar.update(1)
                 if pbar.n >= cfg.nb_faces: break
@@ -184,12 +187,11 @@ class VisageGenerator():
         for folder in [outObj, outLmk3D_npy, outLmk2D, outVisagePNG, outLmks3D_PNG, outMarkersPNG, outCamera]: os.makedirs(folder, exist_ok=True)
         if cfg.save_markers: markers = np.load("markers.npy")
         save_any_png = cfg.save_png or cfg.save_lmks3D_png or cfg.save_markers
-        self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, rotation=cfg.rotation)
+        self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=cfg.camera)
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)
-            camera = self.render.getCamera()
-            if self.cameras is not None: camera[:3] = self.cameras[i]
+            camera = None if self.cameras is None else self.cameras[i]
             if self._textures is None: texture=None
             else: 
                 texture = self._textures[i].to(self.device)
@@ -222,7 +224,7 @@ class VisageGenerator():
                     mks = util.read_all_index_opti_tri(vertices, self._faces, markers)
                     self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks), device=self.device), ptsInAlpha=cfg.pts_in_alpha, camera=camera)
             if cfg.save_camera:
-                np.save(f'{outCamera}/{basename}.npy',np.array(camera))
+                torch.save(camera, f'{outCamera}/{basename}.pt')
 
 cfg = Config()
 @click.command()
@@ -233,7 +235,7 @@ cfg = Config()
 @click.option('--view',  type=bool,  default=cfg.view,  help='enable view', is_flag=True)
 @click.option('--batch-size', type=int, default=cfg.batch_size, help='number of visage generate in the same time')
 @click.option('--texture-batch-size', type=int, default=cfg.texture_batch_size, help='number of texture generate in same time')
-@click.option('--rotation', type=str, default=cfg.rotation, help='default camera rotation for renderer')
+@click.option('--camera', type=str, default=cfg.camera, help='default camera for renderer')
 
 # Generator parameter
 @click.option('--input-folder', type=str, default=cfg.input_folder, help='input folder for load parameter (default : None)')
