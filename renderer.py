@@ -177,6 +177,9 @@ class Renderer():
         glCallLists(gl_lists)
         pygame.display.flip()
 
+    def randomBackground(self):
+        glClearColor(*torch.rand(3, device=self.device).tolist(),1.)
+
     def save_to_image(self, filename, vertices, texture, pts=None, ptsInAlpha:bool=True, camera=None):
         self._edit_GL_List(vertices, texture)
         if pts is not None:

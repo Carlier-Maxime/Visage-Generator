@@ -223,6 +223,7 @@ class VisageGenerator():
                             f.write(f'{i + 1} {lmks2D[i][0]} {lmks2D[i][1]} False\n')
                 else: raise TypeError("format for saving landmarks 2D is not supported !")
             if save_any_png:
+                if cfg.random_bg: self.render.randomBackground()
                 if cfg.save_png: self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, texture, camera=camera)
                 if cfg.save_lmks3D_png: self.render.save_to_image(f'{outLmks3D_PNG}/{basename}.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
                 if cfg.save_markers:
@@ -288,6 +289,7 @@ cfg = Config()
 @click.option('--lmk2D-format', 'lmk2D_format', type=str, default=cfg.lmk2D_format, help='format used for save lmk2d. (npy and pts is supported)')
 @click.option('--save-obj',  type=bool,  default=cfg.save_obj,  help='enable save into file obj', is_flag=True)
 @click.option('--save-png',  type=bool,  default=cfg.save_png,  help='enable save into file png', is_flag=True)
+@click.option('--random-bg', type=bool, default=cfg.random_bg, help='enable random background color for renderer', is_flag=True)
 @click.option('--save-lmks3D-npy', 'save_lmks3D_npy', type=bool,  default=cfg.save_lmks3D_npy,  help='enable save landmarks 3D into file npy', is_flag=True)
 @click.option('--save-lmks3D-png', 'save_lmks3D_png', type=bool,  default=cfg.save_lmks3D_png,  help='enable save landmarks 3D with visage into file png', is_flag=True)
 @click.option('--save-lmks2D', 'save_lmks2D',  type=bool,  default=cfg.save_lmks2D,  help='enable save landmarks 2D into file npy', is_flag=True)

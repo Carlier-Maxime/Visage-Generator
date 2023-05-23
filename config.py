@@ -49,6 +49,7 @@ class Config:
         self.camera = [10.,0.,0.,-2.,0.,0.,0.]
         self.pose_for_camera = False
         self.camera_format = 'default'
+        self.random_bg = False
 
     def set(self, **kwargs):
         d = dict(kwargs)
@@ -103,3 +104,4 @@ class Config:
         self.save_camera=d['save_camera']
         self.pose_for_camera=d['pose_for_camera']
         self.camera_format=d['camera_format']
+        self.random_bg=d['random_bg']
