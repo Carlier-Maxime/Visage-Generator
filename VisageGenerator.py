@@ -141,6 +141,10 @@ class VisageGenerator():
 
     def generate(self, cfg: Config):
         shape_params, pose_params, expression_params, texture_params, neck_pose, eye_pose = self.genParams(cfg) if cfg.input_folder is None else self.load_params(cfg)
+        if cfg.pose_for_camera:
+            if self.cameras is None: self.cameras = torch.tensor(cfg.camera, device=self.device).repeat(cfg.nb_faces,1)
+            self.cameras[:,4:] = pose_params[:,:3] / radian
+            pose_params[:,:3] = 0
 
         self._vertex = []
         self._landmark = []
@@ -235,6 +239,7 @@ cfg = Config()
 @click.option('--view',  type=bool,  default=cfg.view,  help='enable view', is_flag=True)
 @click.option('--batch-size', type=int, default=cfg.batch_size, help='number of visage generate in the same time')
 @click.option('--texture-batch-size', type=int, default=cfg.texture_batch_size, help='number of texture generate in same time')
+@click.option('--pose-for-camera', type=bool, default=cfg.pose_for_camera, help='use pose rotation parameter for camera instead of visage generation', is_flag=True)
 @click.option('--camera', type=str, default=cfg.camera, help='default camera for renderer')
 
 # Generator parameter
