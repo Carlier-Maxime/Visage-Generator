@@ -239,9 +239,10 @@ class VisageGenerator():
                         cameras_json['labels'].append([basename, torch.cat([extrinsic.flatten(), intrinsic_norm.flatten()]).tolist()])
                     case _: TypeError('format of camera save is unknow')
         
-        with open(f'{outCamera}/cameras.json', 'w') as file:
-            import json
-            json.dump(cameras_json, file)
+        if cfg.save_camera and cfg.camera_format=='json':
+            with open(f'{outCamera}/cameras.json', 'w') as file:
+                import json
+                json.dump(cameras_json, file)
 
 cfg = Config()
 @click.command()
