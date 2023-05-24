@@ -45,10 +45,11 @@ class Config:
         self.outdir = 'output'
         self.input_folder = None
         self.zeros_params = False
-        self.save_camera = False
+        self.save_camera_default = False
+        self.save_camera_matrices = False
+        self.save_camera_json = False
         self.camera = [10.,0.,0.,-2.,0.,0.,0.]
         self.pose_for_camera = False
-        self.camera_format = 'default'
         self.random_bg = False
 
     def set(self, **kwargs):
@@ -101,7 +102,8 @@ class Config:
         self.outdir=d['outdir']
         self.input_folder=d['input_folder']
         self.zeros_params=d['zeros_params']
-        self.save_camera=d['save_camera']
+        self.save_camera_default=d['save_camera_default']
+        self.save_camera_matrices=d['save_camera_matrices']
+        self.save_camera_json=d['save_camera_json']
         self.pose_for_camera=d['pose_for_camera']
-        self.camera_format=d['camera_format']
         self.random_bg=d['random_bg']

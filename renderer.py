@@ -270,9 +270,10 @@ class Renderer():
         if 0 <= winZ <= 1: return int(winX), int(winY)
         return None
 
-    def getCameraMatrices(self):
+    def getCameraMatrices(self, camera:torch.Tensor):
         # Conversion de l'angle de champ (fov) en focale
-        focal_length = 1.0 / torch.tan(torch.deg2rad(self.fov / 2.0))
+        fov, tx, ty, tz, rx, ry, rz = camera
+        focal_length = 1.0 / torch.tan(torch.deg2rad(fov / 2.0))
 
         # Calcul de la matrice intrinsèque
         intrinsic_matrix = torch.tensor([
@@ -282,10 +283,10 @@ class Renderer():
         ], dtype=torch.float32, device=self.device)
 
         # Calcul de la matrice d'extrinsèques
-        rotation_x = torch.deg2rad(self.rx)
-        rotation_y = torch.deg2rad(self.ry)
-        rotation_z = torch.deg2rad(self.rz)
-        translation = torch.tensor([self.tx, self.ty, self.tz], dtype=torch.float32, device=self.device)
+        rotation_x = torch.deg2rad(rx)
+        rotation_y = torch.deg2rad(ry)
+        rotation_z = torch.deg2rad(rz)
+        translation = torch.tensor([tx, ty, tz], dtype=torch.float32, device=self.device)
 
         rotation_matrix_x = torch.tensor([
             [1, 0, 0],
