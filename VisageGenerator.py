@@ -177,20 +177,31 @@ class VisageGenerator():
                 texture = texture / 255
                 self._textures[i*cfg.texture_batch_size:(i+1)*cfg.texture_batch_size] = texture.cpu()
 
+    def save_lmks2D(self, lmks2D_path, lmk):
+        lmks2D = []
+        for p in lmk:
+            lmks2D.append(self.render.getCoord2D(p))
+        if lmks2D_path.endswith('.npy'):
+            np.save(lmks2D_path, lmks2D[17:])
+        elif lmks2D_path.endswith('.pts'):
+            with open(lmks2D_path, 'w') as f:
+                lmks2D = lmks2D[17:]
+                for i in range(len(lmks2D)):
+                    f.write(f'{i + 1} {lmks2D[i][0]} {lmks2D[i][1]} False\n')
+        else: raise TypeError("format for saving landmarks 2D is not supported !")
 
     def save(self, cfg:Config):
         out = cfg.outdir
-        tmp = 'tmp'
-        outObj = (out if cfg.save_obj else tmp)+"/obj"
-        outLmk3D_npy = (out if cfg.save_lmks3D_npy else tmp)+"/lmks/3D"
-        outLmk2D = (out if cfg.save_lmks2D else tmp)+"/lmks/2D"
-        outVisagePNG = (out if cfg.save_png else tmp)+"/png/default"
-        outLmks3D_PNG = (out if cfg.save_lmks3D_png else tmp)+"/png/lmks"
-        outMarkersPNG = (out if cfg.save_markers else tmp)+"/png/markers"
-        outCamera = (out if cfg.save_camera else tmp)+"/camera"
-        for folder in [outObj, outLmk3D_npy, outLmk2D, outVisagePNG, outLmks3D_PNG, outMarkersPNG, outCamera]: os.makedirs(folder, exist_ok=True)
+        outObj = out+"/obj"
+        outLmk3D_npy = out+"/lmks/3D"
+        outLmk2D = out+"/lmks/2D"
+        outVisagePNG = out+"/png/default"
+        outLmks3D_PNG = out+"/png/lmks"
+        outMarkersPNG = out+"/png/markers"
+        outCamera = out+"/camera"
+        outs = [outObj, outLmk3D_npy, outLmk2D, outVisagePNG, outLmks3D_PNG, outMarkersPNG, outCamera]
+        for folder in outs: os.makedirs(folder, exist_ok=True)
         if cfg.save_markers: markers = np.load("markers.npy")
-        save_any_png = cfg.save_png or cfg.save_lmks3D_png or cfg.save_markers
         self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=cfg.camera)
         if cfg.camera_format=='json': cameras_json = {'labels': []}
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
@@ -202,33 +213,21 @@ class VisageGenerator():
                 texture = self._textures[i].to(self.device)
                 texture = texture * 255
                 texture = texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
-            basename=f"visage{str(i)}" if self.filenames is None else self.filenames[i]
+            folder=format(i//1000,'05d')
+            if i%1000==0: 
+                for out_path in outs: os.makedirs(f'{out_path}/{folder}', exist_ok=True)
+            basename=f"{folder}/visage{format(i,'08d')}" if self.filenames is None else self.filenames[i]
             visage_path = f'{outObj}/{basename}.obj'
             lmks3Dnpy_path = f'{outLmk3D_npy}/{basename}.npy'
             lmks2D_path = f'{outLmk2D}/{basename}.{cfg.lmk2D_format}'
-            if cfg.save_obj :
-                self.save_obj(visage_path, vertices.cpu().numpy(), texture=texture)
-            if cfg.save_lmks3D_npy :
-                np.save(lmks3Dnpy_path, lmk.cpu().numpy())
-            if cfg.save_lmks2D:
-                lmks2D = []
-                for p in lmk:
-                    lmks2D.append(self.render.getCoord2D(p))
-                if lmks2D_path.endswith('.npy'):
-                    np.save(lmks2D_path, lmks2D[17:])
-                elif lmks2D_path.endswith('.pts'):
-                    with open(lmks2D_path, 'w') as f:
-                        lmks2D = lmks2D[17:]
-                        for i in range(len(lmks2D)):
-                            f.write(f'{i + 1} {lmks2D[i][0]} {lmks2D[i][1]} False\n')
-                else: raise TypeError("format for saving landmarks 2D is not supported !")
-            if save_any_png:
-                if cfg.random_bg: self.render.randomBackground()
-                if cfg.save_png: self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, texture, camera=camera)
-                if cfg.save_lmks3D_png: self.render.save_to_image(f'{outLmks3D_PNG}/{basename}.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
-                if cfg.save_markers:
-                    mks = util.read_all_index_opti_tri(vertices, self._faces, markers)
-                    self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(mks), device=self.device), ptsInAlpha=cfg.pts_in_alpha, camera=camera)
+
+            if cfg.save_obj : self.save_obj(visage_path, vertices.cpu().numpy(), texture=texture)
+            if cfg.save_lmks3D_npy : np.save(lmks3Dnpy_path, lmk.cpu().numpy())
+            if cfg.save_lmks2D: self.save_lmks2D(lmks2D_path, lmk)
+            if cfg.random_bg: self.render.randomBackground()
+            if cfg.save_png: self.render.save_to_image(f'{outVisagePNG}/{basename}.png', vertices, texture, camera=camera)
+            if cfg.save_lmks3D_png: self.render.save_to_image(f'{outLmks3D_PNG}/{basename}.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
+            if cfg.save_markers: self.render.save_to_image(f'{outMarkersPNG}/{basename}.png', vertices, texture, pts=torch.tensor(np.array(util.read_all_index_opti_tri(vertices, self._faces, markers)), device=self.device), ptsInAlpha=cfg.pts_in_alpha, camera=camera)
             if cfg.save_camera:
                 match cfg.camera_format:
                     case 'default': torch.save(camera, f'{outCamera}/{basename}.pt')
