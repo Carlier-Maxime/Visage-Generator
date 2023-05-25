@@ -245,9 +245,6 @@ cfg = Config()
 
 def main(**kwargs):
     cfg.set(**kwargs)
-    img_resolution = cfg.img_resolution[1:-1].split(",")
-    for i in range(len(img_resolution)): img_resolution[i] = int(img_resolution[i])
-    cfg.img_resolution = img_resolution
     vg = VisageGenerator(cfg)
     vg.generate(cfg)
     vg.save(cfg)
