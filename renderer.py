@@ -158,8 +158,14 @@ class Renderer():
                 self.tx += i/256
                 self.ty -= j/256
                 self._updateCamera()
-        elif e.type == KEYDOWN and e.key == K_c:
-            print(f'rx: {self.rx}, ry: {self.ry}, rz: {self.rz}, tx: {self.tx}, ty: {self.ty}, tz: {self.tz}')
+        elif e.type == KEYDOWN:
+            if e.key == K_c: print(f'fov: {self.fov}, tx: {self.tx}, ty: {self.ty}, tz: {self.tz}, rx: {self.rx}, ry: {self.ry}, rz: {self.rz}')
+            if e.key ==K_KP_MINUS: 
+                self.fov-=0.1
+                self._updateCamera()
+            if e.key ==K_KP_PLUS: 
+                self.fov+=0.1
+                self._updateCamera()
         return 1
 
     def _poll_events(self):
