@@ -104,8 +104,7 @@ class CameraJSONSaver(Saver):
             self._saving(filename, *args, **kwds)
 
     def _saving(self, basename, camera, *args: Any, **kwds: Any):
-        intrinsic, extrinsic = self.render.getCameraMatrices(camera)
-        intrinsic_norm = intrinsic[:3, :3] / intrinsic[2, 2]
+        intrinsic_norm, extrinsic = self.render.getCameraMatrices(camera)
         np.savetxt(self.file, torch.cat([extrinsic.flatten(), intrinsic_norm.flatten()]).view(1,-1).cpu().numpy(), '%f', delimiter=',', newline='', header=f'"{basename}": [', footer=f']', comments='')
     
     def close(self):
