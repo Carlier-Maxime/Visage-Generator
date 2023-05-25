@@ -157,7 +157,7 @@ class VisageGenerator():
         camera_matrices_Saver = TorchSaver(out+"/camera/matrices", cfg.save_camera_matrices)
         camera_json_Saver = CameraJSONSaver(out+"/camera", self.render, cfg.save_camera_json)
         markers = np.load("markers.npy") if cfg.save_markers else None
-        if cfg.save_camera_default or cfg.save_camera_matrices or cfg.save_camera_json: print("WARNING : pose for camera not enable, all camera is same (use --pose-for-camera) !!!")
+        if (cfg.save_camera_default or cfg.save_camera_matrices or cfg.save_camera_json) and not cfg.pose_for_camera: print("WARNING : pose for camera not enable, all camera is same (use --pose-for-camera) !!!")
         for i in trange(len(self._vertex), desc='saving', unit='visage'):
             vertices = self._vertex[i].to(self.device)
             lmk = self._landmark[i].to(self.device)
