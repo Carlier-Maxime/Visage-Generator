@@ -315,7 +315,7 @@ class Renderer():
         return intrinsic_matrix, extrinsic_matrix
     
     def getCamera(self):
-        return [self.fov, self.tx, self.ty, self.tz, self.rx, self.ry, self.rz]
+        return torch.tensor([self.fov, self.tx, self.ty, self.tz, self.rx, self.ry, self.rz], device=self.device)
 
 if __name__ == '__main__':
     import ObjLoader, sys
