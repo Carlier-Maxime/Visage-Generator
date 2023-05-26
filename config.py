@@ -31,14 +31,13 @@ class Config:
         self.device="cuda"
         self.view=False
         self.flame_model_path='./model/generic_model.pkl'
-        self.batch_size=128
+        self.batch_size=32
         self.use_face_contour=True
         self.use_3D_translation=True
         self.shape_params=300
         self.expression_params=100
         self.static_landmark_embedding_path='./model/flame_static_embedding.pkl'
         self.dynamic_landmark_embedding_path='./model/flame_dynamic_embedding.npy'
-        self.texture_batch_size=16
         self.save_markers=False
         self.img_resolution=[512,512]
         self.show_window=False

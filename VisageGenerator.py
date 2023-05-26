@@ -15,7 +15,7 @@ from FLAME import FLAME
 from Viewer import Viewer
 from renderer import Renderer
 from config import Config
-from tqdm import trange
+from tqdm import trange, tqdm
 import util
 from Params import *
 from savers import *
@@ -26,50 +26,61 @@ class VisageGenerator():
     def __init__(self, cfg: Config):
         self.flame_layer = FLAME(cfg.flame_model_path, cfg.batch_size, cfg.use_face_contour, cfg.use_3D_translation, cfg.shape_params, cfg.expression_params, cfg.static_landmark_embedding_path, cfg.dynamic_landmark_embedding_path).to(cfg.device)
         self.device = cfg.device
-        self.shape_params_generator = ParamsGenerator(cfg.shape_params, cfg.min_shape_param, cfg.max_shape_param, cfg.device)
-        self.expression_params_generator = ParamsGenerator(cfg.expression_params, cfg.min_expression_param, cfg.max_expression_param, cfg.device)
-        self.pose_params_generator = MultiParamsGenerator([3,1,2], [cfg.min_rotation_param * radian, cfg.min_jaw_param1 * radian, cfg.min_jaw_param2_3 * radian], [cfg.max_rotation_param * radian, cfg.max_jaw_param1 * radian, cfg.max_jaw_param2_3 * radian], cfg.device)
-        self.texture_params_generator = ParamsGenerator(50, cfg.min_texture_param, cfg.max_texture_param, cfg.device) if cfg.texturing else BaseParamsGenerator(0,0,0,cfg.device)
-        self.neck_params_generator = ParamsGenerator(3, cfg.min_neck_param*radian, cfg.max_neck_param*radian, cfg.device)
-        self.eye_params_generator = ParamsGenerator(6,0,0,cfg.device)
-        self.params_generators = [
-            self.shape_params_generator,
-            self.pose_params_generator,
-            self.expression_params_generator,
-            self.texture_params_generator,
-            self.neck_params_generator,
-            self.eye_params_generator
+        self.params_generators = [ # shape, expression, pose, texture, neck, eye
+            ParamsGenerator(cfg.shape_params, cfg.min_shape_param, cfg.max_shape_param, cfg.device),
+            ParamsGenerator(cfg.expression_params, cfg.min_expression_param, cfg.max_expression_param, cfg.device),
+            MultiParamsGenerator([3,1,2], [cfg.min_rotation_param * radian, cfg.min_jaw_param1 * radian, cfg.min_jaw_param2_3 * radian], [cfg.max_rotation_param * radian, cfg.max_jaw_param1 * radian, cfg.max_jaw_param2_3 * radian], cfg.device),
+            ParamsGenerator(50, cfg.min_texture_param, cfg.max_texture_param, cfg.device) if cfg.texturing else BaseParamsGenerator(0,0,0,cfg.device),
+            ParamsGenerator(3, cfg.min_neck_param*radian, cfg.max_neck_param*radian, cfg.device),
+            ParamsGenerator(6,0,0,cfg.device)
         ]
         self.batch_size = cfg.batch_size
         self.cameras = None
         self.filenames = None
+        self.shape_params, self.expression_params, self.pose_params, self.texture_params, self.neck_pose, self.eye_pose = self.genParams(cfg) if cfg.input_folder is None else self.load_params(cfg)
+        if cfg.pose_for_camera:
+            if self.cameras is None: self.cameras = torch.tensor(cfg.camera, device=self.device).repeat(cfg.nb_faces,1)
+            self.cameras[:,4:] = self.pose_params[:,:3] / radian
+            self.pose_params[:,:3] = 0
+        self._faces = self.flame_layer.faces
+        if cfg.texturing:
+            tex_space = np.load("model/FLAME_texture.npz")
+            self.texture_mean = tex_space['mean'].reshape(1, -1)
+            self.texture_basis = tex_space['tex_dir'].reshape(-1, 200)
+            self.texture_mean = torch.from_numpy(self.texture_mean).float()[None, ...].to(self.device)
+            self.texture_basis = torch.from_numpy(self.texture_basis[:, :50]).float()[None, ...].to(self.device)
+            self._textures = None
+
+        self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=cfg.camera)
+        self.markers = np.load("markers.npy") if cfg.save_markers else None
+        if (cfg.save_camera_default or cfg.save_camera_matrices or cfg.save_camera_json) and not cfg.pose_for_camera: print("WARNING : pose for camera not enable, all camera is same (use --pose-for-camera) !!!")
+        self.obj_Saver = ObjSaver(cfg.outdir+"/obj", self.render, cfg.save_obj)
+        self.lmk3D_npy_Saver = NumpySaver(cfg.outdir+"/lmks/3D", cfg.save_lmks3D_npy)
+        self.lmk2D_Saver = Lmks2DSaver(cfg.outdir+"/lmks/2D", self.render, cfg.save_lmks2D)
+        self.visage_png_Saver = VisageImageSaver(cfg.outdir+"/png/default", self.render, cfg.save_png)
+        self.lmk3D_png_Saver = VisageImageSaver(cfg.outdir+"/png/lmks", self.render, cfg.save_lmks3D_png)
+        self.markers_png_Saver = VisageImageSaver(cfg.outdir+"/png/markers", self.render, cfg.save_markers)
+        self.camera_default_Saver = TorchSaver(cfg.outdir+"/camera/default", cfg.save_camera_default)
+        self.camera_matrices_Saver = TorchSaver(cfg.outdir+"/camera/matrices", cfg.save_camera_matrices)
+        self.camera_json_Saver = CameraJSONSaver(cfg.outdir+"/camera", self.render, cfg.save_camera_json)
+        self.batch_index=None
 
     def view(self, cfg: Config, other_objects=None) -> None:
-        """
-        View visage generate
-        Args:
-            other_objects: other object to display with faces
+        print("Open Viewer...")
+        Viewer(self, other_objects=other_objects, device=self.device, window_size=cfg.img_resolution, cameras=self.cameras)
 
-        Returns: None
-        """
-        Viewer(self._vertex, self._textures, self._landmark, self._faces, other_objects=other_objects, device=self.device, window_size=cfg.img_resolution, cameras=self.cameras)
-
-    def get_vertices(self, i: int) -> list:
-        """
-        Obtain vertices for face
-        Args:
-            i: index of face
-
-        Returns: vertices
-        """
-        return self._vertex[i]
-
-    def get_faces(self) -> list:
-        """
-        Obtain faces
-        Returns: array of all faces
-        """
+    def getFaces(self):
         return self._faces
+    
+    def getVisage(self, index:int):
+        assert index>=0 and index<cfg.nb_faces
+        batch_index = index//self.batch_size
+        if self.batch_index is None or self.batch_index!=batch_index: self.generate_batch(batch_index)
+        i = index%self.batch_size
+        return self._vertices[i], self._textures[i], self._lmks[i]
+    
+    def nbFaces(self):
+        return self.shape_params.shape[0]
 
     def genParams(self, cfg: Config):
         print('Generate random parameters')
@@ -106,61 +117,26 @@ class VisageGenerator():
             if all_params[i] is not None: all_params[i] = torch.cat(params).reshape(cfg.nb_faces, nb_params)
         return all_params
 
-    def generate(self, cfg: Config):
-        shape_params, pose_params, expression_params, texture_params, neck_pose, eye_pose = self.genParams(cfg) if cfg.input_folder is None else self.load_params(cfg)
-        if cfg.pose_for_camera:
-            if self.cameras is None: self.cameras = torch.tensor(cfg.camera, device=self.device).repeat(cfg.nb_faces,1)
-            self.cameras[:,4:] = pose_params[:,:3] / radian
-            pose_params[:,:3] = 0
+    def generate_batch(self, batch_index:int):
+        sp = self.shape_params[batch_index*self.batch_size:(batch_index+1)*self.batch_size]
+        ep = self.expression_params[batch_index*self.batch_size:(batch_index+1)*self.batch_size]
+        pp = self.pose_params[batch_index*self.batch_size:(batch_index+1)*self.batch_size]
+        neck = self.neck_pose[batch_index*self.batch_size:(batch_index+1)*self.batch_size]
+        eye = self.eye_pose[batch_index*self.batch_size:(batch_index+1)*self.batch_size]
+        self._vertices, self._lmks = self.flame_layer(sp, ep, pp, neck, eye)
 
-        self._vertex = []
-        self._landmark = []
-        for i in trange(cfg.nb_faces//self.batch_size+(1 if cfg.nb_faces%self.batch_size>0 else 0), desc='generate visages', unit='step'):
-            sp = shape_params[i*self.batch_size:(i+1)*self.batch_size]
-            ep = expression_params[i*self.batch_size:(i+1)*self.batch_size]
-            pp = pose_params[i*self.batch_size:(i+1)*self.batch_size]
-            neck = neck_pose[i*self.batch_size:(i+1)*self.batch_size]
-            eye = eye_pose[i*self.batch_size:(i+1)*self.batch_size]
-            vertices, lmks = self.flame_layer(sp, ep, pp, neck, eye)
-            self._vertex.append(vertices.cpu())
-            self._landmark.append(lmks.cpu())
-        self._vertex = torch.cat(self._vertex)
-        self._landmark = torch.cat(self._landmark)
-        self._faces = self.flame_layer.faces
-
-        self._textures = None
         if cfg.texturing:
-            tex_space = np.load("model/FLAME_texture.npz")
-            texture_mean = tex_space['mean'].reshape(1, -1)
-            texture_basis = tex_space['tex_dir'].reshape(-1, 200)
-            texture_mean = torch.from_numpy(texture_mean).float()[None, ...].to(self.device)
-            texture_basis = torch.from_numpy(texture_basis[:, :50]).float()[None, ...].to(self.device)
-            self._textures = torch.zeros((cfg.nb_faces, 3, 512, 512), dtype=torch.float32, device='cpu')
-            for i in trange(cfg.nb_faces//cfg.texture_batch_size+(1 if cfg.nb_faces%cfg.texture_batch_size>0 else 0), desc='texturing', unit='step'):
-                tp = texture_params[i*cfg.texture_batch_size:(i+1)*cfg.texture_batch_size]
-                texture = texture_mean + (texture_basis * tp[:, None, :]).sum(-1)
-                texture = texture.reshape(tp.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
-                texture = texture[:, [2, 1, 0], :, :]
-                texture = texture / 255
-                self._textures[i*cfg.texture_batch_size:(i+1)*cfg.texture_batch_size] = texture.cpu()
+            tp = self.texture_params[batch_index*self.batch_size:(batch_index+1)*self.batch_size]
+            self._textures = self.texture_mean + (self.texture_basis * tp[:, None, :]).sum(-1)
+            self._textures = self._textures.reshape(tp.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
+            self._textures = self._textures[:, [2, 1, 0], :, :]
+            self._textures = self._textures / 255
+        self.batch_index = batch_index
 
-    def save(self, cfg:Config):
-        out = cfg.outdir
-        self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=cfg.camera)
-        obj_Saver = ObjSaver(out+"/obj", self.render, cfg.save_obj)
-        lmk3D_npy_Saver = NumpySaver(out+"/lmks/3D", cfg.save_lmks3D_npy)
-        lmk2D_Saver = Lmks2DSaver(out+"/lmks/2D", self.render, cfg.save_lmks2D)
-        visage_png_Saver = VisageImageSaver(out+"/png/default", self.render, cfg.save_png)
-        lmk3D_png_Saver = VisageImageSaver(out+"/png/lmks", self.render, cfg.save_lmks3D_png)
-        markers_png_Saver = VisageImageSaver(out+"/png/markers", self.render, cfg.save_markers)
-        camera_default_Saver = TorchSaver(out+"/camera/default", cfg.save_camera_default)
-        camera_matrices_Saver = TorchSaver(out+"/camera/matrices", cfg.save_camera_matrices)
-        camera_json_Saver = CameraJSONSaver(out+"/camera", self.render, cfg.save_camera_json)
-        markers = np.load("markers.npy") if cfg.save_markers else None
-        if (cfg.save_camera_default or cfg.save_camera_matrices or cfg.save_camera_json) and not cfg.pose_for_camera: print("WARNING : pose for camera not enable, all camera is same (use --pose-for-camera) !!!")
-        for i in trange(len(self._vertex), desc='saving', unit='visage'):
-            vertices = self._vertex[i].to(self.device)
-            lmk = self._landmark[i].to(self.device)
+    def save_batch(self, cfg:Config, leave_pbar:bool=True):
+        for i in trange(len(self._vertices), desc='saving batch', unit='visage', leave=leave_pbar):
+            vertices = self._vertices[i].to(self.device)
+            lmk = self._lmks[i].to(self.device)
             camera = self.render.getCamera() if self.cameras is None else self.cameras[i]
             if self._textures is None: texture=None
             else: 
@@ -170,15 +146,23 @@ class VisageGenerator():
             basename=format(i,'08d') if self.filenames is None else self.filenames[i]
             if cfg.random_bg: self.render.randomBackground()
             
-            obj_Saver(i, basename+'.obj', vertices.cpu().numpy(), self._faces, texture=texture)
-            lmk3D_npy_Saver(i, basename+'.npy', lmk.cpu().numpy())
-            lmk2D_Saver(i, basename+f'.{cfg.lmk2D_format}', lmk)
-            visage_png_Saver(i, basename+'.png', vertices, texture, camera=camera)
-            lmk3D_png_Saver(i, basename+'.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
-            markers_png_Saver(i, basename+'.png', vertices, texture, pts=torch.tensor(np.array(util.read_all_index_opti_tri(vertices, self._faces, markers)), device=self.device) if markers is not None else None, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
-            camera_default_Saver(i, basename+'.pt', camera)
-            camera_matrices_Saver(i, basename+'.pt', self.render.getCameraMatrices(camera))
-            camera_json_Saver(i, basename, camera)
+            self.obj_Saver(i, basename+'.obj', vertices.cpu().numpy(), self._faces, texture=texture)
+            self.lmk3D_npy_Saver(i, basename+'.npy', lmk.cpu().numpy())
+            self.lmk2D_Saver(i, basename+f'.{cfg.lmk2D_format}', lmk)
+            self.visage_png_Saver(i, basename+'.png', vertices, texture, camera=camera)
+            self.lmk3D_png_Saver(i, basename+'.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
+            self.markers_png_Saver(i, basename+'.png', vertices, texture, pts=torch.tensor(np.array(util.read_all_index_opti_tri(vertices, self._faces, self.markers)), device=self.device) if self.markers is not None else None, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
+            self.camera_default_Saver(i, basename+'.pt', camera)
+            self.camera_matrices_Saver(i, basename+'.pt', self.render.getCameraMatrices(camera))
+            self.camera_json_Saver(i, basename, camera)
+    
+    def save_all(self, cfg:Config):
+        pbar = tqdm(total=cfg.nb_faces, desc='saving all visages', unit='visage')
+        for i in range(cfg.nb_faces//self.batch_size+(1 if cfg.nb_faces%self.batch_size>0 else 0)):
+            self.generate_batch(i)
+            self.save_batch(cfg, leave_pbar=False)
+            pbar.update(self._vertices.shape[0])
+        pbar.close()
 
 cfg = Config()
 @click.command()
@@ -188,7 +172,6 @@ cfg = Config()
 @click.option('--device',  type=str,  default=cfg.device,  help='choice your device for generate face. ("cpu" or "cuda")')
 @click.option('--view',  type=bool,  default=cfg.view,  help='enable view', is_flag=True)
 @click.option('--batch-size', type=int, default=cfg.batch_size, help='number of visage generate in the same time')
-@click.option('--texture-batch-size', type=int, default=cfg.texture_batch_size, help='number of texture generate in same time')
 @click.option('--pose-for-camera', type=bool, default=cfg.pose_for_camera, help='use pose rotation parameter for camera instead of visage generation', is_flag=True)
 @click.option('--camera', type=str, default=cfg.camera, help='default camera for renderer')
 
@@ -246,10 +229,8 @@ cfg = Config()
 def main(**kwargs):
     cfg.set(**kwargs)
     vg = VisageGenerator(cfg)
-    vg.generate(cfg)
-    vg.save(cfg)
-    if cfg.view:
-        vg.view(cfg)
+    vg.save_all(cfg)
+    if cfg.view: vg.view(cfg)
 
 if __name__ == "__main__":
     main()

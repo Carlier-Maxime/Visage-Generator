@@ -10,25 +10,11 @@ from util import read_all_index_opti_tri
 from renderer import Renderer
 
 class Viewer(Renderer):
-    def __init__(self, vertex: list, textures, landmark: list, faces: list, show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True, other_objects: list = None, device="cuda", window_size=[1024,1024], cameras = None):
-        """
-        Args:
-            vertex (list): array of all vertex
-            landmark (list): array of all landmark
-            faces (list): array of all faces
-            file_obj_for_color (list): array of all path file for 3D object color
-            show_joints (bool): display joints (landmark)
-            show_vertices (bool): display vertices
-            show_markers (bool): display markers
-            other_objects (list): list of all others objects. one object represented by : [vertices, faces]
-                but the triangles may be empty : []
-        """
+    def __init__(self, vGen, show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True, other_objects: list = None, device="cuda", window_size=[1024,1024], cameras = None):
         Renderer.__init__(self, window_size[0], window_size[1], device)
         self._device = device
-        self._vertex = vertex
-        self._textures = textures
-        self._landmark = landmark
-        self._faces = faces
+        self.vGen = vGen
+        self._faces = vGen.getFaces()
         self._show_vertices = show_vertices
         self._show_joints = show_joints
         self._show_markers = show_markers
@@ -70,7 +56,7 @@ class Viewer(Renderer):
         while 1:
             clock.tick(60)
             lists = [self.gl_list_visage]
-            if self._show_joints and self._landmark is not None: lists.append(self._joints_glList)
+            if self._show_joints and self._lmks is not None: lists.append(self._joints_glList)
             if self._show_markers: lists.append(self._markers_glList)
             if self._show_vertices: lists.append(self._vertices_glList)
             if self._edit_markers and self._select_glList is not None: lists.append(self._select_glList)
@@ -108,15 +94,14 @@ class Viewer(Renderer):
 
         Returns: None
         """
-        if i >= self._vertex.shape[0]: i=0
-        elif i < 0: i=self._vertex.shape[0]-1
+        if i >= self.vGen.nbFaces(): i=0
+        elif i < 0: i=self.vGen.nbFaces()-1
         self._index = i
-        if self._textures is not None:
-            texture = self._textures[self._index].to(self.device)
-            texture = texture * 255
-            texture = texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
-        else: texture = None
-        self._edit_GL_List(self._vertex[i].to(self._device), texture)
+        self._vertices, self._texture, self._lmks = self.vGen.getVisage(self._index)
+        if self._texture is not None:
+            self._texture = self._texture * 255
+            self._texture = self._texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
+        self._edit_GL_List(self._vertices.to(self._device), self._texture)
         self.update_pts()
         if self.cameras is not None: self._changeCamera(self.cameras[self._index])
 
@@ -152,25 +137,25 @@ class Viewer(Renderer):
         Returns: None
         """
         self._vertices_glList = self.gen_vertices_glList()
-        if self._landmark is not None: self._joints_glList = self.gen_joints_glList()
+        if self._lmks is not None: self._joints_glList = self.gen_joints_glList()
         self._markers_glList = self.gen_markers_glList()
 
     def gen_select_glList(self):
-        vert = self._vertex[self._index][self._directionalMatrix[self._slcIndex][0]]
+        vert = self._vertices[self._directionalMatrix[self._slcIndex][0]]
         vert = vert.to(self.device)[None]
         self._select_glList = Renderer.create_spheres_gl_list(self.large_raw_sphere, vert, self._select_glList, [255, 255, 0.1])
         return self._select_glList
 
     def gen_vertices_glList(self):
-        vts = self._vertex[self._index].to(self._device)
+        vts = self._vertices.to(self._device)
         return Renderer.create_spheres_gl_list(self.small_raw_sphere, vts, self._vertices_glList, [255, 0.2, 0.2])
 
     def gen_joints_glList(self):
-        lmk = self._landmark[self._index].to(self._device)
+        lmk = self._lmks.to(self._device)
         return Renderer.create_spheres_gl_list(self.raw_sphere, lmk, self._joints_glList, [0.2, 0.2, 255])
 
     def gen_markers_glList(self):
-        mks = torch.tensor(np.array(read_all_index_opti_tri(self._vertex[self._index], self._faces, self._markersIndex)), device=self._device)
+        mks = torch.tensor(np.array(read_all_index_opti_tri(self._vertices, self._faces, self._markersIndex)), device=self._device)
         return Renderer.create_spheres_gl_list(self.raw_sphere, mks, self._markers_glList, [0.2, 255, 0.2])
 
     def add_marker(self) -> None:
