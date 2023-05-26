@@ -43,13 +43,13 @@ class VisageGenerator():
             self.cameras[:,4:] = self.pose_params[:,:3] / radian
             self.pose_params[:,:3] = 0
         self._faces = self.flame_layer.faces
+        self._textures = None
         if cfg.texturing:
             tex_space = np.load("model/FLAME_texture.npz")
             self.texture_mean = tex_space['mean'].reshape(1, -1)
             self.texture_basis = tex_space['tex_dir'].reshape(-1, 200)
             self.texture_mean = torch.from_numpy(self.texture_mean).float()[None, ...].to(self.device)
             self.texture_basis = torch.from_numpy(self.texture_basis[:, :50]).float()[None, ...].to(self.device)
-            self._textures = None
         else: self.texture_mean = None
 
         self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=cfg.camera)
