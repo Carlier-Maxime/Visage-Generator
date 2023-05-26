@@ -26,10 +26,11 @@ class VisageGenerator():
     def __init__(self, cfg: Config):
         self.flame_layer = FLAME(cfg.flame_model_path, cfg.batch_size, cfg.use_face_contour, cfg.use_3D_translation, cfg.shape_params, cfg.expression_params, cfg.static_landmark_embedding_path, cfg.dynamic_landmark_embedding_path).to(cfg.device)
         self.device = cfg.device
+        cfg.pose_params = torch.tensor(cfg.pose_params)
         self.params_generators = [ # shape, expression, pose, texture, neck, eye
             ParamsGenerator(cfg.shape_params, cfg.min_shape_param, cfg.max_shape_param, cfg.device),
             ParamsGenerator(cfg.expression_params, cfg.min_expression_param, cfg.max_expression_param, cfg.device),
-            MultiParamsGenerator([3,1,2], [cfg.min_rotation_param * radian, cfg.min_jaw_param1 * radian, cfg.min_jaw_param2_3 * radian], [cfg.max_rotation_param * radian, cfg.max_jaw_param1 * radian, cfg.max_jaw_param2_3 * radian], cfg.device),
+            MultiParamsGenerator(cfg.pose_params[::3].to(torch.int).tolist(), (cfg.pose_params[1::3]*radian).tolist(), (cfg.pose_params[2::3]*radian).tolist(), cfg.device),
             ParamsGenerator(50, cfg.min_texture_param, cfg.max_texture_param, cfg.device) if cfg.texturing else BaseParamsGenerator(0,0,0,cfg.device),
             ParamsGenerator(3, cfg.min_neck_param*radian, cfg.max_neck_param*radian, cfg.device),
             ParamsGenerator(6,0,0,cfg.device)
@@ -167,8 +168,7 @@ class VisageGenerator():
         pbar.close()
 
 def click_callback_strToList(ctx:click.Context, param:click.Parameter, value):
-    val = Config._str_to_list(value, param.metavar)
-    return val
+    return Config._str_to_list(value, param.metavar)
 
 @click.command()
 # General
@@ -187,12 +187,7 @@ def click_callback_strToList(ctx:click.Context, param:click.Parameter, value):
 @click.option('--max-shape-param',  type=float,  default=2,  help='maximum value for shape param')
 @click.option('--min-expression-param',  type=float,  default=-2,  help='minimum value for expression param')
 @click.option('--max-expression-param',  type=float,  default=2,  help='maximum value for expression param')
-@click.option('--min-rotation-param',  type=float,  default=-30,  help='minimum value for rotation param')
-@click.option('--max-rotation-param',  type=float,  default=30,  help='maximum value for rotation param')
-@click.option('--min-jaw-param1',  type=float,  default=0,  help='minimum value for jaw param 1')
-@click.option('--max-jaw-param1',  type=float,  default=30,  help='maximum value for jaw param 1')
-@click.option('--min-jaw-param2-3',  type=float,  default=-10,  help='minimum value for jaw param 2-3')
-@click.option('--max-jaw-param2-3',  type=float,  default=10,  help='maximum value for jaw param 2-3')
+@click.option('--pose-params', type=str, metavar=float, default=[3,-30,30, 1,0,30, 2,-10,10], help='Pose parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6', callback=click_callback_strToList)
 @click.option('--min-texture-param',  type=float,  default=-2,  help='minimum value for texture param')
 @click.option('--max-texture-param',  type=float,  default=2,  help='maximum value for texture param')
 @click.option('--min-neck-param',  type=float,  default=-30,  help='minimum value for neck param')
