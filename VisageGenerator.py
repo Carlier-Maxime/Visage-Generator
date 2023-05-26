@@ -50,6 +50,7 @@ class VisageGenerator():
             self.texture_mean = torch.from_numpy(self.texture_mean).float()[None, ...].to(self.device)
             self.texture_basis = torch.from_numpy(self.texture_basis[:, :50]).float()[None, ...].to(self.device)
             self._textures = None
+        else: self.texture_mean = None
 
         self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=cfg.camera)
         self.markers = np.load("markers.npy") if cfg.save_markers else None
@@ -73,7 +74,7 @@ class VisageGenerator():
         return self._faces
     
     def getVisage(self, index:int):
-        assert index>=0 and index<cfg.nb_faces
+        assert index>=0 and index<self.nbFaces()
         batch_index = index//self.batch_size
         if self.batch_index is None or self.batch_index!=batch_index: self.generate_batch(batch_index)
         i = index%self.batch_size
@@ -125,7 +126,7 @@ class VisageGenerator():
         eye = self.eye_pose[batch_index*self.batch_size:(batch_index+1)*self.batch_size]
         self._vertices, self._lmks = self.flame_layer(sp, ep, pp, neck, eye)
 
-        if cfg.texturing:
+        if self.texture_mean is not None:
             tp = self.texture_params[batch_index*self.batch_size:(batch_index+1)*self.batch_size]
             self._textures = self.texture_mean + (self.texture_basis * tp[:, None, :]).sum(-1)
             self._textures = self._textures.reshape(tp.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
@@ -164,70 +165,73 @@ class VisageGenerator():
             pbar.update(self._vertices.shape[0])
         pbar.close()
 
-cfg = Config()
+def click_callback_strToList(ctx:click.Context, param:click.Parameter, value):
+    val = Config._str_to_list(value, param.metavar)
+    return val
+
 @click.command()
 # General
-@click.option('--nb-faces', type=int, default=cfg.nb_faces, help='number faces generate')
-@click.option('--not-texturing', 'texturing', type=bool,  default=cfg.texturing,  help='disable texture', is_flag=True)
-@click.option('--device',  type=str,  default=cfg.device,  help='choice your device for generate face. ("cpu" or "cuda")')
-@click.option('--view',  type=bool,  default=cfg.view,  help='enable view', is_flag=True)
-@click.option('--batch-size', type=int, default=cfg.batch_size, help='number of visage generate in the same time')
-@click.option('--pose-for-camera', type=bool, default=cfg.pose_for_camera, help='use pose rotation parameter for camera instead of visage generation', is_flag=True)
-@click.option('--camera', type=str, default=cfg.camera, help='default camera for renderer')
+@click.option('--nb-faces', type=int, default=1000, help='number faces generate')
+@click.option('--not-texturing', 'texturing', type=bool,  default=True,  help='disable texture', is_flag=True)
+@click.option('--device',  type=str,  default='cuda',  help='choice your device for generate face. ("cpu" or "cuda")')
+@click.option('--view',  type=bool,  default=False,  help='enable view', is_flag=True)
+@click.option('--batch-size', type=int, default=32, help='number of visage generate in the same time')
+@click.option('--pose-for-camera', type=bool, default=False, help='use pose rotation parameter for camera instead of visage generation', is_flag=True)
+@click.option('--camera', type=str, metavar=float, default=[10.,0.,0.,-2.,0.,0.,0.], help='default camera for renderer [fov, tx, ty, tz, rx, ry, rz] (rotation in degree)', callback=click_callback_strToList)
 
 # Generator parameter
-@click.option('--input-folder', type=str, default=cfg.input_folder, help='input folder for load parameter (default : None)')
-@click.option('--zeros-params', type=bool, default=cfg.zeros_params, help='zeros for all params not loaded', is_flag=True)
-@click.option('--min-shape-param',  type=float,  default=cfg.min_shape_param,  help='minimum value for shape param')
-@click.option('--max-shape-param',  type=float,  default=cfg.max_shape_param,  help='maximum value for shape param')
-@click.option('--min-expression-param',  type=float,  default=cfg.min_expression_param,  help='minimum value for expression param')
-@click.option('--max-expression-param',  type=float,  default=cfg.max_expression_param,  help='maximum value for expression param')
-@click.option('--min-rotation-param',  type=float,  default=cfg.min_rotation_param,  help='minimum value for rotation param')
-@click.option('--max-rotation-param',  type=float,  default=cfg.max_rotation_param,  help='maximum value for rotation param')
-@click.option('--min-jaw-param1',  type=float,  default=cfg.min_jaw_param1,  help='minimum value for jaw param 1')
-@click.option('--max-jaw-param1',  type=float,  default=cfg.max_jaw_param1,  help='maximum value for jaw param 1')
-@click.option('--min-jaw-param2-3',  type=float,  default=cfg.min_jaw_param2_3,  help='minimum value for jaw param 2-3')
-@click.option('--max-jaw-param2-3',  type=float,  default=cfg.max_jaw_param2_3,  help='maximum value for jaw param 2-3')
-@click.option('--min-texture-param',  type=float,  default=cfg.min_texture_param,  help='minimum value for texture param')
-@click.option('--max-texture-param',  type=float,  default=cfg.max_texture_param,  help='maximum value for texture param')
-@click.option('--min-neck-param',  type=float,  default=cfg.min_neck_param,  help='minimum value for neck param')
-@click.option('--max-neck-param',  type=float,  default=cfg.max_neck_param,  help='maximum value for neck param')
-@click.option('--fixed-shape', type=bool, default=cfg.fixed_shape, help='fixed the same shape for all visage generated', is_flag=True)
-@click.option('--fixed-expression', type=bool, default=cfg.fixed_expression, help='fixed the same expression for all visage generated', is_flag=True)
-@click.option('--fixed-jaw', type=bool, default=cfg.fixed_jaw, help='fixed the same jaw for all visage generated', is_flag=True)
-@click.option('--fixed-texture', type=bool, default=cfg.fixed_texture, help='fixed the same texture for all visage generated', is_flag=True)
-@click.option('--fixed-neck', type=bool, default=cfg.fixed_neck, help='fixed the same neck for all visage generated', is_flag=True)
+@click.option('--input-folder', type=str, default=None, help='input folder for load parameter')
+@click.option('--zeros-params', type=bool, default=False, help='zeros for all params not loaded', is_flag=True)
+@click.option('--min-shape-param',  type=float,  default=-2,  help='minimum value for shape param')
+@click.option('--max-shape-param',  type=float,  default=2,  help='maximum value for shape param')
+@click.option('--min-expression-param',  type=float,  default=-2,  help='minimum value for expression param')
+@click.option('--max-expression-param',  type=float,  default=2,  help='maximum value for expression param')
+@click.option('--min-rotation-param',  type=float,  default=-30,  help='minimum value for rotation param')
+@click.option('--max-rotation-param',  type=float,  default=30,  help='maximum value for rotation param')
+@click.option('--min-jaw-param1',  type=float,  default=0,  help='minimum value for jaw param 1')
+@click.option('--max-jaw-param1',  type=float,  default=30,  help='maximum value for jaw param 1')
+@click.option('--min-jaw-param2-3',  type=float,  default=-10,  help='minimum value for jaw param 2-3')
+@click.option('--max-jaw-param2-3',  type=float,  default=10,  help='maximum value for jaw param 2-3')
+@click.option('--min-texture-param',  type=float,  default=-2,  help='minimum value for texture param')
+@click.option('--max-texture-param',  type=float,  default=2,  help='maximum value for texture param')
+@click.option('--min-neck-param',  type=float,  default=-30,  help='minimum value for neck param')
+@click.option('--max-neck-param',  type=float,  default=30,  help='maximum value for neck param')
+@click.option('--fixed-shape', type=bool, default=False, help='fixed the same shape for all visage generated', is_flag=True)
+@click.option('--fixed-expression', type=bool, default=False, help='fixed the same expression for all visage generated', is_flag=True)
+@click.option('--fixed-jaw', type=bool, default=False, help='fixed the same jaw for all visage generated', is_flag=True)
+@click.option('--fixed-texture', type=bool, default=False, help='fixed the same texture for all visage generated', is_flag=True)
+@click.option('--fixed-neck', type=bool, default=False, help='fixed the same neck for all visage generated', is_flag=True)
 
 # Flame parameter
-@click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=cfg.use_face_contour, is_flag=True, help='not use face contour for generate visage')
-@click.option('--not-use-3D-translation', 'use_3D_translation', type=bool, default=cfg.use_3D_translation, is_flag=True, help='not use 3D translation for generate visage')
-@click.option('--shape-params', type=int, default=cfg.shape_params, help='a number of shape parameter used')
-@click.option('--expression-params', type=int, default=cfg.expression_params, help='a number of expression parameter used')
+@click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=True, is_flag=True, help='not use face contour for generate visage')
+@click.option('--not-use-3D-translation', 'use_3D_translation', type=bool, default=True, is_flag=True, help='not use 3D translation for generate visage')
+@click.option('--shape-params', type=int, default=300, help='a number of shape parameter used')
+@click.option('--expression-params', type=int, default=100, help='a number of expression parameter used')
 
 # Saving
-@click.option('--outdir', type=str, default=cfg.outdir, help='path directory for output')
-@click.option('--lmk2D-format', 'lmk2D_format', type=str, default=cfg.lmk2D_format, help='format used for save lmk2d. (npy and pts is supported)')
-@click.option('--save-obj',  type=bool,  default=cfg.save_obj,  help='enable save into file obj', is_flag=True)
-@click.option('--save-png',  type=bool,  default=cfg.save_png,  help='enable save into file png', is_flag=True)
-@click.option('--random-bg', type=bool, default=cfg.random_bg, help='enable random background color for renderer', is_flag=True)
-@click.option('--save-lmks3D-npy', 'save_lmks3D_npy', type=bool,  default=cfg.save_lmks3D_npy,  help='enable save landmarks 3D into file npy', is_flag=True)
-@click.option('--save-lmks3D-png', 'save_lmks3D_png', type=bool,  default=cfg.save_lmks3D_png,  help='enable save landmarks 3D with visage into file png', is_flag=True)
-@click.option('--save-lmks2D', 'save_lmks2D',  type=bool,  default=cfg.save_lmks2D,  help='enable save landmarks 2D into file npy', is_flag=True)
-@click.option('--save-markers', type=bool,  default=cfg.save_markers,  help='enable save markers into png file', is_flag=True)
-@click.option('--img-resolution', type=str, default=cfg.img_resolution, help='resolution of image')
-@click.option('--show-window', type=bool,  default=cfg.show_window,  help='show window during save png (enable if images is the screenshot or full black)', is_flag=True)
-@click.option('--not-pts-in-alpha', 'pts_in_alpha', type=bool, default=cfg.pts_in_alpha, help='not save landmarks/markers png version to channel alpha', is_flag=True)
-@click.option('--save-camera-default', type=bool, default=cfg.save_camera_default, help='save camera in default format', is_flag=True)
-@click.option('--save-camera-matrices', type=bool, default=cfg.save_camera_matrices, help='save camera in matrices format', is_flag=True)
-@click.option('--save-camera-json', type=bool, default=cfg.save_camera_json, help='save camera in json format', is_flag=True)
+@click.option('--outdir', type=str, default='output', help='path directory for output')
+@click.option('--lmk2D-format', 'lmk2D_format', type=str, default='npy', help='format used for save lmk2d. (npy and pts is supported)')
+@click.option('--save-obj',  type=bool,  default=False,  help='enable save into file obj', is_flag=True)
+@click.option('--save-png',  type=bool,  default=False,  help='enable save into file png', is_flag=True)
+@click.option('--random-bg', type=bool, default=False, help='enable random background color for renderer', is_flag=True)
+@click.option('--save-lmks3D-npy', 'save_lmks3D_npy', type=bool,  default=False,  help='enable save landmarks 3D into file npy', is_flag=True)
+@click.option('--save-lmks3D-png', 'save_lmks3D_png', type=bool,  default=False,  help='enable save landmarks 3D with visage into file png', is_flag=True)
+@click.option('--save-lmks2D', 'save_lmks2D',  type=bool,  default=False,  help='enable save landmarks 2D into file npy', is_flag=True)
+@click.option('--save-markers', type=bool,  default=False,  help='enable save markers into png file', is_flag=True)
+@click.option('--img-resolution', type=str, metavar=int, default=[512,512], help='resolution of image', callback=click_callback_strToList)
+@click.option('--show-window', type=bool,  default=False,  help='show window during save png (enable if images is the screenshot or full black)', is_flag=True)
+@click.option('--not-pts-in-alpha', 'pts_in_alpha', type=bool, default=True, help='not save landmarks/markers png version to channel alpha', is_flag=True)
+@click.option('--save-camera-default', type=bool, default=False, help='save camera in default format', is_flag=True)
+@click.option('--save-camera-matrices', type=bool, default=False, help='save camera in matrices format', is_flag=True)
+@click.option('--save-camera-json', type=bool, default=False, help='save camera in json format', is_flag=True)
 
 # Path
-@click.option('--flame-model-path', type=str, default=cfg.flame_model_path, help='path for acess flame model')
-@click.option('--static-landmark-embedding-path', type=str, default=cfg.static_landmark_embedding_path, help='path for static landmark embedding file')
-@click.option('--dynamic-landmark-embedding-path', type=str, default=cfg.dynamic_landmark_embedding_path, help='path for dynamic landmark embedding file')
+@click.option('--flame-model-path', type=str, default='./model/generic_model.pkl', help='path for acess flame model')
+@click.option('--static-landmark-embedding-path', type=str, default='./model/flame_static_embedding.pkl', help='path for static landmark embedding file')
+@click.option('--dynamic-landmark-embedding-path', type=str, default='./model/flame_dynamic_embedding.npy', help='path for dynamic landmark embedding file')
 
 def main(**kwargs):
-    cfg.set(**kwargs)
+    cfg = Config(**kwargs)
     vg = VisageGenerator(cfg)
     vg.save_all(cfg)
     if cfg.view: vg.view(cfg)
