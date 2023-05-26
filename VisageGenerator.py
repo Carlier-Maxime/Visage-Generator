@@ -144,18 +144,19 @@ class VisageGenerator():
                 texture = self._textures[i].to(self.device)
                 texture = texture * 255
                 texture = texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
-            basename=format(i,'08d') if self.filenames is None else self.filenames[i]
+            index = self.batch_index*self.batch_size+i
+            basename=format(index,'08d') if self.filenames is None else self.filenames[i]
             if cfg.random_bg: self.render.randomBackground()
             
-            self.obj_Saver(i, basename+'.obj', vertices.cpu().numpy(), self._faces, texture=texture)
-            self.lmk3D_npy_Saver(i, basename+'.npy', lmk.cpu().numpy())
-            self.lmk2D_Saver(i, basename+f'.{cfg.lmk2D_format}', lmk)
-            self.visage_png_Saver(i, basename+'.png', vertices, texture, camera=camera)
-            self.lmk3D_png_Saver(i, basename+'.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
-            self.markers_png_Saver(i, basename+'.png', vertices, texture, pts=torch.tensor(np.array(util.read_all_index_opti_tri(vertices, self._faces, self.markers)), device=self.device) if self.markers is not None else None, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
-            self.camera_default_Saver(i, basename+'.pt', camera)
-            self.camera_matrices_Saver(i, basename+'.pt', self.render.getCameraMatrices(camera))
-            self.camera_json_Saver(i, basename, camera)
+            self.obj_Saver(index, basename+'.obj', vertices.cpu().numpy(), self._faces, texture=texture)
+            self.lmk3D_npy_Saver(index, basename+'.npy', lmk.cpu().numpy())
+            self.lmk2D_Saver(index, basename+f'.{cfg.lmk2D_format}', lmk)
+            self.visage_png_Saver(index, basename+'.png', vertices, texture, camera=camera)
+            self.lmk3D_png_Saver(index, basename+'.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
+            self.markers_png_Saver(index, basename+'.png', vertices, texture, pts=torch.tensor(np.array(util.read_all_index_opti_tri(vertices, self._faces, self.markers)), device=self.device) if self.markers is not None else None, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
+            self.camera_default_Saver(index, basename+'.pt', camera)
+            self.camera_matrices_Saver(index, basename+'.pt', self.render.getCameraMatrices(camera))
+            self.camera_json_Saver(index, basename, camera)
     
     def save_all(self, cfg:Config):
         pbar = tqdm(total=cfg.nb_faces, desc='saving all visages', unit='visage')
