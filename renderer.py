@@ -207,6 +207,7 @@ class Renderer():
             else: 
                 self._render([self.gl_list_visage, pts_gl_list], camera)
                 img_visage = torch.frombuffer(bytearray(glReadPixels(0,0,self.width,self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
+            glDeleteLists(pts_gl_list,1)
         else:
             self._render([self.gl_list_visage], camera)
             img_visage = torch.frombuffer(bytearray(glReadPixels(0,0,self.width,self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
