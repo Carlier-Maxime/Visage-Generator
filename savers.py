@@ -101,7 +101,7 @@ class CameraJSONSaver(Saver):
                 self.file.write('{"labels": {\n')
                 self.first=False
             else: self.file.write(',\n')
-            self._saving(filename, *args, **kwds)
+            self._saving(format(index//1000,"05d")+'/'+filename, *args, **kwds)
 
     def _saving(self, basename, camera, *args: Any, **kwds: Any):
         intrinsic_norm, extrinsic = self.render.getCameraMatrices(camera)
