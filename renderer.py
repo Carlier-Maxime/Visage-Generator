@@ -276,24 +276,11 @@ class Renderer():
         winX, winY, winZ = gluProject(point3D[0], point3D[1], point3D[2], modelview, projection, viewport)
         if 0 <= winZ <= 1: return int(winX), int(winY)
         return None
-
-    def getCameraMatrices(self, camera:torch.Tensor):
-        # Conversion de l'angle de champ (fov) en focale
-        fov, tx, ty, tz, rx, ry, rz = camera
-        focal_length = (self.width/2) / torch.tan(torch.deg2rad(fov / 2.0))
-
-        # Calcul de la matrice intrinsèque normalisé
-        intrinsic_matrix = torch.tensor([
-            [focal_length/self.width, 0, 0.5],
-            [0, focal_length/self.height, 0.5],
-            [0, 0, 1]
-        ], dtype=torch.float32, device=self.device)
-
-        # Calcul de la matrice d'extrinsèques
+    
+    def getRotationMatrix(self, rx, ry, rz):
         rotation_x = torch.deg2rad(rx)
         rotation_y = torch.deg2rad(ry)
         rotation_z = torch.deg2rad(rz)
-        translation = torch.tensor([tx, ty, tz], dtype=torch.float32, device=self.device)
 
         rotation_matrix_x = torch.tensor([
             [1, 0, 0],
@@ -313,7 +300,23 @@ class Renderer():
             [0, 0, 1]
         ], dtype=torch.float32, device=self.device)
 
-        rotation_matrix = torch.matmul(torch.matmul(rotation_matrix_z, rotation_matrix_y), rotation_matrix_x)
+        return torch.matmul(torch.matmul(rotation_matrix_z, rotation_matrix_y), rotation_matrix_x)
+
+    def getCameraMatrices(self, camera:torch.Tensor):
+        # Conversion de l'angle de champ (fov) en focale
+        fov, tx, ty, tz, rx, ry, rz = camera
+        focal_length = (self.width/2) / torch.tan(torch.deg2rad(fov / 2.0))
+
+        # Calcul de la matrice intrinsèque normalisé
+        intrinsic_matrix = torch.tensor([
+            [focal_length/self.width, 0, 0.5],
+            [0, focal_length/self.height, 0.5],
+            [0, 0, 1]
+        ], dtype=torch.float32, device=self.device)
+
+        # Calcul de la matrice d'extrinsèques
+        rotation_matrix = self.getRotationMatrix(rx,ry,rz)
+        translation = torch.tensor([tx, ty, tz], dtype=torch.float32, device=self.device)
 
         extrinsic_matrix = torch.eye(4, dtype=torch.float32, device=self.device)
         extrinsic_matrix[:3, :3] = rotation_matrix
