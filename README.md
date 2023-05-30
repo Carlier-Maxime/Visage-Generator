@@ -42,52 +42,49 @@ Here are the different settings you can change:
 
 ### General
 - ```--nb-faces``` : number faces generate
-- ```--not-texturing', 'texturing``` : disable texture
+- ```--not-texturing``` : disable texture
 - ```--device``` : choice your device for generate face. ("cpu" or "cuda")
 - ```--view``` : enable view
 - ```--batch-size``` : number of visage generate in the same time
-- ```--texture-batch-size``` : number of texture generate in same time
+- ```--pose-for-camera``` : use pose rotation parameter for camera instead of visage generation
+- ```--camera``` : default camera for renderer [fov, tx, ty, tz, rx, ry, rz] (rotation in degree)
 
 ### Generator parameter
-- ```--min-shape-param``` : minimum value for shape param
-- ```--max-shape-param``` : maximum value for shape param
-- ```--min-expression-param``` : minimum value for expression param
-- ```--max-expression-param``` : maximum value for expression param
-- ```--global-pose-param1``` : value of first global pose param
-- ```--global-pose-param2``` : value of second global pose param
-- ```--global-pose-param3``` : value of third global pose param
-- ```--min-jaw-param1``` : minimum value for jaw param 1
-- ```--max-jaw-param1``` : maximum value for jaw param 1
-- ```--min-jaw-param2-3``` : minimum value for jaw param 2-3
-- ```--max-jaw-param2-3``` : maximum value for jaw param 2-3
-- ```--min-texture-param``` : minimum value for texture param
-- ```--max-texture-param``` : maximum value for texture param
-- ```--min-neck-param``` : minimum value for neck param
-- ```--max-neck-param``` : maximum value for neck param
+- ```--input-folder``` : input folder for load parameter
+- ```--zeros-params``` : zeros for all params not loaded
+- ```--shape-params``` : Shape parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==300
+- ```--expression-params``` : Expression parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==100
+- ```--pose-params``` : Pose parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6 (min, max in degree)
+- ```--texture-params``` : Texture parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==50
+- ```--neck-params``` : Neck parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==3 (min, max in degree)
+- ```--eye-params``` : Eye parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6
 - ```--fixed-shape``` : fixed the same shape for all visage generated
 - ```--fixed-expression``` : fixed the same expression for all visage generated
-- ```--fixed-jaw``` : fixed the same jaw for all visage generated
+- ```--fixed-pose``` : fixed the same jaw for all visage generated
 - ```--fixed-texture``` : fixed the same texture for all visage generated
 - ```--fixed-neck``` : fixed the same neck for all visage generated
+- ```--fixed-eye``` : fixed the same eye for all visage generated
 
 ### Flame parameter
-- ```--not-use-face-contour', 'use_face_contour``` : not use face contour for generate visage
-- ```--not-use-3D-translation', 'use_3D_translation``` : not use 3D translation for generate visage
-- ```--shape-params``` : a number of shape parameter used
-- ```--expression-params``` : a number of expression parameter used
+- ```--not-use-face-contour``` : not use face contour for generate visage
+- ```--not-use-3D-translation``` : not use 3D translation for generate visage
 
 ### Saving
 - ```--outdir``` : path directory for output
-- ```--lmk2D-format', 'lmk2D_format``` : format used for save lmk2d. (npy and pts is supported)
+- ```--lmk2D-format``` : format used for save lmk2d. (npy and pts is supported)
 - ```--save-obj``` : enable save into file obj
 - ```--save-png``` : enable save into file png
-- ```--save-lmks3D-npy', 'save_lmks3D_npy``` : enable save landmarks 3D into file npy
-- ```--save-lmks3D-png', 'save_lmks3D_png``` : enable save landmarks 3D with visage into file png
-- ```--save-lmks2D', 'save_lmks2D``` : enable save landmarks 2D into file npy
+- ```--random-bg``` : enable random background color for renderer
+- ```--save-lmks3D-npy``` : enable save landmarks 3D into file npy
+- ```--save-lmks3D-png``` : enable save landmarks 3D with visage into file png
+- ```--save-lmks2D``` : enable save landmarks 2D into file npy
 - ```--save-markers``` : enable save markers into png file
 - ```--img-resolution``` : resolution of image
 - ```--show-window``` : show window during save png (enable if images is the screenshot or full black)
-- ```--not-pts-in-alpha', 'pts_in_alpha``` : not save landmarks/markers png version to channel alpha
+- ```--not-pts-in-alpha``` : not save landmarks/markers png version to channel alpha
+- ```--save-camera-default``` : save camera in default format
+- ```--save-camera-matrices``` : save camera in matrices format
+- ```--save-camera-json``` : save camera in json format
 
 ### Path
 - ```--flame-model-path``` : path for acess flame model
