@@ -3,7 +3,7 @@
 Go to [FLAME](https://flame.is.tue.mpg.de/)
 create account and connect
 => Download :
-- FLAME 2020 (fixed mouth, improved expressions, more data)
+- FLAME 2023 (revised eye region, improved expressions, versions w/ and w/o jaw rotation)
 - FLAME texture space (for non-commercial use only)
 
 Go to [RingNet Project](https://github.com/soubhiksanyal/RingNet/tree/master/flame_model)

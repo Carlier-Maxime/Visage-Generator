@@ -32,7 +32,7 @@ class VisageGenerator():
             MultiParamsGenerator.from_params(cfg.pose_params, cfg.device, deg2rad=True),
             MultiParamsGenerator.from_params(cfg.texture_params, cfg.device) if cfg.texturing else BaseParamsGenerator(0,0,0,cfg.device),
             MultiParamsGenerator.from_params(cfg.neck_params, cfg.device, deg2rad=True),
-            MultiParamsGenerator.from_params(cfg.eye_params, cfg.device)
+            MultiParamsGenerator.from_params(cfg.eye_params, cfg.device, deg2rad=True)
         ]
         self.batch_size = cfg.batch_size
         self.cameras = None
@@ -217,7 +217,7 @@ def click_callback_strToList(ctx:click.Context, param:click.Parameter, value):
 @click.option('--save-camera-json', type=bool, default=False, help='save camera in json format', is_flag=True)
 
 # Path
-@click.option('--flame-model-path', type=str, default='./model/generic_model.pkl', help='path for acess flame model')
+@click.option('--flame-model-path', type=str, default='./model/flame2023.pkl', help='path for acess flame model')
 @click.option('--static-landmark-embedding-path', type=str, default='./model/flame_static_embedding.pkl', help='path for static landmark embedding file')
 @click.option('--dynamic-landmark-embedding-path', type=str, default='./model/flame_dynamic_embedding.npy', help='path for dynamic landmark embedding file')
 
