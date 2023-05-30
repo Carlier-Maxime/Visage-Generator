@@ -18,7 +18,7 @@ class BaseParamsGenerator():
 
 class ParamsGenerator(BaseParamsGenerator):
     def __init__(self, nb_params:int, min_value:float, max_value:float, device:torch.device) -> None:
-        BaseParamsGenerator.__init__(self, nb_params, min_value, max_value, device)
+        super().__init__(nb_params, min_value, max_value, device)
 
     def generate(self, size) -> torch.Tensor:
         return torch.rand(size, dtype=torch.float32, device=self.device) * (self.max_value - self.min_value) + self.min_value
@@ -36,11 +36,17 @@ class ParamsGenerator(BaseParamsGenerator):
         return params.repeat(count, 1) if same else params
 
 class MultiParamsGenerator(BaseParamsGenerator):
-    def __init__(self, nb_params, min_value, max_value, device:torch.device) -> None:
+    def __init__(self, nb_params:torch.Tensor, min_value:torch.Tensor, max_value:torch.Tensor, device:torch.device) -> None:
         BaseParamsGenerator.__init__(self, nb_params, min_value, max_value, device)
         self.params_generators = []
         for i in range(len(nb_params)):
             self.params_generators.append(ParamsGenerator(nb_params[i], min_value[i], max_value[i], device))
+
+    @classmethod
+    def from_params(cls, params: torch.Tensor | list, device: torch.device, deg2rad:bool=False) -> "MultiParamsGenerator":
+        if isinstance(params, list): params = torch.tensor(params, device=device)
+        if deg2rad: return cls(params[::3].to(torch.int), params[1::3].deg2rad(), params[2::3].deg2rad(), device)
+        return cls(params[::3].to(torch.int), params[1::3], params[2::3], device)
 
     def generate(self, size) -> torch.Tensor:
         if isinstance(size, int): assert size%sum(self.nb_params)==0

@@ -24,16 +24,15 @@ radian = torch.pi / 180.0
 
 class VisageGenerator():
     def __init__(self, cfg: Config):
-        self.flame_layer = FLAME(cfg.flame_model_path, cfg.batch_size, cfg.use_face_contour, cfg.use_3D_translation, cfg.shape_params, cfg.expression_params, cfg.static_landmark_embedding_path, cfg.dynamic_landmark_embedding_path).to(cfg.device)
+        self.flame_layer = FLAME(cfg.flame_model_path, cfg.batch_size, cfg.use_face_contour, cfg.use_3D_translation, int(sum(cfg.shape_params[::3])), int(sum(cfg.expression_params[::3])), cfg.static_landmark_embedding_path, cfg.dynamic_landmark_embedding_path).to(cfg.device)
         self.device = cfg.device
-        cfg.pose_params = torch.tensor(cfg.pose_params)
         self.params_generators = [ # shape, expression, pose, texture, neck, eye
-            ParamsGenerator(cfg.shape_params, cfg.min_shape_param, cfg.max_shape_param, cfg.device),
-            ParamsGenerator(cfg.expression_params, cfg.min_expression_param, cfg.max_expression_param, cfg.device),
-            MultiParamsGenerator(cfg.pose_params[::3].to(torch.int).tolist(), (cfg.pose_params[1::3]*radian).tolist(), (cfg.pose_params[2::3]*radian).tolist(), cfg.device),
-            ParamsGenerator(50, cfg.min_texture_param, cfg.max_texture_param, cfg.device) if cfg.texturing else BaseParamsGenerator(0,0,0,cfg.device),
-            ParamsGenerator(3, cfg.min_neck_param*radian, cfg.max_neck_param*radian, cfg.device),
-            ParamsGenerator(6,0,0,cfg.device)
+            MultiParamsGenerator.from_params(cfg.shape_params, cfg.device),
+            MultiParamsGenerator.from_params(cfg.expression_params, cfg.device),
+            MultiParamsGenerator.from_params(cfg.pose_params, cfg.device, deg2rad=True),
+            MultiParamsGenerator.from_params(cfg.texture_params, cfg.device) if cfg.texturing else BaseParamsGenerator(0,0,0,cfg.device),
+            MultiParamsGenerator.from_params(cfg.neck_params, cfg.device, deg2rad=True),
+            MultiParamsGenerator.from_params(cfg.eye_params, cfg.device)
         ]
         self.batch_size = cfg.batch_size
         self.cameras = None
@@ -86,7 +85,7 @@ class VisageGenerator():
 
     def genParams(self, cfg: Config):
         print('Generate random parameters')
-        fixed = [cfg.fixed_shape, cfg.fixed_jaw, cfg.fixed_expression, cfg.fixed_texture, cfg.fixed_neck, False]
+        fixed = [cfg.fixed_shape, cfg.fixed_expression, cfg.fixed_pose, cfg.fixed_texture, cfg.fixed_neck, cfg.fixed_eye]
         return [generator.zeros(cfg.nb_faces) if cfg.zeros_params else generator.get(cfg.nb_faces, fix) for generator, fix in zip(self.params_generators, fixed)]
 
     def load_params(self, cfg: Config):
@@ -183,26 +182,22 @@ def click_callback_strToList(ctx:click.Context, param:click.Parameter, value):
 # Generator parameter
 @click.option('--input-folder', type=str, default=None, help='input folder for load parameter')
 @click.option('--zeros-params', type=bool, default=False, help='zeros for all params not loaded', is_flag=True)
-@click.option('--min-shape-param',  type=float,  default=-2,  help='minimum value for shape param')
-@click.option('--max-shape-param',  type=float,  default=2,  help='maximum value for shape param')
-@click.option('--min-expression-param',  type=float,  default=-2,  help='minimum value for expression param')
-@click.option('--max-expression-param',  type=float,  default=2,  help='maximum value for expression param')
-@click.option('--pose-params', type=str, metavar=float, default=[3,-30,30, 1,0,30, 2,-10,10], help='Pose parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6', callback=click_callback_strToList)
-@click.option('--min-texture-param',  type=float,  default=-2,  help='minimum value for texture param')
-@click.option('--max-texture-param',  type=float,  default=2,  help='maximum value for texture param')
-@click.option('--min-neck-param',  type=float,  default=-30,  help='minimum value for neck param')
-@click.option('--max-neck-param',  type=float,  default=30,  help='maximum value for neck param')
+@click.option('--shape-params', type=str, metavar=float, default=[300,-2,2], help='Shape parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==300', callback=click_callback_strToList)
+@click.option('--expression-params', type=str, metavar=float, default=[100,-2,2], help='Expression parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==100', callback=click_callback_strToList)
+@click.option('--pose-params', type=str, metavar=float, default=[3,-30,30, 1,0,30, 2,-10,10], help='Pose parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6 (min, max in degree)', callback=click_callback_strToList)
+@click.option('--texture-params', type=str, metavar=float, default=[50,-2,2], help='Texture parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==50', callback=click_callback_strToList)
+@click.option('--neck-params', type=str, metavar=float, default=[3,-30,30], help='Neck parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==3 (min, max in degree)', callback=click_callback_strToList)
+@click.option('--eye-params', type=str, metavar=float, default=[6,0,0], help='Eye parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6', callback=click_callback_strToList)
 @click.option('--fixed-shape', type=bool, default=False, help='fixed the same shape for all visage generated', is_flag=True)
 @click.option('--fixed-expression', type=bool, default=False, help='fixed the same expression for all visage generated', is_flag=True)
-@click.option('--fixed-jaw', type=bool, default=False, help='fixed the same jaw for all visage generated', is_flag=True)
+@click.option('--fixed-pose', type=bool, default=False, help='fixed the same jaw for all visage generated', is_flag=True)
 @click.option('--fixed-texture', type=bool, default=False, help='fixed the same texture for all visage generated', is_flag=True)
 @click.option('--fixed-neck', type=bool, default=False, help='fixed the same neck for all visage generated', is_flag=True)
+@click.option('--fixed-eye', type=bool, default=False, help='fixed the same eye for all visage generated', is_flag=True)
 
 # Flame parameter
 @click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=True, is_flag=True, help='not use face contour for generate visage')
 @click.option('--not-use-3D-translation', 'use_3D_translation', type=bool, default=True, is_flag=True, help='not use 3D translation for generate visage')
-@click.option('--shape-params', type=int, default=300, help='a number of shape parameter used')
-@click.option('--expression-params', type=int, default=100, help='a number of expression parameter used')
 
 # Saving
 @click.option('--outdir', type=str, default='output', help='path directory for output')
