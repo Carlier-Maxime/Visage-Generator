@@ -20,8 +20,6 @@ import util
 from Params import *
 from savers import *
 
-radian = torch.pi / 180.0
-
 class VisageGenerator():
     def __init__(self, cfg: Config):
         self.flame_layer = FLAME(cfg.flame_model_path, cfg.batch_size, cfg.use_face_contour, cfg.use_3D_translation, int(sum(cfg.shape_params[::3])), int(sum(cfg.expression_params[::3])), cfg.static_landmark_embedding_path, cfg.dynamic_landmark_embedding_path).to(cfg.device)
@@ -38,9 +36,9 @@ class VisageGenerator():
         self.cameras = None
         self.filenames = None
         self.shape_params, self.expression_params, self.pose_params, self.texture_params, self.neck_pose, self.eye_pose = self.genParams(cfg) if cfg.input_folder is None else self.load_params(cfg)
-        if cfg.pose_for_camera:
+        if cfg.rotation_for_camera:
             if self.cameras is None: self.cameras = torch.tensor(cfg.camera, device=self.device).repeat(cfg.nb_faces,1)
-            self.cameras[:,4:] = self.pose_params[:,:3] / radian
+            self.cameras[:,4:] = self.pose_params[:,:3].rad2deg()
             self.pose_params[:,:3] = 0
         self._faces = self.flame_layer.faces
         self._textures = None
@@ -54,7 +52,7 @@ class VisageGenerator():
 
         self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=cfg.camera)
         self.markers = np.load("markers.npy") if cfg.save_markers else None
-        if (cfg.save_camera_default or cfg.save_camera_matrices or cfg.save_camera_json) and not cfg.pose_for_camera: print("WARNING : pose for camera not enable, all camera is same (use --pose-for-camera) !!!")
+        if (cfg.save_camera_default or cfg.save_camera_matrices or cfg.save_camera_json) and not cfg.rotation_for_camera: print("WARNING : pose rotation for camera not enable, all camera is same (not use --not-rotation-for-camera for fix this) !!!")
         self.obj_Saver = ObjSaver(cfg.outdir+"/obj", self.render, cfg.save_obj)
         self.lmk3D_npy_Saver = NumpySaver(cfg.outdir+"/lmks/3D", cfg.save_lmks3D_npy)
         self.lmk2D_Saver = Lmks2DSaver(cfg.outdir+"/lmks/2D", self.render, cfg.save_lmks2D)
@@ -176,7 +174,6 @@ def click_callback_strToList(ctx:click.Context, param:click.Parameter, value):
 @click.option('--device',  type=str,  default='cuda',  help='choice your device for generate face. ("cpu" or "cuda")')
 @click.option('--view',  type=bool,  default=False,  help='enable view', is_flag=True)
 @click.option('--batch-size', type=int, default=32, help='number of visage generate in the same time')
-@click.option('--pose-for-camera', type=bool, default=False, help='use pose rotation parameter for camera instead of visage generation', is_flag=True)
 @click.option('--camera', type=str, metavar=float, default=[10.,0.,0.,-2.,0.,0.,0.], help='default camera for renderer [fov, tx, ty, tz, rx, ry, rz] (rotation in degree)', callback=click_callback_strToList)
 
 # Generator parameter
@@ -198,6 +195,7 @@ def click_callback_strToList(ctx:click.Context, param:click.Parameter, value):
 # Flame parameter
 @click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=True, is_flag=True, help='not use face contour for generate visage')
 @click.option('--not-use-3D-translation', 'use_3D_translation', type=bool, default=True, is_flag=True, help='not use 3D translation for generate visage')
+@click.option('--not-rotation-for-camera', 'rotation_for_camera', type=bool, default=True, is_flag=True, help='not use pose rotation parameter for camera instead of visage generation')
 
 # Saving
 @click.option('--outdir', type=str, default='output', help='path directory for output')

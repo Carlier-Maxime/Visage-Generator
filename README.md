@@ -46,7 +46,6 @@ Here are the different settings you can change:
 - ```--device``` : choice your device for generate face. ("cpu" or "cuda")
 - ```--view``` : enable view
 - ```--batch-size``` : number of visage generate in the same time
-- ```--pose-for-camera``` : use pose rotation parameter for camera instead of visage generation
 - ```--camera``` : default camera for renderer [fov, tx, ty, tz, rx, ry, rz] (rotation in degree)
 
 ### Generator parameter
@@ -68,6 +67,7 @@ Here are the different settings you can change:
 ### Flame parameter
 - ```--not-use-face-contour``` : not use face contour for generate visage
 - ```--not-use-3D-translation``` : not use 3D translation for generate visage
+- ```--not-rotation-for-camera```: not use pose rotation parameter for camera instead of visage generation
 
 ### Saving
 - ```--outdir``` : path directory for output
@@ -91,7 +91,7 @@ Here are the different settings you can change:
 - ```--static-landmark-embedding-path``` : path for static landmark embedding file
 - ```--dynamic-landmark-embedding-path``` : path for dynamic landmark embedding file
 
-You can define the parameters either by modifying the default values ​​in config.py file 
+You can define the parameters either by modifying the default values ​​in VisageGenerator.py file (@click.option(...))
 or by launching the program, for example:
 ```
 python ./VisageGenerator.py --nb-faces=1 --view --save-png --save-markers
