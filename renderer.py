@@ -7,6 +7,7 @@ import torch
 
 class Renderer():
     def __init__(self, width:int, height:int, device:torch.device, show:bool=True, camera:list=[10,0,0,-2,0,0,0]):
+        print("Init Renderer... ", end="", flush=True)
         self.device = torch.device(device)
         render_data = torch.load('render_data.pt')
         self.uvcoords = render_data['uvcoords'].to(self.device)
@@ -59,6 +60,7 @@ class Renderer():
         glEnable(GL_DEPTH_TEST)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         self._updateCamera()
+        print("Done")
 
     def __del__(self):
         glDisable(GL_TEXTURE_2D)
