@@ -57,17 +57,18 @@ Here are the different settings you can change:
 - ```--texture-params``` : Texture parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==50
 - ```--neck-params``` : Neck parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==3 (min, max in degree)
 - ```--eye-params``` : Eye parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6
+- ```--camera-params```: Camera parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==7, params order : [fov, tx, ty, tz, rx, ry, rz]. (rotation in degree)
 - ```--fixed-shape``` : fixed the same shape for all visage generated
 - ```--fixed-expression``` : fixed the same expression for all visage generated
 - ```--fixed-pose``` : fixed the same jaw for all visage generated
 - ```--fixed-texture``` : fixed the same texture for all visage generated
 - ```--fixed-neck``` : fixed the same neck for all visage generated
 - ```--fixed-eye``` : fixed the same eye for all visage generated
+- ```--fixed-cameras``` : fixed the same cameras for all visage generated
 
 ### Flame parameter
 - ```--not-use-face-contour``` : not use face contour for generate visage
 - ```--not-use-3D-translation``` : not use 3D translation for generate visage
-- ```--not-rotation-for-camera```: not use pose rotation parameter for camera instead of visage generation
 
 ### Saving
 - ```--outdir``` : path directory for output

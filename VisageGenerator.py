@@ -30,16 +30,12 @@ class VisageGenerator():
             MultiParamsGenerator.from_params(cfg.pose_params, cfg.device, deg2rad=True),
             MultiParamsGenerator.from_params(cfg.texture_params, cfg.device) if cfg.texturing else BaseParamsGenerator(0,0,0,cfg.device),
             MultiParamsGenerator.from_params(cfg.neck_params, cfg.device, deg2rad=True),
-            MultiParamsGenerator.from_params(cfg.eye_params, cfg.device, deg2rad=True)
+            MultiParamsGenerator.from_params(cfg.eye_params, cfg.device, deg2rad=True),
+            MultiParamsGenerator.from_params(cfg.camera_params, cfg.device)
         ]
         self.batch_size = cfg.batch_size
-        self.cameras = None
         self.filenames = None
-        self.shape_params, self.expression_params, self.pose_params, self.texture_params, self.neck_pose, self.eye_pose = self.genParams(cfg) if cfg.input_folder is None else self.load_params(cfg)
-        if cfg.rotation_for_camera:
-            if self.cameras is None: self.cameras = torch.tensor(cfg.camera, device=self.device).repeat(cfg.nb_faces,1)
-            self.cameras[:,4:] = self.pose_params[:,:3].rad2deg()
-            self.pose_params[:,:3] = 0
+        self.shape_params, self.expression_params, self.pose_params, self.texture_params, self.neck_pose, self.eye_pose, self.cameras = self.genParams(cfg) if cfg.input_folder is None else self.load_params(cfg)
         self._faces = self.flame_layer.faces
         self._textures = None
         if cfg.texturing:
@@ -85,15 +81,14 @@ class VisageGenerator():
 
     def genParams(self, cfg: Config):
         print('Generate random parameters')
-        fixed = [cfg.fixed_shape, cfg.fixed_expression, cfg.fixed_pose, cfg.fixed_texture, cfg.fixed_neck, cfg.fixed_eye]
+        fixed = [cfg.fixed_shape, cfg.fixed_expression, cfg.fixed_pose, cfg.fixed_texture, cfg.fixed_neck, cfg.fixed_eye, cfg.fixed_cameras]
         return [generator.zeros(cfg.nb_faces) if cfg.zeros_params else generator.get(cfg.nb_faces, fix) for generator, fix in zip(self.params_generators, fixed)]
 
     def load_params(self, cfg: Config):
         if cfg.nb_faces==-1: cfg.nb_faces = sum(len(files) for _, _, files in os.walk(cfg.input_folder))
         pbar = trange(cfg.nb_faces, desc='load params', unit='visage')
         all_params = [[] for _ in range(len(self.params_generators))]
-        keys = ['shape', 'expression', 'pose', 'texture', 'neck_pose', 'eye_pose']
-        self.cameras = torch.tensor(cfg.camera, device=self.device).repeat(cfg.nb_faces,1)
+        keys = ['shape', 'expression', 'pose', 'texture', 'neck_pose', 'eye_pose', 'cameras']
         self.filenames = []
         for root, _, filenames in os.walk(cfg.input_folder):
             for filename in filenames:
@@ -104,10 +99,6 @@ class VisageGenerator():
                         if gen is None: continue 
                         all_params[i].append(torch.tensor(params[keys[i]], device=cfg.device) if keys[i] in params else gen.zeros() if cfg.zeros_params else gen.one())
                         assert all_params[i][-1].shape[0] == gen.nbParams(), f'{keys[i]} params not a good, expected {gen.nbParams()}, but got {all_params[i][-1].shape[0]} ! (file : {filename})'
-                    if 'cam' in params: 
-                        cam = params['cam']
-                        if len(cam)==3: self.cameras[pbar.n,:3]=torch.from_numpy(cam).to(cfg.device)
-                        else: self.cameras[pbar.n]=cam
                     self.filenames.append(filename.split('.')[0])
                 pbar.update(1)
                 if pbar.n >= cfg.nb_faces: break
@@ -182,21 +173,22 @@ def click_callback_strToList(ctx:click.Context, param:click.Parameter, value):
 @click.option('--zeros-params', type=bool, default=False, help='zeros for all params not loaded', is_flag=True)
 @click.option('--shape-params', type=str, metavar=float, default=[300,-2,2], help='Shape parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==300', callback=click_callback_strToList)
 @click.option('--expression-params', type=str, metavar=float, default=[100,-2,2], help='Expression parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==100', callback=click_callback_strToList)
-@click.option('--pose-params', type=str, metavar=float, default=[3,-30,30, 1,0,30, 2,-10,10], help='Pose parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6 (min, max in degree)', callback=click_callback_strToList)
+@click.option('--pose-params', type=str, metavar=float, default=[3,0,0, 1,0,30, 2,-10,10], help='Pose parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6 (min, max in degree)', callback=click_callback_strToList)
 @click.option('--texture-params', type=str, metavar=float, default=[50,-2,2], help='Texture parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==50', callback=click_callback_strToList)
 @click.option('--neck-params', type=str, metavar=float, default=[3,-30,30], help='Neck parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==3 (min, max in degree)', callback=click_callback_strToList)
 @click.option('--eye-params', type=str, metavar=float, default=[6,0,0], help='Eye parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6', callback=click_callback_strToList)
+@click.option('--camera-params', type=str, metavar=float, default=[1,8,12, 2,-0.05,0.05, 1,-2.1,-1.9, 3,-30,30], help='Camera parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==7, params order : [fov, tx, ty, tz, rx, ry, rz]. (rotation in degree)', callback=click_callback_strToList)
 @click.option('--fixed-shape', type=bool, default=False, help='fixed the same shape for all visage generated', is_flag=True)
 @click.option('--fixed-expression', type=bool, default=False, help='fixed the same expression for all visage generated', is_flag=True)
 @click.option('--fixed-pose', type=bool, default=False, help='fixed the same jaw for all visage generated', is_flag=True)
 @click.option('--fixed-texture', type=bool, default=False, help='fixed the same texture for all visage generated', is_flag=True)
 @click.option('--fixed-neck', type=bool, default=False, help='fixed the same neck for all visage generated', is_flag=True)
 @click.option('--fixed-eye', type=bool, default=False, help='fixed the same eye for all visage generated', is_flag=True)
+@click.option('--fixed-cameras', type=bool, default=False, help='fixed the same cameras for all visage generated', is_flag=True)
 
 # Flame parameter
 @click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=True, is_flag=True, help='not use face contour for generate visage')
 @click.option('--not-use-3D-translation', 'use_3D_translation', type=bool, default=True, is_flag=True, help='not use 3D translation for generate visage')
-@click.option('--not-rotation-for-camera', 'rotation_for_camera', type=bool, default=True, is_flag=True, help='not use pose rotation parameter for camera instead of visage generation')
 
 # Saving
 @click.option('--outdir', type=str, default='output', help='path directory for output')
