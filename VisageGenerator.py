@@ -50,7 +50,6 @@ class VisageGenerator():
 
         self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=cfg.camera)
         self.markers = np.load("markers.npy") if cfg.save_markers else None
-        if (cfg.save_camera_default or cfg.save_camera_matrices or cfg.save_camera_json) and not cfg.rotation_for_camera: print("WARNING : pose rotation for camera not enable, all camera is same (not use --not-rotation-for-camera for fix this) !!!")
         self.obj_Saver = ObjSaver(cfg.outdir+"/obj", self.render, cfg.save_obj)
         self.lmk3D_npy_Saver = NumpySaver(cfg.outdir+"/lmks/3D", cfg.save_lmks3D_npy)
         self.lmk2D_Saver = Lmks2DSaver(cfg.outdir+"/lmks/2D", self.render, cfg.save_lmks2D)
