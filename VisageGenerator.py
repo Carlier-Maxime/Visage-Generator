@@ -44,7 +44,7 @@ class VisageGenerator():
             self.texture_mean = tex_space['mean'].reshape(1, -1)
             self.texture_basis = tex_space['tex_dir'].reshape(-1, 200)
             self.texture_mean = torch.from_numpy(self.texture_mean).float()[None, ...].to(self.device)
-            self.texture_basis = torch.from_numpy(self.texture_basis[:, :50]).float()[None, ...].to(self.device)
+            self.texture_basis = torch.from_numpy(self.texture_basis[:, :int(sum(cfg.texture_params[::3]))]).float()[None, ...].to(self.device)
             print("Done")
         else: self.texture_mean = None
 
@@ -173,7 +173,7 @@ def click_callback_strToList(ctx:click.Context, param:click.Parameter, value):
 @click.option('--shape-params', type=str, metavar=float, default=[300,-2,2], help='Shape parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==300', callback=click_callback_strToList)
 @click.option('--expression-params', type=str, metavar=float, default=[100,-2,2], help='Expression parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==100', callback=click_callback_strToList)
 @click.option('--pose-params', type=str, metavar=float, default=[3,0,0, 1,0,30, 2,-10,10], help='Pose parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6 (min, max in degree)', callback=click_callback_strToList)
-@click.option('--texture-params', type=str, metavar=float, default=[50,-2,2], help='Texture parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==50', callback=click_callback_strToList)
+@click.option('--texture-params', type=str, metavar=float, default=[50,-2,2], help='Texture parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==50, maximum : 200 (increase memory used)', callback=click_callback_strToList)
 @click.option('--neck-params', type=str, metavar=float, default=[3,-30,30], help='Neck parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==3 (min, max in degree)', callback=click_callback_strToList)
 @click.option('--eye-params', type=str, metavar=float, default=[6,0,0], help='Eye parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6', callback=click_callback_strToList)
 @click.option('--camera-params', type=str, metavar=float, default=[1,8,12, 2,-0.05,0.05, 1,-2.1,-1.9, 3,-30,30], help='Camera parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==7, params order : [fov, tx, ty, tz, rx, ry, rz]. (rotation in degree)', callback=click_callback_strToList)

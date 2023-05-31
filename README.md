@@ -54,7 +54,7 @@ Here are the different settings you can change:
 - ```--shape-params``` : Shape parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==300
 - ```--expression-params``` : Expression parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==100
 - ```--pose-params``` : Pose parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6 (min, max in degree)
-- ```--texture-params``` : Texture parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==50
+- ```--texture-params``` : Texture parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==50, maximum : 200 (increase memory used)
 - ```--neck-params``` : Neck parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==3 (min, max in degree)
 - ```--eye-params``` : Eye parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6
 - ```--camera-params```: Camera parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==7, params order : [fov, tx, ty, tz, rx, ry, rz]. (rotation in degree)
