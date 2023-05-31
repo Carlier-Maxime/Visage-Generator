@@ -15,6 +15,9 @@ class BaseParamsGenerator():
     
     def get(self, count:int, same:bool=False) -> torch.Tensor:
         return None
+    
+    def nbParams(self) -> int:
+        return None
 
 class ParamsGenerator(BaseParamsGenerator):
     def __init__(self, nb_params:int, min_value:float, max_value:float, device:torch.device) -> None:
@@ -34,6 +37,9 @@ class ParamsGenerator(BaseParamsGenerator):
     def get(self, count:int, same:bool=False) -> torch.Tensor:
         params = self.generate((1 if same else count, self.nb_params))
         return params.repeat(count, 1) if same else params
+    
+    def nbParams(self) -> int:
+        return self.nb_params
 
 class MultiParamsGenerator(BaseParamsGenerator):
     def __init__(self, nb_params:torch.Tensor, min_value:torch.Tensor, max_value:torch.Tensor, device:torch.device) -> None:
@@ -70,3 +76,6 @@ class MultiParamsGenerator(BaseParamsGenerator):
     def get(self, count:int, same:bool=False) -> torch.Tensor:
         params = self.generate((1 if same else count, sum(self.nb_params)))
         return params.repeat(count, 1) if same else params
+    
+    def nbParams(self) -> int:
+        return self.nb_params.sum()

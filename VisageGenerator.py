@@ -92,7 +92,7 @@ class VisageGenerator():
         if cfg.nb_faces==-1: cfg.nb_faces = sum(len(files) for _, _, files in os.walk(cfg.input_folder))
         pbar = trange(cfg.nb_faces, desc='load params', unit='visage')
         all_params = [[] for _ in range(len(self.params_generators))]
-        keys = ['shape', 'pose', 'expression', 'texture', 'neck_pose', 'eye_pose']
+        keys = ['shape', 'expression', 'pose', 'texture', 'neck_pose', 'eye_pose']
         self.cameras = torch.tensor(cfg.camera, device=self.device).repeat(cfg.nb_faces,1)
         self.filenames = []
         for root, _, filenames in os.walk(cfg.input_folder):
@@ -101,21 +101,20 @@ class VisageGenerator():
                 if filename.endswith(('.npy')):
                     params = np.load(file, allow_pickle=True).item()
                     for i, gen in enumerate(self.params_generators):
-                        if gen is not None: all_params[i].append(torch.tensor(params[keys[i]], device=cfg.device) if keys[i] in params else gen.zeros() if cfg.zeros_params else gen.one())
-                    assert all_params[0][-1].shape[0] == cfg.shape_params, f'shape params not a good, expected {cfg.shape_params}, but got {all_params[0][-1].shape[0]} ! (file : {filename})'
-                    assert all_params[2][-1].shape[0] == cfg.expression_params, f'expression params not a good, expected {cfg.expression_params}, but got {all_params[2][-1].shape[0]} ! (file : {filename})'
+                        if gen is None: continue 
+                        all_params[i].append(torch.tensor(params[keys[i]], device=cfg.device) if keys[i] in params else gen.zeros() if cfg.zeros_params else gen.one())
+                        assert all_params[i][-1].shape[0] == gen.nbParams(), f'{keys[i]} params not a good, expected {gen.nbParams()}, but got {all_params[i][-1].shape[0]} ! (file : {filename})'
                     if 'cam' in params: 
                         cam = params['cam']
-                        if len(cam)==3: self.cameras[pbar.n,:3]=cam
+                        if len(cam)==3: self.cameras[pbar.n,:3]=torch.from_numpy(cam).to(cfg.device)
                         else: self.cameras[pbar.n]=cam
                     self.filenames.append(filename.split('.')[0])
                 pbar.update(1)
                 if pbar.n >= cfg.nb_faces: break
             if pbar.n >= cfg.nb_faces: break
         pbar.close()
-        for i, element in enumerate(zip(all_params, [cfg.shape_params, 6, cfg.expression_params, 50, 3, 6])):
-            params, nb_params = element
-            if all_params[i] is not None: all_params[i] = torch.cat(params).reshape(cfg.nb_faces, nb_params)
+        for i, gen in enumerate(self.params_generators):
+            if all_params[i] is not None: all_params[i] = torch.cat(all_params[i]).reshape(cfg.nb_faces, gen.nbParams())
         return all_params
 
     def generate_batch(self, batch_index:int):
