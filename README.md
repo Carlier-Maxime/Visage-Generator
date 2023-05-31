@@ -114,3 +114,7 @@ If you use parameter ```--view``` you have different keys for manipulation view 
     - :arrow_double_down: (**Down Page**) : direction in negatif Z axis
     - :arrow_double_up: (**Up Page**) : direction in positif Z axis
     - **Enter** : add marker
+
+## Tips
+
+- If you want remove pygame welcome message use ```export PYGAME_HIDE_SUPPORT_PROMPT=hide``` in linux
