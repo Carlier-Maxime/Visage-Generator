@@ -6,7 +6,8 @@ class Config:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    def _str_to_list(value, type):
+    @staticmethod
+    def str2list(value, type_element):
         value = value[1:-1].split(",")
-        value = [type(v) for v in value]
+        value = [type_element(v) for v in value]
         return value

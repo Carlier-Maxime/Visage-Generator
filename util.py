@@ -1,9 +1,10 @@
+import os
 import random
-from typing import Tuple, List, Any
+from typing import Any
 
 import numpy as np
 import torch
-import os
+
 
 def get_vertex_markers(vertex: list, min_x: float = 0.05, min_z: float = -0.03, max_z: float = 0.15,
                        min_eye_distance: float = 0.0139, min_noise_distance: float = 0.0130) \
@@ -364,7 +365,7 @@ def get_vector_for_point(triangles: list, p: list) -> list:
     return vectors
 
 
-def read_index_opti_tri(vertices: list, faces: list, index_opti_tri: list) -> list:
+def read_index_opti_tri(vertices: torch.Tensor, faces: list, index_opti_tri: list) -> list:
     """
     retrieve the index point of the type : [index_vertex, index_triangle, percentage_vector_1, percentage_vector_2]
     Args:
@@ -384,7 +385,7 @@ def read_index_opti_tri(vertices: list, faces: list, index_opti_tri: list) -> li
     return p
 
 
-def read_all_index_opti_tri(vertices: list, faces: list, indexs_opti_tri: list) -> list:
+def read_all_index_opti_tri(vertices: torch.Tensor, faces: list, indexs_opti_tri: any) -> list:
     """
     Read all index of the type : [index_vertex, index_triangle, percentage_vector_1, percentage_vector_2]
     Args:
@@ -468,6 +469,7 @@ def vertex_normals(vertices, faces):
     normals = normals.reshape((bs, nv, 3))
     # pytorch only supports long and byte tensors for indexing
     return normals
+
 
 def gen_lst() -> None:
     """

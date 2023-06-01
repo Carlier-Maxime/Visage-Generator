@@ -37,10 +37,10 @@ from smplx.utils import Struct, to_tensor, to_np, rot_mat_to_euler
 class FLAME(nn.Module):
     """
     Given flame parameters this class generates a differentiable FLAME function
-    which outputs the a mesh and 3D facial landmarks
+    which outputs a mesh and 3D facial landmarks
     """
 
-    def __init__(self, flame_model_path, batch_size, use_face_contour, use_3D_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path):
+    def __init__(self, flame_model_path, batch_size, use_face_contour, use_3d_translation, shape_params, expression_params, static_landmark_embedding_path, dynamic_landmark_embedding_path):
         super(FLAME, self).__init__()
         print("creating the FLAME Decoder")
         with open(flame_model_path, 'rb') as f:
@@ -83,7 +83,7 @@ class FLAME(nn.Module):
 
         # Fixing 3D translation since we use translation in the image plane
 
-        self.use_3D_translation = use_3D_translation
+        self.use_3D_translation = use_3d_translation
 
         default_transl = torch.zeros([self.batch_size, 3],
                                      dtype=self.dtype, requires_grad=False)
@@ -215,7 +215,7 @@ class FLAME(nn.Module):
                 vertices: N X V X 3
                 landmarks: N X number of landmarks X 3
         """
-        size=shape_params.shape[0]
+        size = shape_params.shape[0]
         betas = torch.cat([shape_params, self.shape_betas[:size], expression_params, self.expression_betas[:size]], dim=1)
         neck_pose = (neck_pose if neck_pose is not None else self.neck_pose)
         eye_pose = (eye_pose if eye_pose is not None else self.eye_pose)
