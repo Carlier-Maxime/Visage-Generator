@@ -7,7 +7,6 @@ import torch
 
 class Renderer():
     def __init__(self, width:int, height:int, device:torch.device, show:bool=True, camera:list=[10,0,0,-2,0,0,0]):
-        print("Init Renderer... ", end="", flush=True)
         self.device = torch.device(device)
         render_data = torch.load('render_data.pt')
         self.uvcoords = render_data['uvcoords'].to(self.device)
@@ -60,7 +59,6 @@ class Renderer():
         glEnable(GL_DEPTH_TEST)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         self._updateCamera()
-        print("Done")
 
     def __del__(self):
         glDisable(GL_TEXTURE_2D)
@@ -216,31 +214,19 @@ class Renderer():
         PIL.Image.fromarray(img_visage.cpu().numpy()).transpose(PIL.Image.FLIP_TOP_BOTTOM).save(filename)
 
     def create_sphere(self, radius, slices, stacks):
-        vertex_array = torch.zeros(((stacks + 1) * (slices + 1), 3), dtype=torch.float32, device=self.device)
-        tpi = torch.tensor(torch.pi, device=self.device)
-        for i in range(stacks + 1):
-            theta = i * tpi / stacks
-            sin_theta = torch.sin(theta)
-            cos_theta = torch.cos(theta)
+        theta = torch.linspace(0,torch.pi,stacks+1, device=self.device).repeat(slices+1).reshape(stacks+1, slices+1).permute(1,0)[None]
+        phi = torch.linspace(0,2*torch.pi,slices+1, device=self.device)
+        sin_theta = torch.sin(theta)
+        x = radius * torch.cos(phi) * sin_theta
+        y = radius * torch.cos(theta)
+        z = radius * torch.sin(phi) * sin_theta
+        vertex_array = torch.cat([x,y,z], dim=0).permute(1,2,0).flatten(end_dim=1)
 
-            for j in range(slices + 1):
-                phi = j * 2 * tpi / slices
-                sin_phi = torch.sin(phi)
-                cos_phi = torch.cos(phi)
-
-                x = radius * cos_phi * sin_theta
-                y = radius * cos_theta
-                z = radius * sin_phi * sin_theta
-
-                vertex_array[i * (slices + 1) + j] = torch.tensor([x, y, z], device=self.device)
-
-        indices = torch.zeros((stacks, slices, 6), dtype=torch.int64, device=self.device)
-        for i in range(stacks):
-            for j in range(slices):
-                p1 = i * (slices + 1) + j
-                p2 = p1 + slices + 1
-                indices[i, j] = torch.tensor([p1, p2, p1 + 1, p1 + 1, p2, p2 + 1], dtype=torch.int64, device=self.device)
-
+        i = torch.arange(stacks, dtype=torch.int64, device=self.device)
+        j = torch.arange(slices, dtype=torch.int64, device=self.device)
+        p1 = ((i * (slices + 1)).repeat(j.shape).reshape(stacks, slices).permute(1,0) + j)[None]
+        p2 = p1 + slices + 1
+        indices = torch.cat([p1, p2, p1+1, p1+1, p2, p2+1],dim=0).permute(1,2,0)
         return vertex_array, indices
 
 
