@@ -62,7 +62,7 @@ class ObjSaver(Saver):
             if texture is not None:
                 f.write(f'mtllib {basename.split("/")[-1]}.mtl\n')
             np.savetxt(f, vertices, fmt='v %.6f %.6f %.6f')
-            if texture is not None:
+            if texture is None:
                 np.savetxt(f, faces + 1, fmt='f %d %d %d')
             else:
                 np.savetxt(f, uvcoords, fmt='vt %.6f %.6f')
