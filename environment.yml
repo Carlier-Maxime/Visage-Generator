@@ -17,6 +17,7 @@ dependencies:
   - pyopengl
   - tqdm
   - scipy
+  - opencv
   - pip:
     - smplx
     - chumpy

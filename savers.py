@@ -1,4 +1,4 @@
-import PIL.Image
+import cv2
 import numpy as np
 import os
 import torch
@@ -48,12 +48,12 @@ class ObjSaver(Saver):
         super().__init__(location, enable)
         self.render = renderer
 
-    def _saving(self, path: str, vertices, faces, *args: Any, texture=None, **kwds: Any):
+    def _saving(self, path: str, vertices, faces: torch.Tensor, *args: Any, texture=None, **kwds: Any):
         basename = path.split(".obj")[0]
         uvcoords = uvfaces = None
+        faces = faces.cpu().numpy()
         if texture is not None:
-            img = PIL.Image.fromarray(texture)
-            img.save(basename + "_texture.png")
+            cv2.imwrite(basename + "_texture.png", texture[:, :, [2, 1, 0]])
             uvcoords = self.render.uvcoords.cpu().numpy().reshape((-1, 2))
             uvfaces = self.render.uvfaces.cpu().numpy()
             with open(basename + ".mtl", "w") as f:

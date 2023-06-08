@@ -2,7 +2,7 @@ import pygame
 from pygame.constants import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
-import PIL.Image
+import cv2
 import torch
 
 
@@ -85,8 +85,8 @@ class Renderer:
     @staticmethod
     def _change_gl_texture(texture):
         size = texture.shape
-        image = PIL.Image.fromarray(texture, 'RGB').transpose(PIL.Image.FLIP_TOP_BOTTOM).tobytes()
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size[0], size[1], 0, GL_RGB, GL_UNSIGNED_BYTE, image)
+        image = cv2.flip(texture[:, :, [2, 1, 0]], 0).tobytes()
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size[0], size[1], 0, GL_BGR, GL_UNSIGNED_BYTE, image)
 
     def _create_gl_list(self, vertices, triangles):
         vertices = vertices[self.order_indexs[:, 1]]
@@ -135,7 +135,9 @@ class Renderer:
             if not self._poll_events():
                 break
             self._render(gl_list)
-        PIL.Image.frombytes('RGB', (self.width, self.height), glReadPixels(0, 0, self.width, self.height, GL_RGB, GL_UNSIGNED_BYTE)).transpose(PIL.Image.FLIP_TOP_BOTTOM).save("test.jpg")
+        import numpy as np
+        image = np.array(bytearray(glReadPixels(0, 0, self.width, self.height, GL_BGR, GL_UNSIGNED_BYTE))).reshape([self.height, self.width, 3])
+        cv2.imwrite('test.jpg', cv2.flip(image, 0))
 
     def _poll_event(self, e):
         if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
@@ -229,7 +231,7 @@ class Renderer:
         else:
             self._render([self.gl_list_visage], camera)
             img_visage = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
-        PIL.Image.fromarray(img_visage.cpu().numpy()).transpose(PIL.Image.FLIP_TOP_BOTTOM).save(filename)
+        cv2.imwrite(filename, cv2.flip(img_visage[:, :, [2, 1, 0, 3]].cpu().numpy(), 0))
 
     def create_sphere(self, radius, slices, stacks):
         theta = torch.linspace(0, torch.pi, stacks + 1, device=self.device).repeat(slices + 1).reshape(stacks + 1, slices + 1).permute(1, 0)[None]
@@ -346,3 +348,4 @@ if __name__ == '__main__':
     render = Renderer(1024, 1024, torch.device("cuda"))
     obj = ObjLoader.OBJ(sys.argv[1], swapyz=True)
     render.test(obj.gl_list)
+    del render
