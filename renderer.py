@@ -340,6 +340,11 @@ class Renderer:
     def get_camera(self):
         return torch.tensor([self.fov, self.tx, self.ty, self.tz, self.rx, self.ry, self.rz], device=self.device)
 
+    @staticmethod
+    def void_events():
+        for _ in pygame.event.get():
+            pass
+
 
 if __name__ == '__main__':
     import ObjLoader

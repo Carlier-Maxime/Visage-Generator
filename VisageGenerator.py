@@ -150,8 +150,9 @@ class VisageGenerator:
             self.lmk3D_png_Saver(index, basename + '.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
             self.markers_png_Saver(index, basename + '.png', vertices, texture, pts=util.read_all_index_opti_tri(vertices, self._faces, self.markers), ptsInAlpha=cfg.pts_in_alpha, camera=camera)
             self.camera_default_Saver(index, basename + '.pt', camera)
-            self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera_matrices(camera))
+            self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera_matrices(camera) if self.camera_matrices_Saver.enable else None)
             self.camera_json_Saver(index, basename, camera)
+            self.render.void_events()
 
     def save_all(self, cfg: Config):
         pbar = tqdm(total=cfg.nb_faces, desc='saving all visages', unit='visage')
