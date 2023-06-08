@@ -32,6 +32,7 @@ class Renderer:
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_NORMALIZE)
         glShadeModel(GL_SMOOTH)
+        glEnableClientState(GL_VERTEX_ARRAY)
 
         self.rotate = False
         self.rotate_z = False
@@ -41,7 +42,7 @@ class Renderer:
         glEnable(GL_TEXTURE_2D)
         glFrontFace(GL_CCW)
 
-        self.buffers = glGenBuffers(3)
+        self.buffers = glGenBuffers(5)
         glBindBuffer(GL_ARRAY_BUFFER, self.buffers[2])
         glBufferData(GL_ARRAY_BUFFER, self.uvcoords.cpu().numpy(), GL_STATIC_DRAW)
 
@@ -67,7 +68,7 @@ class Renderer:
         glDisable(GL_TEXTURE_2D)
         glDisableClientState(GL_VERTEX_ARRAY)
         glDisableClientState(GL_TEXTURE_COORD_ARRAY)
-        glDeleteBuffers(3, self.buffers)
+        glDeleteBuffers(5, self.buffers)
         glDeleteLists(self.gl_list_visage, 1)
 
     def _update_camera(self):
@@ -209,7 +210,7 @@ class Renderer:
     def save_to_image(self, filename, vertices, texture, pts=None, pts_in_alpha: bool = True, camera=None):
         self._edit_gl_list(vertices, texture)
         if pts is not None:
-            pts_gl_list = Renderer.create_spheres_gl_list(self.raw_sphere, pts)
+            pts_gl_list = self.create_spheres_gl_list(self.raw_sphere, pts)
             if pts_in_alpha:
                 self._render([self.gl_list_visage], camera)
                 img_visage = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
@@ -249,35 +250,30 @@ class Renderer:
         indices = torch.cat([p1, p2, p1 + 1, p1 + 1, p2, p2 + 1], dim=0).permute(1, 2, 0)
         return vertex_array, indices
 
-    @staticmethod
-    def create_spheres_gl_list(raw_sphere, positions, list_id=None, color=None):
+    def create_spheres_gl_list(self, raw_sphere, positions, list_id=None, color=None):
         if color is None:
             color = [0., 255., 0.]
         vertex_array, indices = raw_sphere
         nb_spheres = positions.shape[0]
-        indices = indices.clone().flatten()
+        indices = indices.flatten()
         a = torch.arange(0, vertex_array.shape[0] * nb_spheres, vertex_array.shape[0], device=indices.device)
         indices = (indices.reshape([indices.shape[0] // 3, 3]).repeat(nb_spheres, 1, 1).permute(1, 2, 0) + a).permute(2, 0, 1)
-        vertex_array = (vertex_array.clone().repeat(nb_spheres, 1, 1).permute(1, 0, 2) + positions).permute(1, 0, 2)
+        vertex_array = (vertex_array.repeat(nb_spheres, 1, 1).permute(1, 0, 2) + positions).permute(1, 0, 2)
         if list_id is None:
             list_id = glGenLists(1)
         glNewList(list_id, GL_COMPILE)
         glDisable(GL_TEXTURE_2D)
         glColor(color[0], color[1], color[2])
-        vbo = glGenBuffers(1)
-        glBindBuffer(GL_ARRAY_BUFFER, vbo)
+        glBindBuffer(GL_ARRAY_BUFFER, self.buffers[3])
         glBufferData(GL_ARRAY_BUFFER, vertex_array.cpu().numpy(), GL_STATIC_DRAW)
-        glEnableClientState(GL_VERTEX_ARRAY)
-        glBindBuffer(GL_ARRAY_BUFFER, vbo)
+        glBindBuffer(GL_ARRAY_BUFFER, self.buffers[3])
         glVertexPointer(3, GL_FLOAT, 0, None)
-        ibo = glGenBuffers(1)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.buffers[4])
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.cpu().numpy().astype('uint32'), GL_STATIC_DRAW)
         glDrawElements(GL_TRIANGLES, indices.numel(), GL_UNSIGNED_INT, None)
         glColor(1., 1., 1.)
         glEnable(GL_TEXTURE_2D)
         glEndList()
-        glDeleteBuffers(2, [vbo, ibo])
         return list_id
 
     @staticmethod
