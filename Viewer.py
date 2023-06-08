@@ -194,7 +194,7 @@ class Viewer(Renderer):
         return Renderer.create_spheres_gl_list(self.raw_sphere, lmk, self._joints_glList, [0.2, 0.2, 255])
 
     def gen_markers_gl_list(self):
-        mks = torch.tensor(np.array(read_all_index_opti_tri(self._vertices, self._faces, self._markersIndex)), device=self._device)
+        mks = read_all_index_opti_tri(self._vertices, self._faces, self._markersIndex)
         return Renderer.create_spheres_gl_list(self.raw_sphere, mks, self._markers_glList, [0.2, 255, 0.2])
 
     def add_marker(self) -> None:
@@ -208,21 +208,20 @@ class Viewer(Renderer):
 
     def save_marker(self) -> None:
         """
-        Save all markers in the numpy file.
+        Save all markers in the torch file.
         The program will keep these markers even at the next launch
         Returns: None
         """
-        np.save("markers.npy", self._markersIndex)
+        torch.save(self._markersIndex, "markers.pt")
 
     def load_marker(self):
         """
-        Load marker file (markers.npy), if file not exists return the empty numpy array
+        Load marker file (markers.pt), if file not exists return the empty tensor array
         Returns: array of all markers
         """
-        self._markersIndex = np.array([], int)
-        if not exists("markers.npy"):
-            return
-        return np.load("markers.npy")
+        if not exists("markers.pt"):
+            return torch.tensor([], device=self.device).reshape(0, 4)
+        return torch.load("markers.pt").to(self.device)
 
     def remove_marker(self) -> None:
         """

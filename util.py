@@ -64,19 +64,11 @@ def gen_vertices_file(vertices: list) -> None:
 
 def full_random_markers() -> None:
     """
-    generate a numpy array containing 150 random marker indexes and save it to a numpy file.
+    generate a torch array containing 150 random marker indexes and save it to a torch file.
     Args: None
     Return: None
     """
-    t = []
-    for i in range(5023):
-        t.append(i)
-    random.shuffle(t)
-    markers = []
-    for i in range(150):
-        markers.append(t[i])
-
-    np.save("markers.npy", markers)
+    torch.save(torch.randperm(5023)[:150], "markers.pt")
 
 
 def delete_markers(n) -> None:
@@ -100,12 +92,12 @@ def delete_markers(n) -> None:
     save_vertices(t)
 
 
-def load_vertices() -> np.array:
+def load_vertices() -> torch.Tensor:
     """
-    Load numpy file containing vertices
-    Returns: numpy array
+    Load torch file containing vertices
+    Returns: torch tensor
     """
-    return np.load("vertices.npy")
+    return torch.load("vertices.pt")
 
 
 def calc_distance_vertices(t: list, verbose: bool = False) -> list:
@@ -147,17 +139,12 @@ def save_vertices(t) -> None:
 
 def select_random_markers() -> None:
     """
-    Selection random markers and save in numpy array.
+    Selection random markers and save in torch array.
     Returns: None
     """
-    t = load_vertices()
-    markers = []
-    for e in t:
-        markers.append(e[0])
-    random.shuffle(markers)
-    markers = markers[0:150]
-
-    np.save('markers.npy', markers)
+    markers = load_vertices()[:, 0]
+    markers = markers[torch.randperm(len(markers))][:150]
+    torch.save(markers, 'markers.pt')
 
 
 def gen_directional_matrix(vertices: list, index_list: list) -> None:
@@ -216,19 +203,16 @@ def get_index_for_d(index_d: list, dist_d: list, dist: float, coo: list, coo2: l
     return -1
 
 
-def save_faces(vertex: list) -> None:
+def save_faces(vertex: torch.Tensor) -> None:
     """
     save all points corresponding to markers for all faces provided by vertex
     Args:
         vertex (list): array of all vertices for all faces
     Returns: None
     """
-    markers = np.load("markers.npy")
-    data = np.zeros([len(vertex), len(markers), 3])
-    for i in range(len(vertex)):
-        for j in range(len(markers)):
-            data[i, j, :] = vertex[i][markers[j]]
-    np.save("data.npy", data)
+    markers = torch.load("markers.pt").to(vertex.device)
+    data = vertex[torch.arange(len(vertex))][markers[torch.arange(len(markers))]]
+    torch.save(data, "data.pt")
 
 
 def get_index_for_match_points(vertices: list, faces: list, points: list, verbose: bool = False,
@@ -282,7 +266,7 @@ def get_index_for_match_points(vertices: list, faces: list, points: list, verbos
             index_triangles = get_index_triangles_match_vertex(faces, index)
             triangles = np.array(faces)[index_triangles]
             triangles = np.array(vertices)[triangles]
-            vectors = get_vector_for_point(triangles, vertices[index])
+            vectors = get_vector_for_point(triangles, vertices[index]).cpu().numpy()
             ind_vect = -1
             percentage = [0, 0]
             dist2 = dist
@@ -335,7 +319,7 @@ def get_index_triangles_match_vertex(triangles: list, index_point: int) -> list:
     return faces
 
 
-def get_vector_for_point(triangles: list, p: list) -> list:
+def get_vector_for_point(triangles: torch.Tensor, p: torch.Tensor) -> torch.Tensor:
     """
     Obtain all vector for all triangles.
     Args:
@@ -343,29 +327,15 @@ def get_vector_for_point(triangles: list, p: list) -> list:
         p (list): coo point
     Returns: array of all vector for all triangles
     """
-    vectors = []
-    for triangle in triangles:
-        t = [0, 0, 0]
-        ind = []
-        for i in range(3):
-            if p[0] == triangle[i][0] and p[1] == triangle[i][1] and p[2] == triangle[i][2]:
-                t[0] = triangle[i]
-            else:
-                ind.append(i)
-        if len(ind) > 2:
-            print("Error in getVectoForPoint in util.py ! (verify your point is vertex of triangles)")
-            exit(1)
-        t[1] = triangle[ind[0]]
-        t[2] = triangle[ind[1]]
-
-        v = []
-        for i in range(1, 3):
-            v.append([t[i][0] - p[0], t[i][1] - p[1], t[i][2] - p[2]])
-        vectors.append(v)
-    return vectors
+    mask = (triangles == p).all(dim=2)
+    assert mask.any(dim=1).all(), "Error in getVectoForPoint in util.py ! (verify your point is vertex of triangles)"
+    pts = triangles[mask]
+    assert pts.shape[0] == triangles.shape[0], "Error in getVectoForPoint in util.py ! (point must be equal one vertex per triangle)"
+    vec = triangles[~mask].reshape(triangles.shape[0], 2, 3)
+    return vec - pts
 
 
-def read_index_opti_tri(vertices: torch.Tensor, faces: list, index_opti_tri: list) -> list:
+def read_index_opti_tri(vertices: torch.Tensor, faces: torch.Tensor, index_opti_tri: list) -> torch.Tensor:
     """
     retrieve the index point of the type : [index_vertex, index_triangle, percentage_vector_1, percentage_vector_2]
     Args:
@@ -375,17 +345,15 @@ def read_index_opti_tri(vertices: torch.Tensor, faces: list, index_opti_tri: lis
 
     Returns: coordinate point for index provided
     """
-    p = vertices[int(index_opti_tri[0])].cpu().numpy()
+    p = vertices[int(index_opti_tri[0])]
     if index_opti_tri[1] != -1:
-        tri = vertices.cpu().numpy()[faces[int(index_opti_tri[1])]]
-        tmp = get_vector_for_point([tri], p)[0]
-        vectors = torch.tensor(tmp).cpu().numpy()
-        p = p + vectors[0] * index_opti_tri[2]
-        p = p + vectors[1] * index_opti_tri[3]
+        tri = vertices[faces[int(index_opti_tri[1])]]
+        vectors = get_vector_for_point(tri[None], p)[0]
+        p = p + vectors[0] * index_opti_tri[2] + vectors[1] * index_opti_tri[3]
     return p
 
 
-def read_all_index_opti_tri(vertices: torch.Tensor, faces: list, indexs_opti_tri: any) -> list:
+def read_all_index_opti_tri(vertices: torch.Tensor, faces: torch.Tensor, indexs_opti_tri: torch.Tensor | None) -> torch.Tensor | None:
     """
     Read all index of the type : [index_vertex, index_triangle, percentage_vector_1, percentage_vector_2]
     Args:
@@ -396,10 +364,16 @@ def read_all_index_opti_tri(vertices: torch.Tensor, faces: list, indexs_opti_tri
 
     Returns: array of all points. point represented by coordinate : [X, Y, Z]
     """
-    points = []
-    for indexOptiTri in indexs_opti_tri:
-        points.append(read_index_opti_tri(vertices, faces, indexOptiTri))
-    return points
+    if indexs_opti_tri is None:
+        return None
+    pts = vertices[indexs_opti_tri[:, 0].to(torch.int32)]
+    tri = vertices[faces[indexs_opti_tri[:, 1].to(torch.int32)]]
+    mask = ~(tri.permute(1, 0, 2) == pts).all(dim=2).permute(1, 0)
+    vec = (tri[mask].reshape(tri.shape[0], 2, 3).permute(1, 0, 2) - pts).permute(2, 1, 0)
+    vec[:, :, 0] *= indexs_opti_tri[:, 2]
+    vec[:, :, 1] *= indexs_opti_tri[:, 3]
+    vec = vec.permute(1, 2, 0)
+    return pts + vec[:, 0] + vec[:, 1]
 
 
 def dict2obj(d):

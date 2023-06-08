@@ -33,7 +33,7 @@ class VisageGenerator:
         self.batch_size = cfg.batch_size
         self.filenames = None
         self.shape_params, self.expression_params, self.pose_params, self.texture_params, self.neck_pose, self.eye_pose, self.cameras = self.gen_params(cfg) if cfg.input_folder is None else self.load_params(cfg)
-        self._faces = self.flame_layer.faces
+        self._faces = torch.tensor(self.flame_layer.faces.astype('int32'), device=self.device)
         self._textures = None
         if cfg.texturing:
             print("Loading Texture... ", end="", flush=True)
@@ -47,7 +47,7 @@ class VisageGenerator:
             self.texture_mean = None
 
         self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=cfg.camera)
-        self.markers = np.load("markers.npy") if cfg.save_markers else None
+        self.markers = torch.load("markers.pt").to(cfg.device) if cfg.save_markers else None
         self.obj_Saver = ObjSaver(cfg.outdir + "/obj", self.render, cfg.save_obj)
         self.lmk3D_npy_Saver = NumpySaver(cfg.outdir + "/lmks/3D", cfg.save_lmks3D_npy)
         self.lmk2D_Saver = Lmks2DSaver(cfg.outdir + "/lmks/2D", self.render, cfg.save_lmks2D)
@@ -148,7 +148,7 @@ class VisageGenerator:
             self.lmk2D_Saver(index, basename + f'.{cfg.lmk2D_format}', lmk)
             self.visage_png_Saver(index, basename + '.png', vertices, texture, camera=camera)
             self.lmk3D_png_Saver(index, basename + '.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
-            self.markers_png_Saver(index, basename + '.png', vertices, texture, pts=torch.tensor(np.array(util.read_all_index_opti_tri(vertices, self._faces, self.markers)), device=self.device) if self.markers is not None else None, ptsInAlpha=cfg.pts_in_alpha, camera=camera)
+            self.markers_png_Saver(index, basename + '.png', vertices, texture, pts=util.read_all_index_opti_tri(vertices, self._faces, self.markers), ptsInAlpha=cfg.pts_in_alpha, camera=camera)
             self.camera_default_Saver(index, basename + '.pt', camera)
             self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera_matrices(camera))
             self.camera_json_Saver(index, basename, camera)
