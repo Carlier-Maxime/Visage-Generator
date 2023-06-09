@@ -40,7 +40,7 @@ class NumpySaver(Saver):
         super().__init__(location, enable)
 
     def _saving(self, path, data, *args: Any, **kwds: Any) -> Any:
-        np.save(path, data, *args, **kwds)
+        np.save(path, data.cpu().numpy(), *args, **kwds)
 
 
 class ObjSaver(Saver):
@@ -52,6 +52,7 @@ class ObjSaver(Saver):
         basename = path.split(".obj")[0]
         uvcoords = uvfaces = None
         faces = faces.cpu().numpy()
+        vertices = vertices.cpu().numpy()
         if texture is not None:
             cv2.imwrite(basename + "_texture.png", texture[:, :, [2, 1, 0]])
             uvcoords = self.render.uvcoords.cpu().numpy().reshape((-1, 2))
