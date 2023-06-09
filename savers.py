@@ -47,28 +47,27 @@ class ObjSaver(Saver):
     def __init__(self, location, renderer: Renderer, enable: bool = True) -> None:
         super().__init__(location, enable)
         self.render = renderer
+        self.uvcoords = self.render.uvcoords.cpu().numpy().reshape((-1, 2))
+        self.uvfaces = self.render.uvfaces.cpu().numpy()
 
     def _saving(self, path: str, vertices, faces: torch.Tensor, *args: Any, texture=None, **kwds: Any):
         basename = path.split(".obj")[0]
-        uvcoords = uvfaces = None
         faces = faces.cpu().numpy()
         vertices = vertices.cpu().numpy()
         if texture is not None:
             cv2.imwrite(basename + "_texture.png", texture[:, :, [2, 1, 0]])
-            uvcoords = self.render.uvcoords.cpu().numpy().reshape((-1, 2))
-            uvfaces = self.render.uvfaces.cpu().numpy()
             with open(basename + ".mtl", "w") as f:
                 f.write(f'newmtl material_0\nmap_Kd {basename.split("/")[-1]}_texture.png\n')
         with open(path, 'w') as f:
             if texture is not None:
                 f.write(f'mtllib {basename.split("/")[-1]}.mtl\n')
-            np.savetxt(f, vertices, fmt='v %.6f %.6f %.6f')
+            np.savetxt(f, vertices, fmt='v %.6g %.6g %.6g')
             if texture is None:
                 np.savetxt(f, faces + 1, fmt='f %d %d %d')
             else:
-                np.savetxt(f, uvcoords, fmt='vt %.6f %.6f')
+                np.savetxt(f, self.uvcoords, fmt='vt %.6g %.6g')
                 f.write(f'usemtl material_0\n')
-                np.savetxt(f, np.hstack((faces + 1, uvfaces + 1))[:, [0, 3, 1, 4, 2, 5]], fmt='f %d/%d %d/%d %d/%d')
+                np.savetxt(f, np.hstack((faces, self.uvfaces))[:, [0, 3, 1, 4, 2, 5]]+1, fmt='f %d/%d %d/%d %d/%d')
 
 
 class Lmks2DSaver(Saver):
