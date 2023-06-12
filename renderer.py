@@ -314,7 +314,7 @@ class Renderer:
     def get_camera_matrices(self, camera: torch.Tensor):
         # Conversion de l'angle de champ (fov) en focale
         fov, tx, ty, tz, rx, ry, rz = camera
-        focal_length = (self.width / 16.) / torch.tan(torch.deg2rad(fov / 2.0))
+        focal_length = (self.width / (2*torch.pi)) / torch.tan(torch.deg2rad(fov / 2.0))
 
         # Calcul de la matrice intrinsèque normalisé
         intrinsic_matrix = torch.tensor([
