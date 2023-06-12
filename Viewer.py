@@ -187,15 +187,15 @@ class Viewer(Renderer):
 
     def gen_vertices_gl_list(self):
         vts = self._vertices.to(self._device)
-        return Renderer.create_spheres_gl_list(self.small_raw_sphere, vts, self._vertices_glList, [255, 0.2, 0.2])
+        return self.create_spheres_gl_list(self.small_raw_sphere, vts, self._vertices_glList, [255, 0.2, 0.2])
 
     def gen_joints_gl_list(self):
         lmk = self._lmks.to(self._device)
-        return Renderer.create_spheres_gl_list(self.raw_sphere, lmk, self._joints_glList, [0.2, 0.2, 255])
+        return self.create_spheres_gl_list(self.raw_sphere, lmk, self._joints_glList, [0.2, 0.2, 255])
 
     def gen_markers_gl_list(self):
         mks = read_all_index_opti_tri(self._vertices, self._faces, self._markersIndex)
-        return Renderer.create_spheres_gl_list(self.raw_sphere, mks, self._markers_glList, [0.2, 255, 0.2])
+        return self.create_spheres_gl_list(self.raw_sphere, mks, self._markers_glList, [0.2, 255, 0.2])
 
     def add_marker(self) -> None:
         """
