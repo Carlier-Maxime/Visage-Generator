@@ -1,3 +1,4 @@
+import numpy as np
 import pygame
 from pygame.constants import *
 from OpenGL.GL import *
@@ -207,7 +208,7 @@ class Renderer:
     def random_background(self):
         glClearColor(*torch.rand(3, device=self.device).tolist(), 1.)
 
-    def save_to_image(self, filename, vertices, texture, pts=None, pts_in_alpha: bool = True, camera=None):
+    def save_to_image(self, filename, vertices, texture, pts=None, pts_in_alpha: bool = True, camera=None, vertical_flip: bool = True):
         self._edit_gl_list(vertices, texture)
         if pts is not None:
             pts_gl_list = self.create_spheres_gl_list(self.raw_sphere, pts)
@@ -225,14 +226,16 @@ class Renderer:
                 new_colors = img_visage[green_mask]
                 new_colors[:, 3] = 0
                 img_visage[green_mask] = new_colors
+                img_visage = img_visage.cpu().numpy()
             else:
                 self._render([self.gl_list_visage, pts_gl_list], camera)
-                img_visage = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
+                img_visage = np.array(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE))).reshape([self.height, self.width, 4])
             glDeleteLists(pts_gl_list, 1)
         else:
             self._render([self.gl_list_visage], camera)
-            img_visage = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
-        cv2.imwrite(filename, cv2.flip(img_visage[:, :, [2, 1, 0, 3]].cpu().numpy(), 0))
+            img_visage = np.array(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE))).reshape([self.height, self.width, 4])
+        img = img_visage[:, :, [2, 1, 0, 3]]
+        cv2.imwrite(filename, cv2.flip(img, 0) if vertical_flip else img)
 
     def create_sphere(self, radius, slices, stacks):
         theta = torch.linspace(0, torch.pi, stacks + 1, device=self.device).repeat(slices + 1).reshape(stacks + 1, slices + 1).permute(1, 0)[None]
