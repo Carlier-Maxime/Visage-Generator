@@ -131,7 +131,7 @@ class VisageGenerator:
         for i in trange(len(self._vertices), desc='saving batch', unit='visage', leave=leave_pbar):
             vertices = self._vertices[i].to(self.device)
             lmk = self._lmks[i].to(self.device)
-            camera = self.render.get_camera() if self.cameras is None else self.cameras[i]
+            camera = self.render.get_camera() if self.cameras is None else self.cameras[self.batch_index*self.batch_size+i]
             if self._textures is None:
                 texture = None
             else:
