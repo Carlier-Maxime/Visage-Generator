@@ -456,3 +456,16 @@ def gen_lst() -> None:
             for i in range(0, len(files), 2):
                 f.write(f'{os.path.abspath(files[i])} {os.path.abspath(files[i + 1])} 200 100 600 500\n')
     os.chdir('..')
+
+def transformJSON(input_path, output_path, extension):
+    import json
+    f=open(input_path,'r')
+    a=json.load(f)
+    f.close()
+    data = {'labels': {}}
+    keys = a['labels'].keys()
+    for key in keys:
+        data['labels'][f'{key}.{extension}']=a['labels'][key]
+    f=open(output_path,'w')
+    json.dump(data,f)
+    f.close()
