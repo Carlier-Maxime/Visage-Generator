@@ -215,8 +215,7 @@ def save_faces(vertex: torch.Tensor) -> None:
     torch.save(data, "data.pt")
 
 
-def get_index_for_match_points(vertices: list, faces: list, points: list, verbose: bool = False,
-                               triangle_optimize: bool = True, pas_tri: int = 1000):
+def get_index_for_match_points(vertices: torch.Tensor, faces: torch.Tensor, points: torch.Tensor, verbose: bool = False, triangle_optimize: bool = True, nb_step: int = 1000, lr: float = 0.1):
     """
     Obtain the clues that best correspond to the points provided.
     it can be vertex indexes or more complex indexes depending on the triangle_optimize value.
@@ -237,70 +236,61 @@ def get_index_for_match_points(vertices: list, faces: list, points: list, verbos
     - [dest1, dest2, origin]
 
     Args:
-        vertices (list): array of all vertex
-        faces (list): array of all face
-        points (list): array of all points
+        vertices (Tensor): array of all vertex
+        faces (Tensor): array of all face
+        points (Tensor): array of all points
         verbose (bool): enable prompt progress
         triangle_optimize (bool): enable optimize by triangle (index to place the point in the triangle)
-        pas_tri (int): pas used for precision in placement in triangle
+        nb_step (int): number step used for optimize percentage of vector
+        lr (float): learning rate used for optimize percentage of vector
     Returns: list index of index matching points.
     """
     assert len(vertices) > 0
 
-    list_index = []
-    no_tri = 0
-    for ind in range(len(points)):
-        if verbose:
-            print(ind, "/", len(points) - 1, "points")
-        p = points[ind]
-        index = -1
-        dist = -1
-        v = []
-        for i in range(len(vertices)):
-            v = vertices[i]
-            d = np.sqrt((v[0] - p[0]) ** 2 + (v[1] - p[1]) ** 2 + (v[2] - p[2]) ** 2)
-            if dist == -1 or d < dist:
-                index = i
-                dist = d
-        if triangle_optimize:
-            index_triangles = get_index_triangles_match_vertex(faces, index)
-            triangles = np.array(faces)[index_triangles]
-            triangles = np.array(vertices)[triangles]
-            vectors = get_vector_for_point(triangles, vertices[index]).cpu().numpy()
-            ind_vect = -1
-            percentage = [0, 0]
-            dist2 = dist
-            for i in range(len(vectors)):
-                vect = np.array(vectors[i]) / pas_tri
-                perc = []
-                distance = dist
-                vert = vertices[index]
-                for j in range(len(vect)):
-                    pas = 0
-                    for k in range(1, pas_tri):
-                        v = vert + vect[j] * k
-                        d = np.sqrt((v[0] - p[0]) ** 2 + (v[1] - p[1]) ** 2 + (v[2] - p[2]) ** 2)
-                        if d <= distance:
-                            pas = k
-                            distance = d
-                        else:
-                            break
-                    perc.append(pas / pas_tri)
-                    vert = v
-                if distance < dist2:
-                    dist2 = distance
-                    ind_vect = i
-                    percentage = perc
-            if ind_vect == -1:
-                ind_tri = -1
-                no_tri += 1
-            else:
-                ind_tri = index_triangles[ind_vect]
-            list_index.append([index, ind_tri, percentage[0], percentage[1]])
-        else:
-            list_index.append(index)
-    print(no_tri, "/", len(points), " points no need triangles !")
-    return list_index
+    ind = (vertices.repeat(len(points), 1, 1).permute(1, 0, 2) - points).square().sum(dim=2).permute(1, 0).min(dim=1).indices
+    if not triangle_optimize: return ind
+    faces = faces.repeat(len(points), 1, 1)
+    tmp = (faces.permute(1, 2, 0) == ind).permute(2, 0, 1)
+    mask = tmp.any(dim=2)
+    tri = torch.arange(faces.shape[1], device=faces.device).repeat(105, 1)[mask]
+    vec = vertices[faces[mask][~tmp[mask]]]
+    vec = vec.reshape(vec.shape[0]//2, 2, 3).permute(1, 0, 2)
+    ind_repeat = torch.arange(len(points), device=mask.device).repeat_interleave(mask.sum(dim=1))
+    pts = vertices[ind][ind_repeat]
+    vec = (vec - pts).permute(1, 0, 2)
+    points = points[ind_repeat]
+    coeff = torch.zeros(len(vec), 2, dtype=torch.float32, requires_grad=True, device=pts.device)
+    optimizer = torch.optim.Adam([coeff], lr=lr)
+    pts = pts.permute(1, 0)
+    points = points.permute(1, 0)
+    vec = vec.permute(1, 2, 0)
+
+    def calc_dist(coeff, pts, vec, points):
+        coeff = coeff.clamp(0, 1)
+        pts = pts + vec[0] * coeff[:, 0] + vec[1] * coeff[:, 1]
+        return (pts - points).square().permute(1, 0).sum(dim=1).sqrt()
+
+    from tqdm import trange
+    for _ in trange(nb_step, desc='Opti Coeff Vector', unit='step', disable=not verbose):
+        optimizer.zero_grad()
+        loss = calc_dist(coeff, pts, vec, points).sum()
+        loss.backward()
+        optimizer.step()
+    del optimizer
+    coeff = coeff.requires_grad_(False).clamp(0, 1)
+
+    dist = calc_dist(coeff, pts, vec, points)
+    i = 0
+    index = []
+    for group_size in mask.sum(dim=1):
+        index.append(int(dist[i:i + group_size].argmin()) + i)
+        i += group_size
+    index = torch.tensor(index)
+    coeff = coeff[index]
+    tri = tri[index]
+    no_need_tri = int((coeff == torch.tensor([0, 0], device=coeff.device)).all(dim=1).sum())
+    print(no_need_tri, "/", len(tri), " points no need triangles !")
+    return torch.stack([ind, tri, coeff[:, 0], coeff[:, 1]]).permute(1, 0)
 
 
 def get_index_triangles_match_vertex(triangles: list, index_point: int) -> list:
