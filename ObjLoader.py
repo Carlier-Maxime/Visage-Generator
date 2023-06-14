@@ -65,13 +65,16 @@ class OBJ:
         glFrontFace(GL_CCW)
         for face in self.faces:
             vertices, normals, texture_coords, material = face
-            mtl = self.mtl_data[material]
-            if 'texture_Kd' in mtl:
-                # use diffuse texmap
-                glBindTexture(GL_TEXTURE_2D, mtl['texture_Kd'])
-            else:
-                # just use diffuse colour
-                glColor(*mtl['Kd'])
+            try:
+                mtl = self.mtl_data[material]
+                if 'texture_Kd' in mtl:
+                    # use diffuse texmap
+                    glBindTexture(GL_TEXTURE_2D, mtl['texture_Kd'])
+                else:
+                    # just use diffuse colour
+                    glColor(*mtl['Kd'])
+            except AttributeError:
+                pass
 
             glBegin(GL_POLYGON)
             for i in range(len(vertices)):
