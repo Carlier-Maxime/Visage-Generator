@@ -9,10 +9,13 @@ from Camera import *
 
 
 class Renderer:
-    def __init__(self, width: int, height: int, device: torch.device, show: bool = True, camera: torch.Tensor | None = None):
+    def __init__(self, width: int, height: int, device: torch.device, show: bool = True, camera: torch.Tensor | None = None, camera_type: str = 'default'):
         if camera is None:
             camera = torch.tensor([10, 0, 0, -2, 0, 0, 0], device=device, dtype=torch.float32)
-        self.camera = DefaultCamera(camera, width, height)
+        if camera_type == 'default':
+            self.camera = DefaultCamera(camera, width, height)
+        elif camera_type == 'vector':
+            self.camera = VectorCamera(camera, width, height)
         self.device = torch.device(device)
         render_data = torch.load('render_data.pt')
         self.uvcoords = render_data['uvcoords'].to(self.device)

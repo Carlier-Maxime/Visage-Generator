@@ -11,10 +11,10 @@ from renderer import Renderer
 
 
 class Viewer(Renderer):
-    def __init__(self, v_gen, show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True, other_objects: list = None, device="cuda", window_size=None, cameras=None):
+    def __init__(self, v_gen, show_joints: bool = False, show_vertices: bool = False, show_markers: bool = True, other_objects: list = None, device="cuda", window_size=None, cameras=None, camera_type='default'):
         if window_size is None:
             window_size = [1024, 1024]
-        Renderer.__init__(self, window_size[0], window_size[1], device)
+        Renderer.__init__(self, window_size[0], window_size[1], device, camera_type=camera_type)
         self._lmks = None
         self._vertices = None
         self._texture = None

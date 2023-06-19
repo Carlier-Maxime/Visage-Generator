@@ -47,6 +47,7 @@ Here are the different settings you can change:
 - ```--view``` : enable view
 - ```--batch-size``` : number of visage generate in the same time
 - ```--camera``` : default camera for renderer [fov, tx, ty, tz, rx, ry, rz] (rotation in degree)
+- ```--camera-type``` : camera type used for renderer (change utilisation of camera parameter) [default, vector]
 
 ### Generator parameter
 - ```--input-folder``` : input folder for load parameter

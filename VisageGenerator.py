@@ -5,6 +5,7 @@ All rights reserved.
 """
 
 import click
+import torch
 from tqdm import trange, tqdm
 
 import util
@@ -46,7 +47,7 @@ class VisageGenerator:
         else:
             self.texture_mean = None
 
-        self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=cfg.camera)
+        self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=torch.tensor(cfg.camera, device=self.device, dtype=torch.float32), camera_type=cfg.camera_type)
         self.markers = torch.load("markers.pt").to(cfg.device) if cfg.save_markers else None
         self.obj_Saver = ObjSaver(cfg.outdir + "/obj", self.render, cfg.save_obj)
         self.lmk3D_npy_Saver = NumpySaver(cfg.outdir + "/lmks/3D", cfg.save_lmks3D_npy)
@@ -61,7 +62,7 @@ class VisageGenerator:
 
     def view(self, cfg: Config, other_objects=None) -> None:
         print("Open Viewer...")
-        Viewer(self, other_objects=other_objects, device=self.device, window_size=cfg.img_resolution, cameras=self.cameras)
+        Viewer(self, other_objects=other_objects, device=self.device, window_size=cfg.img_resolution, cameras=self.cameras, camera_type=cfg.camera_type)
 
     def get_faces(self):
         return self._faces
@@ -175,6 +176,7 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--view', type=bool, default=False, help='enable view', is_flag=True)
 @click.option('--batch-size', type=int, default=32, help='number of visage generate in the same time')
 @click.option('--camera', type=str, metavar=float, default=[10., 0., 0., -2., 0., 0., 0.], help='default camera for renderer [fov, tx, ty, tz, rx, ry, rz] (rotation in degree)', callback=click_callback_str2list)
+@click.option('--camera-type', type=str, default='default', help='camera type used for renderer (change utilisation of camera parameter) [default, vector]')
 # Generator parameter
 @click.option('--input-folder', type=str, default=None, help='input folder for load parameter')
 @click.option('--zeros-params', type=bool, default=False, help='zeros for all params not loaded', is_flag=True)
