@@ -131,7 +131,8 @@ class VisageGenerator:
         for i in trange(len(self._vertices), desc='saving batch', unit='visage', leave=leave_pbar):
             vertices = self._vertices[i].to(self.device)
             lmk = self._lmks[i].to(self.device)
-            camera = self.render.get_camera() if self.cameras is None else self.cameras[self.batch_index*self.batch_size+i]
+            camera = self.render.get_camera().get_tensor() if self.cameras is None else self.cameras[self.batch_index*self.batch_size+i]
+            self.render.change_camera(camera)
             if self._textures is None:
                 texture = None
             else:
@@ -145,11 +146,11 @@ class VisageGenerator:
             self.obj_Saver(index, basename + '.obj', vertices, self._faces, texture=texture)
             self.lmk3D_npy_Saver(index, basename + '.npy', lmk)
             self.lmk2D_Saver(index, basename + f'.{cfg.lmk2D_format}', lmk)
-            self.visage_png_Saver(index, basename + '.png', vertices, texture, camera=camera, vertical_flip=cfg.vertical_flip)
-            self.lmk3D_png_Saver(index, basename + '.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, camera=camera, vertical_flip=cfg.vertical_flip)
-            self.markers_png_Saver(index, basename + '.png', vertices, texture, pts=util.read_all_index_opti_tri(vertices, self._faces, self.markers), ptsInAlpha=cfg.pts_in_alpha, camera=camera, vertical_flip=cfg.vertical_flip)
+            self.visage_png_Saver(index, basename + '.png', vertices, texture, vertical_flip=cfg.vertical_flip)
+            self.lmk3D_png_Saver(index, basename + '.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, vertical_flip=cfg.vertical_flip)
+            self.markers_png_Saver(index, basename + '.png', vertices, texture, pts=util.read_all_index_opti_tri(vertices, self._faces, self.markers), ptsInAlpha=cfg.pts_in_alpha, vertical_flip=cfg.vertical_flip)
             self.camera_default_Saver(index, basename + '.pt', camera)
-            self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera_matrices(camera) if self.camera_matrices_Saver.enable else None)
+            self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera().get_matrix() if self.camera_matrices_Saver.enable else None)
             self.camera_json_Saver(index, basename, camera)
             self.render.void_events()
 

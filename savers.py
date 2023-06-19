@@ -95,8 +95,8 @@ class VisageImageSaver(Saver):
         super().__init__(location, enable)
         self.render = renderer
 
-    def _saving(self, path, vertices, texture, *args: Any, pts=None, pts_in_alpha=True, camera=None, vertical_flip: bool = True, **kwds: Any):
-        self.render.save_to_image(path, vertices, texture, pts=pts, pts_in_alpha=pts_in_alpha, camera=camera, vertical_flip=vertical_flip)
+    def _saving(self, path, vertices, texture, *args: Any, pts=None, pts_in_alpha=True, vertical_flip: bool = True, **kwds: Any):
+        self.render.save_to_image(path, vertices, texture, pts=pts, pts_in_alpha=pts_in_alpha, vertical_flip=vertical_flip)
 
 
 class CameraJSONSaver(Saver):
@@ -119,7 +119,8 @@ class CameraJSONSaver(Saver):
             self._saving(format(index // 1000, "05d") + '/' + filename, *args, **kwds)
 
     def _saving(self, basename, camera, *args: Any, **kwds: Any):
-        intrinsic_norm, extrinsic = self.render.get_camera_matrices(camera)
+        self.render.change_camera(camera)
+        intrinsic_norm, extrinsic = self.render.get_camera().get_matrix()
         np.savetxt(self.file, torch.cat([extrinsic.flatten(), intrinsic_norm.flatten()]).view(1, -1).cpu().numpy(), '%f', delimiter=',', newline='', header=f'"{basename}": [', footer=f']', comments='')
 
     def close(self):

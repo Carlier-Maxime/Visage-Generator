@@ -5,12 +5,14 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 import cv2
 import torch
+from Camera import *
 
 
 class Renderer:
-    def __init__(self, width: int, height: int, device: torch.device, show: bool = True, camera=None):
+    def __init__(self, width: int, height: int, device: torch.device, show: bool = True, camera: torch.Tensor | None = None):
         if camera is None:
-            camera = [10, 0, 0, -2, 0, 0, 0]
+            camera = torch.tensor([10, 0, 0, -2, 0, 0, 0], device=device, dtype=torch.float32)
+        self.camera = DefaultCamera(camera, width, height)
         self.device = torch.device(device)
         render_data = torch.load('render_data.pt')
         self.uvcoords = render_data['uvcoords'].to(self.device)
@@ -38,7 +40,6 @@ class Renderer:
         self.rotate = False
         self.rotate_z = False
         self.move = False
-        self.fov, self.tx, self.ty, self.tz, self.rx, self.ry, self.rz = camera
 
         glEnable(GL_TEXTURE_2D)
         glFrontFace(GL_CCW)
@@ -63,7 +64,6 @@ class Renderer:
 
         glEnable(GL_DEPTH_TEST)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        self._update_camera()
 
     def __del__(self):
         glDisable(GL_TEXTURE_2D)
@@ -71,18 +71,6 @@ class Renderer:
         glDisableClientState(GL_TEXTURE_COORD_ARRAY)
         glDeleteBuffers(5, self.buffers)
         glDeleteLists(self.gl_list_visage, 1)
-
-    def _update_camera(self):
-        glMatrixMode(GL_PROJECTION)
-        glLoadIdentity()
-        gluPerspective(self.fov, self.width / float(self.height), 0.1, 100.0)
-        glEnable(GL_DEPTH_TEST)
-        glMatrixMode(GL_MODELVIEW)
-        glLoadIdentity()
-        glTranslate(self.tx, self.ty, self.tz)
-        glRotate(self.rx, 1, 0, 0)
-        glRotate(self.ry, 0, 1, 0)
-        glRotate(self.rz, 0, 0, 1)
 
     @staticmethod
     def _change_gl_texture(texture):
@@ -142,15 +130,20 @@ class Renderer:
         cv2.imwrite('test.jpg', cv2.flip(image, 0))
 
     def _poll_event(self, e):
+        fov, tx, ty, tz, rx, ry, rz = self.camera.get_tensor()
+
+        def update_camera():
+            self.change_camera(torch.tensor([fov, tx, ty, tz, rx, ry, rz], device=self.device))
+
         if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
             return 0
         elif e.type == MOUSEBUTTONDOWN:
             if e.button == 4:
-                self.tz = max(1, self.tz - 0.1)
-                self._update_camera()
+                tz = max(1, tz - 0.1)
+                update_camera()
             elif e.button == 5:
-                self.tz += 0.1
-                self._update_camera()
+                tz += 0.1
+                update_camera()
             elif e.button == 1:
                 self.rotate = True
             elif e.button == 3:
@@ -167,25 +160,25 @@ class Renderer:
         elif e.type == MOUSEMOTION:
             i, j = e.rel
             if self.rotate:
-                self.rx += j
-                self.ry += i
-                self._update_camera()
+                rx += j
+                ry += i
+                update_camera()
             if self.rotate_z:
-                self.rz += i
-                self._update_camera()
+                rz += i
+                update_camera()
             if self.move:
-                self.tx += i / 256
-                self.ty -= j / 256
-                self._update_camera()
+                tx += i / 256
+                ty -= j / 256
+                update_camera()
         elif e.type == KEYDOWN:
             if e.key == K_c:
-                print(f'fov: {self.fov}, tx: {self.tx}, ty: {self.ty}, tz: {self.tz}, rx: {self.rx}, ry: {self.ry}, rz: {self.rz}')
+                print(f'fov: {fov}, tx: {tx}, ty: {ty}, tz: {tz}, rx: {rx}, ry: {ry}, rz: {rz}')
             if e.key == K_KP_MINUS:
-                self.fov -= 0.1
-                self._update_camera()
+                fov -= 0.1
+                update_camera()
             if e.key == K_KP_PLUS:
-                self.fov += 0.1
-                self._update_camera()
+                fov += 0.1
+                update_camera()
         return 1
 
     def _poll_events(self):
@@ -194,13 +187,10 @@ class Renderer:
                 return 0
         return 1
 
-    def _change_camera(self, camera):
-        self.fov, self.tx, self.ty, self.tz, self.rx, self.ry, self.rz = camera
-        self._update_camera()
+    def change_camera(self, camera: torch.Tensor) -> None:
+        self.camera.set_camera(camera)
 
-    def _render(self, gl_lists, camera=None):
-        if camera is not None:
-            self._change_camera(camera)
+    def _render(self, gl_lists):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glCallLists(gl_lists)
         pygame.display.flip()
@@ -208,12 +198,12 @@ class Renderer:
     def random_background(self):
         glClearColor(*torch.rand(3, device=self.device).tolist(), 1.)
 
-    def save_to_image(self, filename, vertices, texture, pts=None, pts_in_alpha: bool = True, camera=None, vertical_flip: bool = True):
+    def save_to_image(self, filename, vertices, texture, pts=None, pts_in_alpha: bool = True, vertical_flip: bool = True):
         self._edit_gl_list(vertices, texture)
         if pts is not None:
             pts_gl_list = self.create_spheres_gl_list(self.raw_sphere, pts)
             if pts_in_alpha:
-                self._render([self.gl_list_visage], camera)
+                self._render([self.gl_list_visage])
                 img_visage = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
                 glColor(0., 0., 0.)
@@ -228,11 +218,11 @@ class Renderer:
                 img_visage[green_mask] = new_colors
                 img_visage = img_visage.cpu().numpy()
             else:
-                self._render([self.gl_list_visage, pts_gl_list], camera)
+                self._render([self.gl_list_visage, pts_gl_list])
                 img_visage = np.array(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE))).reshape([self.height, self.width, 4])
             glDeleteLists(pts_gl_list, 1)
         else:
-            self._render([self.gl_list_visage], camera)
+            self._render([self.gl_list_visage])
             img_visage = np.array(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE))).reshape([self.height, self.width, 4])
         img = img_visage[:, :, [2, 1, 0, 3]]
         cv2.imwrite(filename, cv2.flip(img, 0) if vertical_flip else img)
@@ -289,26 +279,8 @@ class Renderer:
             return int(win_x), int(win_y)
         return None
 
-    def get_camera_matrices(self, camera: torch.Tensor):
-        # Conversion de l'angle de champ (fov) en focale
-        fov, tx, ty, tz, rx, ry, rz = camera
-        focal_length = (self.width / (2*torch.pi)) / torch.tan(torch.deg2rad(fov / 2.0))
-
-        # Calcul de la matrice intrinsèque normalisé
-        intrinsic_matrix = torch.tensor([
-            [focal_length / self.width, 0, 0.5],
-            [0, focal_length / self.height, 0.5],
-            [0, 0, 1]
-        ], dtype=torch.float32, device=self.device)
-
-        extrinsic_matrix = torch.tensor(glGetFloatv(GL_MODELVIEW_MATRIX), device=self.device)
-        extrinsic_matrix[:, 3] = extrinsic_matrix[3]
-        extrinsic_matrix[3] = torch.tensor([0, 0, 0, 1], device=self.device)
-
-        return intrinsic_matrix, extrinsic_matrix
-
     def get_camera(self):
-        return torch.tensor([self.fov, self.tx, self.ty, self.tz, self.rx, self.ry, self.rz], device=self.device)
+        return self.camera
 
     @staticmethod
     def void_events():

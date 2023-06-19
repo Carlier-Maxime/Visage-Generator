@@ -139,7 +139,7 @@ class Viewer(Renderer):
         self._edit_gl_list(self._vertices.to(self._device), self._texture)
         self.update_pts()
         if self.cameras is not None:
-            self._change_camera(self.cameras[self._index])
+            self.change_camera(self.cameras[self._index])
 
     def edit_markers(self) -> None:
         """
