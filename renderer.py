@@ -289,31 +289,6 @@ class Renderer:
             return int(win_x), int(win_y)
         return None
 
-    def get_rotation_matrix(self, rx, ry, rz):
-        rotation_x = torch.deg2rad(rx)
-        rotation_y = torch.deg2rad(ry)
-        rotation_z = torch.deg2rad(rz)
-
-        rotation_matrix_x = torch.tensor([
-            [1, 0, 0],
-            [0, torch.cos(rotation_x), -torch.sin(rotation_x)],
-            [0, torch.sin(rotation_x), torch.cos(rotation_x)]
-        ], dtype=torch.float32, device=self.device)
-
-        rotation_matrix_y = torch.tensor([
-            [torch.cos(rotation_y), 0, torch.sin(rotation_y)],
-            [0, 1, 0],
-            [-torch.sin(rotation_y), 0, torch.cos(rotation_y)]
-        ], dtype=torch.float32, device=self.device)
-
-        rotation_matrix_z = torch.tensor([
-            [torch.cos(rotation_z), -torch.sin(rotation_z), 0],
-            [torch.sin(rotation_z), torch.cos(rotation_z), 0],
-            [0, 0, 1]
-        ], dtype=torch.float32, device=self.device)
-
-        return torch.matmul(torch.matmul(rotation_matrix_z, rotation_matrix_y), rotation_matrix_x)
-
     def get_camera_matrices(self, camera: torch.Tensor):
         # Conversion de l'angle de champ (fov) en focale
         fov, tx, ty, tz, rx, ry, rz = camera
@@ -326,13 +301,9 @@ class Renderer:
             [0, 0, 1]
         ], dtype=torch.float32, device=self.device)
 
-        # Calcul de la matrice d'extrinsèques
-        rotation_matrix = self.get_rotation_matrix(rx, ry, rz)
-        translation = torch.tensor([tx, ty, tz], dtype=torch.float32, device=self.device)
-
-        extrinsic_matrix = torch.eye(4, dtype=torch.float32, device=self.device)
-        extrinsic_matrix[:3, :3] = rotation_matrix
-        extrinsic_matrix[:3, 3] = translation
+        extrinsic_matrix = torch.tensor(glGetFloatv(GL_MODELVIEW_MATRIX), device=self.device)
+        extrinsic_matrix[:, 3] = extrinsic_matrix[3]
+        extrinsic_matrix[3] = torch.tensor([0, 0, 0, 1], device=self.device)
 
         return intrinsic_matrix, extrinsic_matrix
 
