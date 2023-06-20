@@ -140,10 +140,10 @@ class VectorCamera(BaseCamera):
             self.phi += 1e-5
         elif self.phi == torch.pi:
             self.phi -= 1e-5
-        self.origin = torch.zeros(3, device=self.fov.device)
-        self.origin[0] = self.radius * torch.sin(self.phi) * torch.cos(torch.pi - self.theta)
-        self.origin[2] = self.radius * torch.sin(self.phi) * torch.sin(torch.pi - self.theta)
-        self.origin[1] = self.radius * torch.cos(self.phi)
+        sin_phi = torch.sin(self.phi)
+        cos_theta = torch.cos(torch.pi - self.theta)
+        sin_theta = torch.sin(torch.pi - self.theta)
+        self.origin = torch.tensor([self.radius*sin_phi*cos_theta,  self.radius*torch.cos(self.phi),  self.radius*sin_phi*sin_theta], device=self.fov.device)
         self.forward_vector = self.lookAt - self.origin
         self.forward_vector = torch.nn.functional.normalize(self.forward_vector, p=2, dim=0)
         self.up_vector = torch.tensor([0, 1, 0], dtype=torch.float32, device=self.origin.device)
