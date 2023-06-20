@@ -78,11 +78,14 @@ class DefaultCamera(BaseCamera):
         self.tensor = camera
         self._update()
 
+    def __str__(self):
+        return f'fov: {self.fov}, tx: {self.tx}, ty: {self.ty}, tz: {self.tz}, rx: {self.rx}, ry: {self.ry}, rz: {self.rz}'
+
 
 class VectorCamera(BaseCamera):
     def __init__(self, camera: torch.Tensor, width, height):
         super().__init__(camera, width, height)
-        self.fov = self.lookAtX = self.lookAtY = self.radius = self.theta = self.phi = self.origin = self.forward_vector = self.up_vector = self.right_vector = None
+        self.fov = self.lookAt = self.radius = self.theta = self.phi = self.origin = self.forward_vector = self.up_vector = self.right_vector = None
         self.set_camera(camera)
 
     def _update(self) -> None:
@@ -94,7 +97,8 @@ class VectorCamera(BaseCamera):
         glLoadIdentity()
         ox, oy, oz = self.origin
         ux, uy, uz = -self.up_vector
-        gluLookAt(ox, oy, oz, self.lookAtX, self.lookAtY, 0, ux, uy, uz)
+        ax, ay, az = self.lookAt
+        gluLookAt(ox, oy, oz, ax, ay, az, ux, uy, uz)
         glFlush()
 
     def get_matrix(self) -> tuple[Tensor, Tensor]:
@@ -105,7 +109,8 @@ class VectorCamera(BaseCamera):
         return intrinsic_matrix, matrix
 
     def set_camera(self, camera: torch.Tensor) -> None:
-        self.fov, self.lookAtX, self.lookAtY, self.radius, self.phi, self.theta, _ = camera
+        self.fov, self.radius, self.phi, self.theta = camera[[0, 4, 5, 6]]
+        self.lookAt = camera[1:4]
         self.tensor = camera
         self.theta = torch.deg2rad(self.theta)
         self.phi = torch.deg2rad(self.phi)
@@ -117,9 +122,12 @@ class VectorCamera(BaseCamera):
         self.origin[0] = self.radius * torch.sin(self.phi) * torch.cos(torch.pi - self.theta)
         self.origin[2] = self.radius * torch.sin(self.phi) * torch.sin(torch.pi - self.theta)
         self.origin[1] = self.radius * torch.cos(self.phi)
-        self.forward_vector = torch.tensor([self.lookAtX, self.lookAtY, 0], device=self.fov.device, dtype=torch.float32) - self.origin
+        self.forward_vector = self.lookAt - self.origin
         self.forward_vector = torch.nn.functional.normalize(self.forward_vector, p=2, dim=0)
         self.up_vector = torch.tensor([0, 1, 0], dtype=torch.float32, device=self.origin.device)
         self.right_vector = -torch.nn.functional.normalize(torch.cross(self.up_vector, self.forward_vector, dim=-1), p=2, dim=0)
         self.up_vector = torch.nn.functional.normalize(torch.cross(self.forward_vector, self.right_vector, dim=-1), p=2, dim=0)
         self._update()
+
+    def __str__(self):
+        return f'fov: {self.fov}, lookAt : {self.lookAt}, radius : {self.radius}, phi : {self.phi}, theta : {self.theta}'

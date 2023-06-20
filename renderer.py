@@ -174,7 +174,7 @@ class Renderer:
                 update_camera()
         elif e.type == KEYDOWN:
             if e.key == K_c:
-                print(f'fov: {fov}, tx: {tx}, ty: {ty}, tz: {tz}, rx: {rx}, ry: {ry}, rz: {rz}')
+                print(self.camera)
             if e.key == K_KP_MINUS:
                 fov -= 0.1
                 update_camera()
