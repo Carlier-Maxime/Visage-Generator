@@ -46,8 +46,8 @@ class VisageGenerator:
             print("Done")
         else:
             self.texture_mean = None
-
-        self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=torch.tensor(cfg.camera, device=self.device, dtype=torch.float32), camera_type=cfg.camera_type)
+        self.default_camera = torch.tensor(cfg.camera, device=self.device, dtype=torch.float32)
+        self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=self.default_camera, camera_type=cfg.camera_type)
         self.markers = torch.load("markers.pt").to(cfg.device) if cfg.save_markers else None
         self.obj_Saver = ObjSaver(cfg.outdir + "/obj", self.render, cfg.save_obj)
         self.lmk3D_npy_Saver = NumpySaver(cfg.outdir + "/lmks/3D", cfg.save_lmks3D_npy)
@@ -132,7 +132,7 @@ class VisageGenerator:
         for i in trange(len(self._vertices), desc='saving batch', unit='visage', leave=leave_pbar):
             vertices = self._vertices[i].to(self.device)
             lmk = self._lmks[i].to(self.device)
-            camera = self.render.get_camera().get_tensor() if self.cameras is None else self.cameras[self.batch_index*self.batch_size+i]
+            camera = self.default_camera if self.cameras is None else self.cameras[self.batch_index*self.batch_size+i]
             self.render.change_camera(camera)
             if self._textures is None:
                 texture = None

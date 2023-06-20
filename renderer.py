@@ -132,55 +132,9 @@ class Renderer:
         cv2.imwrite('test.jpg', cv2.flip(image, 0))
 
     def _poll_event(self, e):
-        fov, tx, ty, tz, rx, ry, rz = self.camera.get_tensor()
-
-        def update_camera():
-            self.change_camera(torch.tensor([fov, tx, ty, tz, rx, ry, rz], device=self.device))
-
         if e.type == QUIT or (e.type == KEYDOWN and e.key == K_ESCAPE):
             return 0
-        elif e.type == MOUSEBUTTONDOWN:
-            if e.button == 4:
-                tz = max(1, tz - 0.1)
-                update_camera()
-            elif e.button == 5:
-                tz += 0.1
-                update_camera()
-            elif e.button == 1:
-                self.rotate = True
-            elif e.button == 3:
-                self.move = True
-            elif e.button == 2:
-                self.rotate_z = True
-        elif e.type == MOUSEBUTTONUP:
-            if e.button == 1:
-                self.rotate = False
-            elif e.button == 3:
-                self.move = False
-            elif e.button == 2:
-                self.rotate_z = False
-        elif e.type == MOUSEMOTION:
-            i, j = e.rel
-            if self.rotate:
-                rx += j
-                ry += i
-                update_camera()
-            if self.rotate_z:
-                rz += i
-                update_camera()
-            if self.move:
-                tx += i / 256
-                ty -= j / 256
-                update_camera()
-        elif e.type == KEYDOWN:
-            if e.key == K_c:
-                print(self.camera)
-            if e.key == K_KP_MINUS:
-                fov -= 0.1
-                update_camera()
-            if e.key == K_KP_PLUS:
-                fov += 0.1
-                update_camera()
+        self.camera.poll_event(e)
         return 1
 
     def _poll_events(self):
