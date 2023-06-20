@@ -128,7 +128,6 @@ class Renderer:
             if not self._poll_events():
                 break
             self._render(gl_list)
-        import numpy as np
         image = np.array(bytearray(glReadPixels(0, 0, self.width, self.height, GL_BGR, GL_UNSIGNED_BYTE))).reshape([self.height, self.width, 3])
         cv2.imwrite('test.jpg', cv2.flip(image, 0))
 

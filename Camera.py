@@ -75,6 +75,7 @@ class DefaultCamera(BaseCamera):
 
     def set_camera(self, camera: torch.Tensor) -> None:
         self.fov, self.tx, self.ty, self.tz, self.rx, self.ry, self.rz = camera
+        self.tensor = camera
         self._update()
 
 
@@ -92,7 +93,7 @@ class VectorCamera(BaseCamera):
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
         ox, oy, oz = self.origin
-        ux, uy, uz = self.up_vector
+        ux, uy, uz = -self.up_vector
         gluLookAt(ox, oy, oz, self.lookAtX, self.lookAtY, 0, ux, uy, uz)
         glFlush()
 
@@ -105,6 +106,7 @@ class VectorCamera(BaseCamera):
 
     def set_camera(self, camera: torch.Tensor) -> None:
         self.fov, self.lookAtX, self.lookAtY, self.radius, self.phi, self.theta, _ = camera
+        self.tensor = camera
         self.theta = torch.deg2rad(self.theta)
         self.phi = torch.deg2rad(self.phi)
         if self.phi == 0:
