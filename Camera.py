@@ -9,12 +9,12 @@ from pygame.constants import *
 
 
 def get_intrinsic_matrix(self):
-    focal_length = (self.width / (2 * torch.pi)) / torch.tan(torch.deg2rad(self.fov / 2.0))
+    focal_length = 1 / (torch.tan(torch.deg2rad(self.fov)) * 1.414)
 
     # Calcul de la matrice intrinsèque normalisé
     intrinsic_matrix = torch.tensor([
-        [focal_length / self.width, 0, 0.5],
-        [0, focal_length / self.height, 0.5],
+        [focal_length, 0, 0.5],
+        [0, focal_length, 0.5],
         [0, 0, 1]
     ], dtype=torch.float32, device=self.fov.device)
     return intrinsic_matrix
@@ -131,7 +131,7 @@ class DefaultCamera(BaseCamera):
 class VectorCamera(BaseCamera):
     def __init__(self, camera: torch.Tensor, width, height):
         super().__init__(camera, width, height)
-        self.fov = self.lookAt = self.radius = self.theta = self.phi = self.origin = self.forward_vector = self.up_vector = self.right_vector = None
+        self.fov = self.lookAt = self.radius = self.theta = self.phi = self.eyePoint = self.forward_vector = self.up_vector = self.right_vector = None
         self.rotate = self.move_z = self.move = False
         self.set_camera(camera)
 
@@ -143,10 +143,10 @@ class VectorCamera(BaseCamera):
         sin_phi = torch.sin(self.phi)
         cos_theta = torch.cos(torch.pi - self.theta)
         sin_theta = torch.sin(torch.pi - self.theta)
-        self.origin = torch.tensor([self.radius*sin_phi*cos_theta,  self.radius*torch.cos(self.phi),  self.radius*sin_phi*sin_theta], device=self.fov.device)
-        self.forward_vector = self.lookAt - self.origin
+        self.eyePoint = torch.tensor([self.radius * sin_phi * cos_theta, self.radius * torch.cos(self.phi), self.radius * sin_phi * sin_theta], device=self.fov.device)
+        self.forward_vector = self.lookAt - self.eyePoint
         self.forward_vector = torch.nn.functional.normalize(self.forward_vector, p=2, dim=0)
-        self.up_vector = torch.tensor([0, 1, 0], dtype=torch.float32, device=self.origin.device)
+        self.up_vector = torch.tensor([0, 1, 0], dtype=torch.float32, device=self.eyePoint.device)
         self.right_vector = -torch.nn.functional.normalize(torch.cross(self.up_vector, self.forward_vector, dim=-1), p=2, dim=0)
         self.up_vector = torch.nn.functional.normalize(torch.cross(self.forward_vector, self.right_vector, dim=-1), p=2, dim=0)
 
@@ -156,16 +156,16 @@ class VectorCamera(BaseCamera):
         glEnable(GL_DEPTH_TEST)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        ox, oy, oz = self.origin
+        ex, ey, ez = self.eyePoint
         ux, uy, uz = -self.up_vector
         ax, ay, az = self.lookAt
-        gluLookAt(ox, oy, oz, ax, ay, az, ux, uy, uz)
+        gluLookAt(ex, ey, ez, ax, ay, az, ux, uy, uz)
 
     def get_matrix(self) -> tuple[Tensor, Tensor]:
         intrinsic_matrix = get_intrinsic_matrix(self)
-        matrix = torch.eye(4, device=self.origin.device)
+        matrix = torch.eye(4, device=self.eyePoint.device)
         matrix[:3, :3] = torch.stack((self.right_vector, self.up_vector, self.forward_vector), dim=-1)
-        matrix[:3, 3] = self.origin
+        matrix[:3, 3] = self.eyePoint
         return intrinsic_matrix, matrix
 
     def set_camera(self, camera: torch.Tensor) -> None:
