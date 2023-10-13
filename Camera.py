@@ -22,6 +22,7 @@ def get_intrinsic_matrix(self):
 
 class BaseCamera:
     def __init__(self, camera: torch.Tensor, width: int, height: int):
+        self.aspect_ratio = None
         self.width = self.height = None
         self.set_size(width, height)
 
@@ -40,6 +41,7 @@ class BaseCamera:
     def set_size(self, width: int, height: int) -> None:
         self.width = width
         self.height = height
+        self.aspect_ratio = self.width / float(self.height)
 
     def poll_event(self, e):
         pass
@@ -56,7 +58,7 @@ class DefaultCamera(BaseCamera):
     def _update(self) -> None:
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(self.fov, self.width / float(self.height), 0.1, 100.0)
+        gluPerspective(self.fov, self.aspect_ratio, 0.1, 100.0)
         glEnable(GL_DEPTH_TEST)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
@@ -133,33 +135,26 @@ class VectorCamera(BaseCamera):
         super().__init__(camera, width, height)
         self.fov = self.lookAt = self.radius = self.theta = self.phi = self.eyePoint = self.forward_vector = self.up_vector = self.right_vector = None
         self.rotate = self.move_z = self.move = False
+        self._default_up_vector = torch.tensor([0, 1, 0], dtype=torch.float32, device=camera.device)
         self.set_camera(camera)
 
     def _update(self) -> None:
-        if self.phi == 0:
-            self.phi += 1e-5
-        elif self.phi == torch.pi:
-            self.phi -= 1e-5
+        self.phi += 1e-5 if self.phi == 0 else -1e-5 if self.phi == torch.pi else 0
         sin_phi = torch.sin(self.phi)
         cos_theta = torch.cos(torch.pi - self.theta)
         sin_theta = torch.sin(torch.pi - self.theta)
         self.eyePoint = torch.tensor([self.radius * sin_phi * cos_theta, self.radius * torch.cos(self.phi), self.radius * sin_phi * sin_theta], device=self.fov.device)
-        self.forward_vector = self.lookAt - self.eyePoint
-        self.forward_vector = torch.nn.functional.normalize(self.forward_vector, p=2, dim=0)
-        self.up_vector = torch.tensor([0, 1, 0], dtype=torch.float32, device=self.eyePoint.device)
-        self.right_vector = -torch.nn.functional.normalize(torch.cross(self.up_vector, self.forward_vector, dim=-1), p=2, dim=0)
+        self.forward_vector = torch.nn.functional.normalize(self.lookAt - self.eyePoint, p=2, dim=0)
+        self.right_vector = -torch.nn.functional.normalize(torch.cross(self._default_up_vector, self.forward_vector, dim=-1), p=2, dim=0)
         self.up_vector = torch.nn.functional.normalize(torch.cross(self.forward_vector, self.right_vector, dim=-1), p=2, dim=0)
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(self.fov, self.width / float(self.height), 0.1, 100.0)
+        gluPerspective(self.fov, self.aspect_ratio, 0.1, 100.0)
         glEnable(GL_DEPTH_TEST)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
-        ex, ey, ez = self.eyePoint
-        ux, uy, uz = -self.up_vector
-        ax, ay, az = self.lookAt
-        gluLookAt(ex, ey, ez, ax, ay, az, ux, uy, uz)
+        gluLookAt(*self.eyePoint, *self.lookAt, *-self.up_vector)
 
     def get_matrix(self) -> tuple[Tensor, Tensor]:
         intrinsic_matrix = get_intrinsic_matrix(self)
