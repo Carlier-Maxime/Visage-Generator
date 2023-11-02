@@ -11,7 +11,6 @@ from pygame.constants import *
 def get_intrinsic_matrix(self):
     focal_length = 1 / (torch.tan(torch.deg2rad(self.fov)) * 1.414)
 
-    # Calcul de la matrice intrinsèque normalisé
     intrinsic_matrix = torch.tensor([
         [focal_length, 0, 0.5],
         [0, focal_length, 0.5],

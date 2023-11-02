@@ -22,12 +22,12 @@ conda env create -f environment.yml
 conda activate vgen
 ```
 
-if you not use anaconda or miniconda then can be install manually package with pip (information for name packages required is in environment.yml, dependencies section)
-if you are any problem during installation with conda, use etc/full_environment.yml instead of environment.yml. (full_environment.yml is complete conda environment detail used for developement Visage-Generator)
+if you not use anaconda or miniconda then can be installed manually package with pip (information for name packages required is in environment.yml, dependencies section)
+if you are any problem during installation with conda, use etc/full_environment.yml instead of environment.yml. (full_environment.yml is complete conda environment detail used for development Visage-Generator)
 
 ### Download Models
 
-The information necessary for the download is indecate in the readme.md of the model folder or in the [link](https://github.com/Carlier-Maxime/Visage-Generator/blob/master/model/readme.md).
+The information necessary for the download is indicate in the readme.md of the model folder or in the [link](https://github.com/Carlier-Maxime/Visage-Generator/blob/master/model/readme.md).
 
 ### Execute **VisageGenerator.py**
 
@@ -73,7 +73,7 @@ Here are the different settings you can change:
 
 ### Saving
 - ```--outdir``` : path directory for output
-- ```--lmk2D-format``` : format used for save lmk2d. (npy and pts is supported)
+- ```--lmk2D-format``` : format used for save landmarks 2D. (npy and pts is supported)
 - ```--save-obj``` : enable save into file obj
 - ```--save-png``` : enable save into file png
 - ```--random-bg``` : enable random background color for renderer
@@ -89,7 +89,7 @@ Here are the different settings you can change:
 - ```--save-camera-json``` : save camera in json format
 
 ### Path
-- ```--flame-model-path``` : path for acess flame model
+- ```--flame-model-path``` : path for access flame model
 - ```--static-landmark-embedding-path``` : path for static landmark embedding file
 - ```--dynamic-landmark-embedding-path``` : path for dynamic landmark embedding file
 
@@ -103,17 +103,17 @@ python ./VisageGenerator.py --nb-faces=1 --view --save-png --save-markers
 ## Keys
 If you use parameter ```--view``` you have different keys for manipulation view and data :
 - **V** : Show Vertices
-- **B** : Show Marker/Balises (Not default marker)
-- **J** : Show Joints
-- **E** : Edit Marker/Balises (Beta)
-- **S** : Save balises
-- **L** : Load balises
+- **B** : Show Marker (Not default landmarks)
+- **J** : Show Joints (that default landmarks)
+- **E** : Edit Marker (Beta)
+- **S** : Save markers
+- **L** : Load markers
 - **Edit marker (enable)** :
-    - :arrow_left: (**Left arrow**) : direction in negatif X axis
+    - :arrow_left: (**Left arrow**) : direction in negative X axis
     - :arrow_right: (**Right arrow**) : direction in positif X axis
-    - :arrow_down: (**Down arrow**) : direction in negatif Y axis
+    - :arrow_down: (**Down arrow**) : direction in negative Y axis
     - :arrow_up: (**Up arrow**) : direction in positif Y axis
-    - :arrow_double_down: (**Down Page**) : direction in negatif Z axis
+    - :arrow_double_down: (**Down Page**) : direction in negative Z axis
     - :arrow_double_up: (**Up Page**) : direction in positif Z axis
     - **Enter** : add marker
 

@@ -71,9 +71,9 @@ class FLAME(nn.Module):
                                                                  requires_grad=False))
 
         # Eyeball and neck rotation
-        default_eyball_pose = torch.zeros([self.batch_size, 6],
-                                          dtype=self.dtype, requires_grad=False)
-        self.register_parameter('eye_pose', nn.Parameter(default_eyball_pose,
+        default_eyeball_pose = torch.zeros([self.batch_size, 6],
+                                           dtype=self.dtype, requires_grad=False)
+        self.register_parameter('eye_pose', nn.Parameter(default_eyeball_pose,
                                                          requires_grad=False))
 
         default_neck_pose = torch.zeros([self.batch_size, 3],

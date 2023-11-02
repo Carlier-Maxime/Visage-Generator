@@ -215,7 +215,7 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--save-camera-matrices', type=bool, default=False, help='save camera in matrices format', is_flag=True)
 @click.option('--save-camera-json', type=bool, default=False, help='save camera in json format', is_flag=True)
 # Path
-@click.option('--flame-model-path', type=str, default='./model/flame2023.pkl', help='path for acess flame model')
+@click.option('--flame-model-path', type=str, default='./model/flame2023.pkl', help='path for access flame model')
 @click.option('--static-landmark-embedding-path', type=str, default='./model/flame_static_embedding.pkl', help='path for static landmark embedding file')
 @click.option('--dynamic-landmark-embedding-path', type=str, default='./model/flame_dynamic_embedding.npy', help='path for dynamic landmark embedding file')
 def main(**kwargs):
