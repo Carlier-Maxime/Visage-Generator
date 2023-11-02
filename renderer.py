@@ -225,14 +225,13 @@ class Renderer:
         glEndList()
         return list_id
 
-    @staticmethod
-    def get_coord_2d(point3d):
+    def get_coord_2d(self, point3d, vertical_flip: bool = True):
         viewport = glGetIntegerv(GL_VIEWPORT)
         model_view = glGetDoublev(GL_MODELVIEW_MATRIX)
         projection_matrix = glGetDoublev(GL_PROJECTION_MATRIX)
         win_x, win_y, win_z = gluProject(point3d[0], point3d[1], point3d[2], model_view, projection_matrix, viewport)
         if 0 <= win_z <= 1:
-            return int(win_x), int(win_y)
+            return int(win_x), (self.height-int(win_y)-1) if vertical_flip else int(win_y)
         return None
 
     def get_camera(self):

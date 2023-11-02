@@ -146,7 +146,7 @@ class VisageGenerator:
                 self.render.random_background()
             self.obj_Saver(index, basename + '.obj', vertices, self._faces, texture=texture)
             self.lmk3D_npy_Saver(index, basename + '.npy', lmk)
-            self.lmk2D_Saver(index, basename + f'.{cfg.lmk2D_format}', lmk)
+            self.lmk2D_Saver(index, basename + f'.{cfg.lmk2D_format}', lmk, vertical_flip=cfg.vertical_flip)
             self.visage_png_Saver(index, basename + '.png', vertices, texture, vertical_flip=cfg.vertical_flip)
             self.lmk3D_png_Saver(index, basename + '.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, vertical_flip=cfg.vertical_flip)
             self.markers_png_Saver(index, basename + '.png', vertices, texture, pts=util.read_all_index_opti_tri(vertices, self._faces, self.markers), ptsInAlpha=cfg.pts_in_alpha, vertical_flip=cfg.vertical_flip)

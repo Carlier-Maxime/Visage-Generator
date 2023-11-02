@@ -75,10 +75,10 @@ class Lmks2DSaver(Saver):
         super().__init__(location, enable)
         self.render = renderer
 
-    def _saving(self, path: str, lmks, *args: Any, **kwds: Any):
+    def _saving(self, path: str, lmks, *args: Any, vertical_flip: bool = True, **kwds: Any):
         lmks_2d = []
         for p in lmks:
-            lmks_2d.append(Renderer.get_coord_2d(p))
+            lmks_2d.append(self.render.get_coord_2d(p, vertical_flip=vertical_flip))
         if path.endswith('.npy'):
             np.save(path, lmks_2d[17:])
         elif path.endswith('.pts'):
