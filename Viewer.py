@@ -38,7 +38,7 @@ class Viewer(Renderer):
                 vertices = torch.tensor(vertices, device=device)
                 triangles = torch.tensor(triangles, device=device)
                 if len(triangles) == 0:
-                    self.oobj_gl_list.append(self.create_spheres_gl_list(vertices))
+                    self.oobj_gl_list.append(self.create_spheres_gl_list(vertices, torch.tensor([0, 0, 0], device=device)))
                 else:
                     self._create_gl_list(vertices, triangles)
 
@@ -134,7 +134,7 @@ class Viewer(Renderer):
         self._index = i
         self._vertices, self._texture, self._lmks = self.vGen.get_visage(self._index)
         if self._texture is not None:
-            self._texture = self._texture * 255
+            self._texture *= 255
             self._texture = self._texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
         self._edit_gl_list(self._vertices.to(self._device), self._texture)
         self.update_pts()

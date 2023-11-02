@@ -248,13 +248,14 @@ def get_index_for_match_points(vertices: torch.Tensor, faces: torch.Tensor, poin
     assert len(vertices) > 0
 
     ind = (vertices.repeat(len(points), 1, 1).permute(1, 0, 2) - points).square().sum(dim=2).permute(1, 0).min(dim=1).indices
-    if not triangle_optimize: return ind
+    if not triangle_optimize:
+        return ind
     faces = faces.repeat(len(points), 1, 1)
     tmp = (faces.permute(1, 2, 0) == ind).permute(2, 0, 1)
     mask = tmp.any(dim=2)
     tri = torch.arange(faces.shape[1], device=faces.device).repeat(105, 1)[mask]
     vec = vertices[faces[mask][~tmp[mask]]]
-    vec = vec.reshape(vec.shape[0]//2, 2, 3).permute(1, 0, 2)
+    vec = vec.reshape(vec.shape[0] // 2, 2, 3).permute(1, 0, 2)
     ind_repeat = torch.arange(len(points), device=mask.device).repeat_interleave(mask.sum(dim=1))
     pts = vertices[ind][ind_repeat]
     vec = (vec - pts).permute(1, 0, 2)
@@ -447,15 +448,16 @@ def gen_lst() -> None:
                 f.write(f'{os.path.abspath(files[i])} {os.path.abspath(files[i + 1])} 200 100 600 500\n')
     os.chdir('..')
 
+
 def transformJSON(input_path, output_path, extension):
     import json
-    f=open(input_path,'r')
-    a=json.load(f)
+    f = open(input_path, 'r')
+    a = json.load(f)
     f.close()
     data = {'labels': {}}
     keys = a['labels'].keys()
     for key in keys:
-        data['labels'][f'{key}.{extension}']=a['labels'][key]
-    f=open(output_path,'w')
-    json.dump(data,f)
+        data['labels'][f'{key}.{extension}'] = a['labels'][key]
+    f = open(output_path, 'w')
+    json.dump(data, f)
     f.close()

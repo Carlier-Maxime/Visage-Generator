@@ -125,7 +125,7 @@ class VisageGenerator:
             self._textures = self.texture_mean + (self.texture_basis * tp[:, None, :]).sum(-1)
             self._textures = self._textures.reshape(tp.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
             self._textures = self._textures[:, [2, 1, 0], :, :]
-            self._textures = self._textures / 255
+            self._textures /= 255
         self.batch_index = batch_index
 
     def save_batch(self, cfg: Config, leave_pbar: bool = True):
@@ -138,7 +138,7 @@ class VisageGenerator:
                 texture = None
             else:
                 texture = self._textures[i].to(self.device)
-                texture = texture * 255
+                texture *= 255
                 texture = texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
             index = self.batch_index * self.batch_size + i
             basename = format(index, '08d') if self.filenames is None else self.filenames[i]
