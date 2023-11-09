@@ -160,27 +160,26 @@ class Renderer:
             pts_gl_list = self.create_spheres_gl_list(self.raw_sphere, pts)
             if pts_in_alpha:
                 self._render([self.gl_list_visage])
-                img_visage = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
+                img_visage = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
                 glColor(0., 0., 0.)
                 glCallList(self.gl_list_visage)
                 glColor(1., 1., 1.)
                 glCallList(pts_gl_list)
                 pygame.display.flip()
-                img_pts = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
+                img_pts = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
                 green_mask = (img_pts == torch.tensor([0, 255, 0, 255], device=self.device)).all(dim=2)
                 new_colors = img_visage[green_mask]
                 new_colors[:, 3] = 0
                 img_visage[green_mask] = new_colors
-                img_visage = img_visage.cpu().numpy()
+                img = img_visage.cpu().numpy()
             else:
                 self._render([self.gl_list_visage, pts_gl_list])
-                img_visage = np.array(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE))).reshape([self.height, self.width, 4])
+                img = np.frombuffer(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE), np.uint8).reshape([self.height, self.width, -1])
             glDeleteLists(pts_gl_list, 1)
         else:
             self._render([self.gl_list_visage])
-            img_visage = np.array(bytearray(glReadPixels(0, 0, self.width, self.height, GL_RGBA, GL_UNSIGNED_BYTE))).reshape([self.height, self.width, 4])
-        img = img_visage[:, :, [2, 1, 0, 3]]
+            img = np.frombuffer(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE), np.uint8).reshape([self.height, self.width, -1])
         cv2.imwrite(filename, cv2.flip(img, 0) if vertical_flip else img)
 
     def create_sphere(self, radius, slices, stacks):
