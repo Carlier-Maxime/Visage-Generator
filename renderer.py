@@ -18,9 +18,9 @@ class Renderer:
             self.camera = VectorCamera(camera, width, height)
         self.device = torch.device(device)
         render_data = torch.load('render_data.pt')
-        self.uvcoords = render_data['uvcoords'].to(self.device)
-        self.uvfaces = render_data['uvfaces'].to(self.device)
-        self.order_indexs = render_data['order_indexs'].to(self.device)
+        self.uv_coords = render_data['uv_coords'].to(self.device)
+        self.uv_faces = render_data['uv_faces'].to(self.device)
+        self.order_indices = render_data['order_indices'].to(self.device)
         self.raw_sphere = self.create_sphere(0.002, 30, 30)
 
         pygame.init()
@@ -49,10 +49,10 @@ class Renderer:
 
         self.buffers = glGenBuffers(5)
         glBindBuffer(GL_ARRAY_BUFFER, self.buffers[2])
-        glBufferData(GL_ARRAY_BUFFER, self.uvcoords.cpu().numpy(), GL_STATIC_DRAW)
+        glBufferData(GL_ARRAY_BUFFER, self.uv_coords.cpu().numpy(), GL_STATIC_DRAW)
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.buffers[0])
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, self.uvfaces.cpu().numpy().astype('uint32'), GL_STATIC_DRAW)
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, self.uv_faces.cpu().numpy().astype('uint32'), GL_STATIC_DRAW)
 
         glEnableClientState(GL_TEXTURE_COORD_ARRAY)
         glBindBuffer(GL_ARRAY_BUFFER, self.buffers[2])
@@ -82,7 +82,7 @@ class Renderer:
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size[0], size[1], 0, GL_BGR, GL_UNSIGNED_BYTE, image)
 
     def _create_gl_list(self, vertices, triangles):
-        vertices = vertices[self.order_indexs[:, 1]]
+        vertices = vertices[self.order_indices[:, 1]]
         vertices = vertices.cpu().numpy()
         vbo, fbo = glCreateBuffers(2)
         gl_list = glGenLists(1)
@@ -101,7 +101,7 @@ class Renderer:
         return gl_list
 
     def _edit_gl_list(self, vertices, texture):
-        vertices = vertices[self.order_indexs[:, 1]]
+        vertices = vertices[self.order_indices[:, 1]]
         vertices = vertices.cpu().numpy()
 
         glNewList(self.gl_list_visage, GL_COMPILE)
@@ -114,7 +114,7 @@ class Renderer:
         else:
             glDisable(GL_TEXTURE_2D)
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.buffers[0])
-        glDrawElements(GL_TRIANGLES, self.uvfaces.numel(), GL_UNSIGNED_INT, None)
+        glDrawElements(GL_TRIANGLES, self.uv_faces.numel(), GL_UNSIGNED_INT, None)
         if texture is None:
             glEnable(GL_TEXTURE_2D)
         glEndList()
@@ -265,6 +265,6 @@ if __name__ == '__main__':
     import sys
 
     render = Renderer(1024, 1024, torch.device("cuda"))
-    obj = ObjLoader.OBJ(sys.argv[1], swapyz=True)
+    obj = ObjLoader.OBJ(sys.argv[1], swapYZ=True)
     render.test(obj.gl_list)
     del render

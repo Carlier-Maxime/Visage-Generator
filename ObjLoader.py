@@ -4,11 +4,11 @@ from OpenGL.GL import *
 
 
 class OBJ:
-    def __init__(self, filename, swapyz=False):
+    def __init__(self, filename, swapYZ=False):
         """Loads a Wavefront OBJ file. """
         self.vertices = []
         self.normals = []
-        self.texcoords = []
+        self.textures_coords = []
         self.faces = []
 
         material = None
@@ -24,38 +24,38 @@ class OBJ:
                 v = values[1:4]
                 for i in range(len(v)):
                     v[i] = float(v[i])
-                if swapyz:
+                if swapYZ:
                     v = v[0], v[2], v[1]
                 self.vertices.append(v)
             elif values[0] == 'vn':
                 v = map(float, values[1:4])
-                if swapyz:
+                if swapYZ:
                     v = v[0], v[2], v[1]
                 self.normals.append(v)
             elif values[0] == 'vt':
-                self.texcoords.append(list(map(float, values[1:3])))
+                self.textures_coords.append(list(map(float, values[1:3])))
             elif values[0] in ('usemtl', 'usemat'):
                 material = values[1]
             elif values[0] == 'mtllib':
                 self.mtl_data = OBJ.mtl(f'{path}/{values[1]}')
             elif values[0] == 'f':
                 face = []
-                texcoords = []
+                textures_coords = []
                 norms = []
                 for v in values[1:]:
                     w = v.split('/')
                     face.append(int(w[0]))
                     if len(w) >= 2 and len(w[1]) > 0:
-                        texcoords.append(int(w[1]))
+                        textures_coords.append(int(w[1]))
                     else:
-                        texcoords.append(0)
+                        textures_coords.append(0)
                     if len(w) >= 3 and len(w[2]) > 0:
                         norms.append(int(w[2]))
                     else:
                         norms.append(0)
-                self.faces.append((face, norms, texcoords, material))
+                self.faces.append((face, norms, textures_coords, material))
 
-        self.texcoords = np.array(self.texcoords)
+        self.textures_coords = np.array(self.textures_coords)
         self.vertices = np.array(self.vertices)
         self.normals = np.array(self.normals)
         self.vertices *= 10
@@ -68,7 +68,7 @@ class OBJ:
             try:
                 mtl = self.mtl_data[material]
                 if 'texture_Kd' in mtl:
-                    # use diffuse texmap
+                    # use diffuse texture map
                     glBindTexture(GL_TEXTURE_2D, mtl['texture_Kd'])
                 else:
                     # just use diffuse colour
@@ -81,7 +81,7 @@ class OBJ:
                 if normals[i] > 0:
                     glNormal3fv(self.normals[normals[i] - 1])
                 if texture_coords[i] > 0:
-                    tex_coo = np.array(list(self.texcoords[texture_coords[i] - 1]))
+                    tex_coo = np.array(list(self.textures_coords[texture_coords[i] - 1]))
                     glTexCoord2fv(tex_coo)
                 glVertex3fv(self.vertices[vertices[i] - 1])
             glEnd()

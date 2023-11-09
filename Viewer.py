@@ -30,7 +30,7 @@ class Viewer(Renderer):
         self._joints_glList = self._vertices_glList = self._markers_glList = self._select_glList = None
         self.cameras = cameras
 
-        self.oobj_gl_list = []
+        self.other_obj_gl_list = []
         if other_objects is not None:
             for obj in other_objects:
                 vertices = obj[0]
@@ -38,7 +38,7 @@ class Viewer(Renderer):
                 vertices = torch.tensor(vertices, device=device)
                 triangles = torch.tensor(triangles, device=device)
                 if len(triangles) == 0:
-                    self.oobj_gl_list.append(self.create_spheres_gl_list(vertices, torch.tensor([0, 0, 0], device=device)))
+                    self.other_obj_gl_list.append(self.create_spheres_gl_list(vertices, torch.tensor([0, 0, 0], device=device)))
                 else:
                     self._create_gl_list(vertices, triangles)
 

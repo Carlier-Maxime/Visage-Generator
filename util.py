@@ -344,25 +344,25 @@ def read_index_opti_tri(vertices: torch.Tensor, faces: torch.Tensor, index_opti_
     return p
 
 
-def read_all_index_opti_tri(vertices: torch.Tensor, faces: torch.Tensor, indexs_opti_tri: torch.Tensor | None) -> torch.Tensor | None:
+def read_all_index_opti_tri(vertices: torch.Tensor, faces: torch.Tensor, indices_opti_tri: torch.Tensor | None) -> torch.Tensor | None:
     """
     Read all index of the type : [index_vertex, index_triangle, percentage_vector_1, percentage_vector_2]
     Args:
         vertices (list): the array of all vertex (one vertex is a point represented in an array : [x, y, z])
         faces (list): the array of all face / triangle (one face is an array containing 3 index of vertex : [i, j, k])
-        indexs_opti_tri (list): array of all indexs. type index is :
+        indices_opti_tri (list): array of all indexes. type index is :
             [index_vertex, index_triangle, percentage_vector_1, percentage_vector_2]
 
     Returns: array of all points. point represented by coordinate : [X, Y, Z]
     """
-    if indexs_opti_tri is None:
+    if indices_opti_tri is None:
         return None
-    pts = vertices[indexs_opti_tri[:, 0].to(torch.int32)]
-    tri = vertices[faces[indexs_opti_tri[:, 1].to(torch.int32)]]
+    pts = vertices[indices_opti_tri[:, 0].to(torch.int32)]
+    tri = vertices[faces[indices_opti_tri[:, 1].to(torch.int32)]]
     mask = ~(tri.permute(1, 0, 2) == pts).all(dim=2).permute(1, 0)
     vec = (tri[mask].reshape(tri.shape[0], 2, 3).permute(1, 0, 2) - pts).permute(2, 1, 0)
-    vec[:, :, 0] *= indexs_opti_tri[:, 2]
-    vec[:, :, 1] *= indexs_opti_tri[:, 3]
+    vec[:, :, 0] *= indices_opti_tri[:, 2]
+    vec[:, :, 1] *= indices_opti_tri[:, 3]
     vec = vec.permute(1, 2, 0)
     return pts + vec[:, 0] + vec[:, 1]
 
