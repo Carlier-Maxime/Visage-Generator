@@ -167,8 +167,8 @@ class Renderer:
                 glColor(1., 1., 1.)
                 glCallList(pts_gl_list)
                 pygame.display.flip()
-                img_pts = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
-                green_mask = (img_pts == torch.tensor([0, 255, 0, 255], device=self.device)).all(dim=2)
+                img_pts = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_GREEN, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 1)
+                green_mask = (img_pts == 255).all(dim=2)
                 new_colors = img_visage[green_mask]
                 new_colors[:, 3] = 0
                 img_visage[green_mask] = new_colors
