@@ -154,11 +154,13 @@ class Renderer:
     def random_background(self):
         glClearColor(*torch.rand(3, device=self.device).tolist(), 1.)
 
-    def save_to_image(self, filename, vertices, texture, pts=None, pts_in_alpha: bool = True, vertical_flip: bool = True):
+    def save_to_image(self, filename, vertices, texture, pts=None, pts_in_alpha: bool = True, vertical_flip: bool = True, save_depth: bool = False, depth_in_alpha: bool = False):
         self._edit_gl_list(vertices, texture)
-        if pts is not None:
+        save_color: bool = not save_depth or depth_in_alpha
+        if pts is not None and save_color:
             pts_gl_list = self.create_spheres_gl_list(self.raw_sphere, pts)
             if pts_in_alpha:
+                assert not save_depth or not depth_in_alpha
                 self._render([self.gl_list_visage])
                 img_visage = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -175,11 +177,27 @@ class Renderer:
                 img = img_visage.cpu().numpy()
             else:
                 self._render([self.gl_list_visage, pts_gl_list])
-                img = np.frombuffer(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE), np.uint8).reshape([self.height, self.width, -1])
+                img = np.frombuffer(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE), np.uint8).reshape([self.height, self.width, -1]).copy()
             glDeleteLists(pts_gl_list, 1)
-        else:
+        elif save_color:
             self._render([self.gl_list_visage])
-            img = np.frombuffer(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE), np.uint8).reshape([self.height, self.width, -1])
+            img = np.frombuffer(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE), np.uint8).reshape([self.height, self.width, -1]).copy()
+        else:
+            img = None
+        if save_depth or depth_in_alpha:
+            depth_image = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_DEPTH_COMPONENT, GL_FLOAT)), dtype=torch.float32).to(self.device).view(self.height, self.width)
+            mask = depth_image < 1
+            tmp = depth_image[mask]
+            depth_min, depth_max = tmp.min(), tmp.max()
+            depth_image[mask] = ((tmp - depth_min) / (depth_max - depth_min)) * (1. - 0.2)
+            depth_image = (depth_image - 1) * -1
+            depth_image = (depth_image * 255.).to(torch.uint8).cpu().numpy()
+            if depth_in_alpha:
+                assert not pts_in_alpha or pts is None
+                assert img is not None
+                img[:, :, 3] = depth_image
+            else:
+                img = depth_image
         cv2.imwrite(filename, cv2.flip(img, 0) if vertical_flip else img)
 
     def create_sphere(self, radius, slices, stacks):

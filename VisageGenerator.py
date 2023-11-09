@@ -55,6 +55,7 @@ class VisageGenerator:
         self.visage_png_Saver = VisageImageSaver(cfg.outdir + "/png/default", self.render, cfg.save_png)
         self.lmk3D_png_Saver = VisageImageSaver(cfg.outdir + "/png/lmks", self.render, cfg.save_lmks3D_png)
         self.markers_png_Saver = VisageImageSaver(cfg.outdir + "/png/markers", self.render, cfg.save_markers)
+        self.depth_png_Saver = VisageImageSaver(cfg.outdir + "/png/depth", self.render, cfg.save_depth)
         self.camera_default_Saver = TorchSaver(cfg.outdir + "/camera/default", cfg.save_camera_default)
         self.camera_matrices_Saver = TorchSaver(cfg.outdir + "/camera/matrices", cfg.save_camera_matrices)
         self.camera_json_Saver = CameraJSONSaver(cfg.outdir + "/camera", self.render, cfg.save_camera_json)
@@ -132,7 +133,7 @@ class VisageGenerator:
         for i in trange(len(self._vertices), desc='saving batch', unit='visage', leave=leave_pbar):
             vertices = self._vertices[i].to(self.device)
             lmk = self._lmks[i].to(self.device)
-            camera = self.default_camera if self.cameras is None else self.cameras[self.batch_index*self.batch_size+i]
+            camera = self.default_camera if self.cameras is None else self.cameras[self.batch_index * self.batch_size + i]
             self.render.change_camera(camera)
             if self._textures is None:
                 texture = None
@@ -147,9 +148,10 @@ class VisageGenerator:
             self.obj_Saver(index, basename + '.obj', vertices, self._faces, texture=texture)
             self.lmk3D_npy_Saver(index, basename + '.npy', lmk)
             self.lmk2D_Saver(index, basename + f'.{cfg.lmk2D_format}', lmk, vertical_flip=cfg.vertical_flip)
-            self.visage_png_Saver(index, basename + '.png', vertices, texture, vertical_flip=cfg.vertical_flip)
-            self.lmk3D_png_Saver(index, basename + '.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, vertical_flip=cfg.vertical_flip)
-            self.markers_png_Saver(index, basename + '.png', vertices, texture, pts=util.read_all_index_opti_tri(vertices, self._faces, self.markers), ptsInAlpha=cfg.pts_in_alpha, vertical_flip=cfg.vertical_flip)
+            self.visage_png_Saver(index, basename + '.png', vertices, texture, vertical_flip=cfg.vertical_flip, depth_in_alpha=cfg.depth_in_alpha)
+            self.lmk3D_png_Saver(index, basename + '.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, vertical_flip=cfg.vertical_flip, depth_in_alpha=cfg.depth_in_alpha)
+            self.markers_png_Saver(index, basename + '.png', vertices, texture, pts=util.read_all_index_opti_tri(vertices, self._faces, self.markers), ptsInAlpha=cfg.pts_in_alpha, vertical_flip=cfg.vertical_flip, depth_in_alpha=cfg.depth_in_alpha)
+            self.depth_png_Saver(index, basename + '.png', vertices, texture, pts=util.read_all_index_opti_tri(vertices, self._faces, self.markers), ptsInAlpha=cfg.pts_in_alpha, vertical_flip=cfg.vertical_flip, save_depth=True)
             self.camera_default_Saver(index, basename + '.pt', camera)
             self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera().get_matrix() if self.camera_matrices_Saver.enable else None)
             self.camera_json_Saver(index, basename, camera)
@@ -207,8 +209,10 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--save-lmks3D-png', 'save_lmks3D_png', type=bool, default=False, help='enable save landmarks 3D with visage into file png', is_flag=True)
 @click.option('--save-lmks2D', 'save_lmks2D', type=bool, default=False, help='enable save landmarks 2D into file npy', is_flag=True)
 @click.option('--save-markers', type=bool, default=False, help='enable save markers into png file', is_flag=True)
+@click.option('--save-depth', type=bool, default=False, help='enable save depth into png file', is_flag=True)
 @click.option('--img-resolution', type=str, metavar=int, default=[512, 512], help='resolution of image', callback=click_callback_str2list)
 @click.option('--show-window', type=bool, default=False, help='show window during save png (enable if images is the screenshot or full black)', is_flag=True)
+@click.option('--depth-in-alpha', 'depth_in_alpha', type=bool, default=False, help='save depth to channel alpha', is_flag=True)
 @click.option('--not-vertical-flip', 'vertical_flip', type=bool, default=True, help='disable vertical flip for saving image', is_flag=True)
 @click.option('--not-pts-in-alpha', 'pts_in_alpha', type=bool, default=True, help='not save landmarks/markers png version to channel alpha', is_flag=True)
 @click.option('--save-camera-default', type=bool, default=False, help='save camera in default format', is_flag=True)
