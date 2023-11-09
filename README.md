@@ -27,7 +27,7 @@ if you are any problem during installation with conda, use etc/full_environment.
 
 ### Download Models
 
-The information necessary for the download is indicate in the readme.md of the model folder or in the [link](https://github.com/Carlier-Maxime/Visage-Generator/blob/master/model/readme.md).
+The information necessary for the download is indicated in the [readme.md](model/readme.md) of the model folder or in the [link](https://github.com/Carlier-Maxime/Visage-Generator/blob/master/model/readme.md).
 
 ### Execute **VisageGenerator.py**
 
