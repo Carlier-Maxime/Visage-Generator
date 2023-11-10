@@ -10,6 +10,7 @@ from Camera import *
 
 class Renderer:
     def __init__(self, width: int, height: int, device: torch.device, show: bool = True, camera: torch.Tensor | None = None, camera_type: str = 'default'):
+        self.show = show
         if camera is None:
             camera = torch.tensor([10, 0, 0, -2, 0, 0, 0], device=device, dtype=torch.float32)
         if camera_type == 'default':
@@ -28,6 +29,28 @@ class Renderer:
         self.height = height
         pygame.display.set_icon(pygame.image.load('logo.png'))
         pygame.display.set_mode([width, height], pygame.constants.OPENGL | pygame.constants.DOUBLEBUF | pygame.SHOWN if show else pygame.HIDDEN)
+
+        framebuffer = glGenFramebuffers(1)
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer)
+
+        self.depth_texture = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, self.depth_texture)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, width, height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, None)
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, self.depth_texture, 0)
+
+        self.color_texture = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, self.color_texture)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, None)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, self.color_texture, 0)
+        glDrawBuffers(1, [GL_COLOR_ATTACHMENT0])
+
+        if glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE:
+            print("Erreur: Le framebuffer n'est pas complet.")
+            glBindFramebuffer(GL_FRAMEBUFFER, 0)
+            return
+        self.frameBuffer = framebuffer
 
         glLightfv(GL_LIGHT0, GL_POSITION, (-40, 200, 100, 0.0))
         glLightfv(GL_LIGHT0, GL_AMBIENT, (0.4, 0.4, 0.4, 1.0))
@@ -66,6 +89,7 @@ class Renderer:
         self.gl_list_visage = glGenLists(1)
 
         glEnable(GL_DEPTH_TEST)
+        glClearColor(0., 0., 0., 1.)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
     def __del__(self):
@@ -75,10 +99,10 @@ class Renderer:
         glDeleteBuffers(5, self.buffers)
         glDeleteLists(self.gl_list_visage, 1)
 
-    @staticmethod
-    def _change_gl_texture(texture):
+    def _change_gl_texture(self, texture):
         size = texture.shape
         image = cv2.flip(texture[:, :, [2, 1, 0]], 0).tobytes()
+        glBindTexture(GL_TEXTURE_2D, self.texid)
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size[0], size[1], 0, GL_BGR, GL_UNSIGNED_BYTE, image)
 
     def _create_gl_list(self, vertices, triangles):
@@ -109,11 +133,14 @@ class Renderer:
         glBindBuffer(GL_ARRAY_BUFFER, self.buffers[1])
         glBufferData(GL_ARRAY_BUFFER, vertices, GL_STREAM_DRAW)
         glVertexPointer(3, GL_FLOAT, 0, None)
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.buffers[0])
         if texture is not None:
+            glEnableClientState(GL_TEXTURE_COORD_ARRAY)
             self._change_gl_texture(texture)
+            glBindBuffer(GL_ARRAY_BUFFER, self.buffers[2])
+            glTexCoordPointer(2, GL_FLOAT, 0, None)
         else:
             glDisable(GL_TEXTURE_2D)
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, self.buffers[0])
         glDrawElements(GL_TRIANGLES, self.uv_faces.numel(), GL_UNSIGNED_INT, None)
         if texture is None:
             glEnable(GL_TEXTURE_2D)
@@ -149,10 +176,23 @@ class Renderer:
     def _render(self, gl_lists):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glCallLists(gl_lists)
+        if self.show:
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, self.frameBuffer)
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
+            glBlitFramebuffer(0, 0, self.width, self.height, 0, 0, self.width, self.height, GL_COLOR_BUFFER_BIT, GL_NEAREST)
+            glBindFramebuffer(GL_FRAMEBUFFER, self.frameBuffer)
         pygame.display.flip()
 
     def random_background(self):
         glClearColor(*torch.rand(3, device=self.device).tolist(), 1.)
+
+    def getImageFromTextureColor(self):
+        img = np.zeros((self.height, self.width, 4), dtype=np.uint8)
+        glBindTexture(GL_TEXTURE_2D, self.color_texture)
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, img)
+        img = np.frombuffer(img, np.uint8).reshape([self.height, self.width, -1]).copy()
+        glBindTexture(GL_TEXTURE_2D, self.texid)
+        return img
 
     def save_to_image(self, filename, vertices, texture, pts=None, pts_in_alpha: bool = True, vertical_flip: bool = True, save_depth: bool = False, depth_in_alpha: bool = False):
         self._edit_gl_list(vertices, texture)
@@ -162,14 +202,20 @@ class Renderer:
             if pts_in_alpha:
                 assert not save_depth or not depth_in_alpha
                 self._render([self.gl_list_visage])
-                img_visage = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 4)
+                img_visage = torch.from_numpy(self.getImageFromTextureColor()).to(self.device)
                 glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
                 glColor(0., 0., 0.)
                 glCallList(self.gl_list_visage)
                 glColor(1., 1., 1.)
                 glCallList(pts_gl_list)
                 pygame.display.flip()
-                img_pts = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_GREEN, GL_UNSIGNED_BYTE)), dtype=torch.uint8).to(self.device).view(self.height, self.width, 1)
+
+                img_pts = np.zeros((self.height, self.width, 1), dtype=np.uint8)
+                glBindTexture(GL_TEXTURE_2D, self.color_texture)
+                glGetTexImage(GL_TEXTURE_2D, 0, GL_GREEN, GL_UNSIGNED_BYTE, img_pts)
+                img_pts = torch.frombuffer(bytearray(img_pts), dtype=torch.uint8).view(self.height, self.width, -1)
+                glBindTexture(GL_TEXTURE_2D, self.texid)
+
                 green_mask = (img_pts == 255).all(dim=2)
                 new_colors = img_visage[green_mask]
                 new_colors[:, 3] = 0
@@ -177,15 +223,19 @@ class Renderer:
                 img = img_visage.cpu().numpy()
             else:
                 self._render([self.gl_list_visage, pts_gl_list])
-                img = np.frombuffer(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE), np.uint8).reshape([self.height, self.width, -1]).copy()
+                img = self.getImageFromTextureColor()
             glDeleteLists(pts_gl_list, 1)
         elif save_color:
             self._render([self.gl_list_visage])
-            img = np.frombuffer(glReadPixels(0, 0, self.width, self.height, GL_BGRA, GL_UNSIGNED_BYTE), np.uint8).reshape([self.height, self.width, -1]).copy()
+            img = self.getImageFromTextureColor()
         else:
+            self._render([self.gl_list_visage])
             img = None
         if save_depth or depth_in_alpha:
-            depth_image = torch.frombuffer(bytearray(glReadPixels(0, 0, self.width, self.height, GL_DEPTH_COMPONENT, GL_FLOAT)), dtype=torch.float32).to(self.device).view(self.height, self.width)
+            depth_values = np.zeros((self.height, self.width), dtype=np.float32)
+            glBindTexture(GL_TEXTURE_2D, self.depth_texture)
+            glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, depth_values)
+            depth_image = torch.frombuffer(bytearray(depth_values), dtype=torch.float32).to(self.device).view(self.height, self.width)
             mask = depth_image < 1
             tmp = depth_image[mask]
             depth_min, depth_max = tmp.min(), tmp.max()
