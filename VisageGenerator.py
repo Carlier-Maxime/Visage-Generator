@@ -61,6 +61,7 @@ class VisageGenerator:
         self.camera_matrices_Saver = TorchSaver(cfg.outdir + "/camera/matrices", cfg.save_camera_matrices)
         self.camera_json_Saver = CameraJSONSaver(cfg.outdir + "/camera", self.render, cfg.save_camera_json)
         self.batch_index = None
+        self.coords_multiplier = cfg.coords_multiplier
 
     def view(self, cfg: Config, other_objects=None) -> None:
         print("Open Viewer...")
@@ -121,6 +122,8 @@ class VisageGenerator:
         neck = self.neck_pose[batch_index * self.batch_size:(batch_index + 1) * self.batch_size]
         eye = self.eye_pose[batch_index * self.batch_size:(batch_index + 1) * self.batch_size]
         self._vertices, self._lmks = self.flame_layer(sp, ep, pp, neck, eye)
+        self._vertices = self._vertices * self.coords_multiplier
+        self._lmks = self._lmks * self.coords_multiplier
 
         if self.texture_mean is not None:
             tp = self.texture_params[batch_index * self.batch_size:(batch_index + 1) * self.batch_size]
@@ -199,6 +202,7 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--fixed-neck', type=bool, default=False, help='fixed the same neck for all visage generated', is_flag=True)
 @click.option('--fixed-eye', type=bool, default=False, help='fixed the same eye for all visage generated', is_flag=True)
 @click.option('--fixed-cameras', type=bool, default=False, help='fixed the same cameras for all visage generated', is_flag=True)
+@click.option('--coords-multiplier', type=float, default=1, help='multiply coordinates by the value. (fov must be augmented for not change result in png)')
 # Flame parameter
 @click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=True, is_flag=True, help='not use face contour for generate visage')
 @click.option('--not-use-3D-translation', 'use_3D_translation', type=bool, default=True, is_flag=True, help='not use 3D translation for generate visage')
