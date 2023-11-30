@@ -18,6 +18,7 @@ from savers import *
 
 class VisageGenerator:
     def __init__(self, cfg: Config):
+        self._latents = None
         self._lmks = None
         self._vertices = None
         self.flame_layer = FLAME(cfg.flame_model_path, cfg.batch_size, cfg.use_face_contour, cfg.use_3D_translation, int(sum(cfg.shape_params[::3])), int(sum(cfg.expression_params[::3])), cfg.static_landmark_embedding_path, cfg.dynamic_landmark_embedding_path).to(cfg.device)
@@ -50,6 +51,7 @@ class VisageGenerator:
         self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=self.default_camera, camera_type=cfg.camera_type)
         self.markers = torch.load("markers.pt").to(cfg.device) if cfg.save_markers_png or cfg.save_markers_npy else None
         self.obj_Saver = ObjSaver(cfg.outdir + "/obj", self.render, cfg.save_obj)
+        self.latents_Saver = NumpySaver(cfg.outdir + "/latents", cfg.save_latents)
         self.lmk3D_npy_Saver = NumpySaver(cfg.outdir + "/lmks/3D", cfg.save_lmks3D_npy)
         self.lmk2D_Saver = Lmks2DSaver(cfg.outdir + "/lmks/2D", self.render, cfg.save_lmks2D)
         self.visage_png_Saver = VisageImageSaver(cfg.outdir + "/png/default", self.render, cfg.save_png)
@@ -121,6 +123,7 @@ class VisageGenerator:
         pp = self.pose_params[batch_index * self.batch_size:(batch_index + 1) * self.batch_size]
         neck = self.neck_pose[batch_index * self.batch_size:(batch_index + 1) * self.batch_size]
         eye = self.eye_pose[batch_index * self.batch_size:(batch_index + 1) * self.batch_size]
+        self._latents = torch.cat([sp, ep, pp, neck, eye], dim=1)
         self._vertices, self._lmks = self.flame_layer(sp, ep, pp, neck, eye)
         self._vertices = self._vertices * self.coords_multiplier
         self._lmks = self._lmks * self.coords_multiplier
@@ -151,6 +154,7 @@ class VisageGenerator:
                 self.render.random_background()
             markers = util.read_all_index_opti_tri(vertices, self._faces, self.markers)
             self.obj_Saver(index, basename + '.obj', vertices, self._faces, texture=texture)
+            self.latents_Saver(index, basename + '.npy', self._latents[i])
             self.lmk3D_npy_Saver(index, basename + '.npy', lmk)
             self.lmk2D_Saver(index, basename + f'.{cfg.lmk2D_format}', lmk, vertical_flip=cfg.vertical_flip)
             self.visage_png_Saver(index, basename + '.png', vertices, texture, vertical_flip=cfg.vertical_flip, depth_in_alpha=cfg.depth_in_alpha)
@@ -212,6 +216,7 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--save-obj', type=bool, default=False, help='enable save into file obj', is_flag=True)
 @click.option('--save-png', type=bool, default=False, help='enable save into file png', is_flag=True)
 @click.option('--random-bg', type=bool, default=False, help='enable random background color for renderer', is_flag=True)
+@click.option('--save-latents', type=bool, default=False, help='enable save latents into file npy', is_flag=True)
 @click.option('--save-lmks3D-npy', 'save_lmks3D_npy', type=bool, default=False, help='enable save landmarks 3D into file npy', is_flag=True)
 @click.option('--save-lmks3D-png', 'save_lmks3D_png', type=bool, default=False, help='enable save landmarks 3D with visage into file png', is_flag=True)
 @click.option('--save-lmks2D', 'save_lmks2D', type=bool, default=False, help='enable save landmarks 2D into file npy', is_flag=True)
