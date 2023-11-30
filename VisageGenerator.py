@@ -123,18 +123,25 @@ class VisageGenerator:
         pp = self.pose_params[batch_index * self.batch_size:(batch_index + 1) * self.batch_size]
         neck = self.neck_pose[batch_index * self.batch_size:(batch_index + 1) * self.batch_size]
         eye = self.eye_pose[batch_index * self.batch_size:(batch_index + 1) * self.batch_size]
-        self._latents = torch.cat([sp, ep, pp, neck, eye], dim=1)
         self._vertices, self._lmks = self.flame_layer(sp, ep, pp, neck, eye)
         self._vertices = self._vertices * self.coords_multiplier
         self._lmks = self._lmks * self.coords_multiplier
 
+        tp = None
         if self.texture_mean is not None:
             tp = self.texture_params[batch_index * self.batch_size:(batch_index + 1) * self.batch_size]
             self._textures = self.texture_mean + (self.texture_basis * tp[:, None, :]).sum(-1)
             self._textures = self._textures.reshape(tp.shape[0], 512, 512, 3).permute(0, 3, 1, 2)
             self._textures = self._textures[:, [2, 1, 0], :, :]
             self._textures /= 255
+        self._latents = {'shape': sp, 'expression': ep, 'pose': pp, 'neck_pose': neck, 'eye_pose': eye, 'texture': tp}
         self.batch_index = batch_index
+
+    def get_latents(self, index: int):
+        latents = {}
+        for key, value in self._latents.items():
+            latents[key] = value[index]
+        return latents
 
     def save_batch(self, cfg: Config, leave_pbar: bool = True):
         for i in trange(len(self._vertices), desc='saving batch', unit='visage', leave=leave_pbar):
@@ -154,7 +161,7 @@ class VisageGenerator:
                 self.render.random_background()
             markers = util.read_all_index_opti_tri(vertices, self._faces, self.markers)
             self.obj_Saver(index, basename + '.obj', vertices, self._faces, texture=texture)
-            self.latents_Saver(index, basename + '.npy', self._latents[i])
+            self.latents_Saver(index, basename + '.npy', self.get_latents(i))
             self.lmk3D_npy_Saver(index, basename + '.npy', lmk)
             self.lmk2D_Saver(index, basename + f'.{cfg.lmk2D_format}', lmk, vertical_flip=cfg.vertical_flip)
             self.visage_png_Saver(index, basename + '.png', vertices, texture, vertical_flip=cfg.vertical_flip, depth_in_alpha=cfg.depth_in_alpha)

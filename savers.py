@@ -40,7 +40,9 @@ class NumpySaver(Saver):
         super().__init__(location, enable)
 
     def _saving(self, path, data, *args: Any, **kwargs: Any) -> Any:
-        np.save(path, data.cpu().numpy(), *args, **kwargs)
+        if torch.is_tensor(data):
+            data = data.cpu().numpy()
+        np.save(path, data, *args, **kwargs)
 
 
 class ObjSaver(Saver):
