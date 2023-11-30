@@ -103,7 +103,7 @@ class VisageGenerator:
                     for i, gen in enumerate(self.params_generators):
                         if gen is None:
                             continue
-                        all_params[i].append(torch.tensor(params[keys[i]], device=cfg.device) if keys[i] in params else gen.zeros() if cfg.zeros_params else gen.one())
+                        all_params[i].append(params[keys[i]].clone().detach().to(cfg.device) if keys[i] in params else gen.zeros() if cfg.zeros_params else gen.one())
                         assert all_params[i][-1].shape[0] == gen.get_nb_params(), f'{keys[i]} params not a good, expected {gen.get_nb_params()}, but got {all_params[i][-1].shape[0]} ! (file : {filename})'
                     self.filenames.append(filename.split('.')[0])
                 pbar.update(1)
