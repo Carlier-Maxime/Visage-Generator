@@ -1,11 +1,10 @@
 import abc
-from typing import Tuple
 
 import torch
 from OpenGL.GL import *
 from OpenGL.GLU import *
-from torch import Tensor
 from pygame.constants import *
+from torch import Tensor
 
 
 def get_intrinsic_matrix(self):
@@ -149,7 +148,7 @@ class VectorCamera(BaseCamera):
 
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective(self.fov, self.aspect_ratio, 0.1, 100.0)
+        gluPerspective(self.fov, self.aspect_ratio, 0.01, 100)
         glEnable(GL_DEPTH_TEST)
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
@@ -177,7 +176,7 @@ class VectorCamera(BaseCamera):
     def poll_event(self, e):
         if e.type == MOUSEBUTTONDOWN:
             if e.button == 4:
-                self.radius = self.radius - 0.1
+                self.radius -= 0.1
                 self._update()
             elif e.button == 5:
                 self.radius += 0.1
