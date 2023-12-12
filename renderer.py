@@ -1,10 +1,7 @@
+import cv2
 import numpy as np
 import pygame
-from pygame.constants import *
-from OpenGL.GL import *
-from OpenGL.GLU import *
-import cv2
-import torch
+
 from Camera import *
 
 
@@ -28,7 +25,7 @@ class Renderer:
         self.width = width
         self.height = height
         pygame.display.set_icon(pygame.image.load('logo.png'))
-        pygame.display.set_mode([width, height], pygame.constants.OPENGL | pygame.constants.DOUBLEBUF | pygame.SHOWN if show else pygame.HIDDEN)
+        pygame.display.set_mode([width, height], pygame.constants.OPENGL | pygame.constants.DOUBLEBUF | (pygame.SHOWN if show else pygame.HIDDEN))
 
         framebuffer = glGenFramebuffers(1)
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer)
