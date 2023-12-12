@@ -84,7 +84,7 @@ class VisageGenerator:
         if self.batch_index is None or self.batch_index != batch_index:
             self.generate_batch(batch_index)
         i = index % self.batch_size
-        return self._vertices[i], self._textures[i], self._lmks[i]
+        return self._vertices[i].clone(), self._textures[i].clone(), self._lmks[i].clone()
 
     def nb_faces(self):
         return self.shape_params.shape[0]
@@ -158,7 +158,7 @@ class VisageGenerator:
             if self._textures is None:
                 texture = None
             else:
-                texture = self._textures[i].to(self.device)
+                texture = self._textures[i].clone().to(self.device)
                 texture *= 255
                 texture = texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
             index = self.batch_index * self.batch_size + i
