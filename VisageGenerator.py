@@ -70,6 +70,7 @@ class VisageGenerator:
     def view(self, cfg: Config, other_objects=None) -> None:
         print("Open Viewer...")
         if cfg.view:
+            self.render.set_other_objects(other_objects)
             self.render.loop()
         else:
             raise NotImplemented

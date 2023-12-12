@@ -31,16 +31,7 @@ class Viewer(Renderer):
         self.cameras = cameras
 
         self.other_obj_gl_list = []
-        if other_objects is not None:
-            for obj in other_objects:
-                vertices = obj[0]
-                triangles = obj[1]
-                vertices = torch.tensor(vertices, device=device)
-                triangles = torch.tensor(triangles, device=device)
-                if len(triangles) == 0:
-                    self.other_obj_gl_list.append(self.create_spheres_gl_list(vertices, torch.tensor([0, 0, 0], device=device)))
-                else:
-                    self._create_gl_list(vertices, triangles)
+        self.set_other_objects(other_objects)
 
         self._index = 0
         self._slcIndex = 0
@@ -59,6 +50,19 @@ class Viewer(Renderer):
         if self._select_glList is not None:
             glDeleteLists(self._select_glList, 1)
         Renderer.__del__(self)
+
+    def set_other_objects(self, other_objects):
+        if other_objects is None:
+            return
+        for obj in other_objects:
+            vertices = obj[0]
+            triangles = obj[1]
+            vertices = torch.tensor(vertices, device=self.device)
+            triangles = torch.tensor(triangles, device=self.device)
+            if len(triangles) == 0:
+                self.other_obj_gl_list.append(self.create_spheres_gl_list(vertices, torch.tensor([0, 0, 0], device=self.device)))
+            else:
+                self._create_gl_list(vertices, triangles)
 
     def loop(self):
         clock = pygame.time.Clock()
