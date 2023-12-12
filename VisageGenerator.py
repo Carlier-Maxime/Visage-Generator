@@ -29,11 +29,13 @@ class VisageGenerator:
             MultiParamsGenerator.from_params(cfg.texture_params, cfg.device) if cfg.texturing else BaseParamsGenerator(0, 0, 0, cfg.device),
             MultiParamsGenerator.from_params(cfg.neck_params, cfg.device, deg2rad=True),
             MultiParamsGenerator.from_params(cfg.eye_params, cfg.device, deg2rad=True),
-            MultiParamsGenerator.from_params(cfg.camera_params, cfg.device)
+            MultiParamsGenerator.from_params(cfg.camera_params, cfg.device),
+            MultiParamsGenerator.from_params(cfg.ambient_params, cfg.device)
         ]
         self.batch_size = cfg.batch_size
         self.filenames = None
-        self.shape_params, self.expression_params, self.pose_params, self.texture_params, self.neck_pose, self.eye_pose, self.cameras = self.gen_params(cfg) if cfg.input_folder is None else self.load_params(cfg)
+        self.shape_params, self.expression_params, self.pose_params, self.texture_params, self.neck_pose, self.eye_pose, self.cameras, self.ambient_lights = self.gen_params(cfg) if cfg.input_folder is None else self.load_params(cfg)
+        self.ambient_lights = self.ambient_lights[:, :3] * self.ambient_lights[:, 3].view(-1, 1)
         self._faces = torch.tensor(self.flame_layer.faces.astype('int32'), device=self.device)
         self._textures = None
         if cfg.texturing:
@@ -91,7 +93,7 @@ class VisageGenerator:
 
     def gen_params(self, cfg: Config):
         print('Generate random parameters')
-        fixed = [cfg.fixed_shape, cfg.fixed_expression, cfg.fixed_pose, cfg.fixed_texture, cfg.fixed_neck, cfg.fixed_eye, cfg.fixed_cameras]
+        fixed = [cfg.fixed_shape, cfg.fixed_expression, cfg.fixed_pose, cfg.fixed_texture, cfg.fixed_neck, cfg.fixed_eye, cfg.fixed_cameras, cfg.fixed_ambient]
         return [generator.zeros(cfg.nb_faces) if cfg.zeros_params else generator.get(cfg.nb_faces, fix) for generator, fix in zip(self.params_generators, fixed)]
 
     def load_params(self, cfg: Config):
@@ -99,7 +101,7 @@ class VisageGenerator:
             cfg.nb_faces = sum(len(files) for _, _, files in os.walk(cfg.input_folder))
         pbar = trange(cfg.nb_faces, desc='load params', unit='visage')
         all_params = [[] for _ in range(len(self.params_generators))]
-        keys = ['shape', 'expression', 'pose', 'texture', 'neck_pose', 'eye_pose', 'cameras']
+        keys = ['shape', 'expression', 'pose', 'texture', 'neck_pose', 'eye_pose', 'cameras', 'ambient']
         self.filenames = []
         for root, _, filenames in os.walk(cfg.input_folder):
             for filename in filenames:
@@ -155,6 +157,7 @@ class VisageGenerator:
             lmk = self._lmks[i].to(self.device)
             camera = self.default_camera if self.cameras is None else self.cameras[self.batch_index * self.batch_size + i]
             self.render.change_camera(camera)
+            self.render.set_ambient_color(self.ambient_lights[self.batch_index * self.batch_size + i])
             if self._textures is None:
                 texture = None
             else:
@@ -212,6 +215,7 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--neck-params', type=str, metavar=float, default=[3, -30, 30], help='Neck parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==3 (min, max in degree)', callback=click_callback_str2list)
 @click.option('--eye-params', type=str, metavar=float, default=[6, 0, 0], help='Eye parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6', callback=click_callback_str2list)
 @click.option('--camera-params', type=str, metavar=float, default=[1, 8, 12, 2, -0.05, 0.05, 1, -2.1, -1.9, 3, -30, 30], help='Camera parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==7, (default : [fov, tx, ty, tz, rx, ry, rz], vector : [fov, lookAtX, lookAtY, lookAtZ, radius, phi, theta])', callback=click_callback_str2list)
+@click.option('--ambient-params', type=str, metavar=float, default=[3, 0.75, 1, 1, 0, 1], help='Ambient light parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==4, [R,G,B,Intensity]', callback=click_callback_str2list)
 @click.option('--fixed-shape', type=bool, default=False, help='fixed the same shape for all visage generated', is_flag=True)
 @click.option('--fixed-expression', type=bool, default=False, help='fixed the same expression for all visage generated', is_flag=True)
 @click.option('--fixed-pose', type=bool, default=False, help='fixed the same jaw for all visage generated', is_flag=True)
@@ -219,6 +223,7 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--fixed-neck', type=bool, default=False, help='fixed the same neck for all visage generated', is_flag=True)
 @click.option('--fixed-eye', type=bool, default=False, help='fixed the same eye for all visage generated', is_flag=True)
 @click.option('--fixed-cameras', type=bool, default=False, help='fixed the same cameras for all visage generated', is_flag=True)
+@click.option('--fixed-ambient', type=bool, default=False, help='fixed the same eye for all visage generated', is_flag=True)
 @click.option('--coords-multiplier', type=float, default=1, help='multiply coordinates by the value. (fov must be augmented for not change result in png)')
 # Flame parameter
 @click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=True, is_flag=True, help='not use face contour for generate visage')

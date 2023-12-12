@@ -49,11 +49,9 @@ class Renderer:
             return
         self.frameBuffer = framebuffer
 
-        glLightfv(GL_LIGHT0, GL_POSITION, (-40, 200, 100, 0.0))
-        glLightfv(GL_LIGHT0, GL_AMBIENT, (0.4, 0.4, 0.4, 1.0))
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, (0.5, 0.5, 0.5, 1.0))
-        glEnable(GL_LIGHT0)
         glEnable(GL_LIGHTING)
+        glEnable(GL_LIGHT0)  # Ambient light
+        self.set_ambient_color((1, 1, 1))
         glEnable(GL_COLOR_MATERIAL)
         glEnable(GL_DEPTH_TEST)
         glEnable(GL_NORMALIZE)
@@ -166,6 +164,13 @@ class Renderer:
             if not self._poll_event(e):
                 return 0
         return 1
+
+    def set_ambient_color(self, color):
+        if torch.is_tensor(color):
+            color = color.cpu().numpy()
+        np.append(color, 1)
+        glLightfv(GL_LIGHT0, GL_AMBIENT, color)
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, color)
 
     def change_camera(self, camera: torch.Tensor) -> None:
         self.camera.set_camera(camera)
@@ -295,7 +300,7 @@ class Renderer:
         projection_matrix = glGetDoublev(GL_PROJECTION_MATRIX)
         win_x, win_y, win_z = gluProject(point3d[0], point3d[1], point3d[2], model_view, projection_matrix, viewport)
         if 0 <= win_z <= 1:
-            return int(win_x), (self.height-int(win_y)-1) if vertical_flip else int(win_y)
+            return int(win_x), (self.height - int(win_y) - 1) if vertical_flip else int(win_y)
         return None
 
     def get_camera(self):
