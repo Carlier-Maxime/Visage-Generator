@@ -5,7 +5,6 @@ All rights reserved.
 """
 
 import click
-import torch
 from tqdm import trange, tqdm
 
 import util
