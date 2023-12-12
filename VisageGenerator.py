@@ -47,7 +47,12 @@ class VisageGenerator:
         else:
             self.texture_mean = None
         self.default_camera = torch.tensor(cfg.camera, device=self.device, dtype=torch.float32)
-        self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=self.default_camera, camera_type=cfg.camera_type)
+        self.batch_index = None
+        self.coords_multiplier = cfg.coords_multiplier
+        if cfg.view:
+            self.render = Viewer(self, other_objects=None, device=self.device, window_size=cfg.img_resolution, cameras=self.cameras, camera_type=cfg.camera_type)
+        else:
+            self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=self.default_camera, camera_type=cfg.camera_type)
         self.markers = torch.load("markers.pt").to(cfg.device) if cfg.save_markers_png or cfg.save_markers_npy else None
         self.obj_Saver = ObjSaver(cfg.outdir + "/obj", self.render, cfg.save_obj)
         self.latents_Saver = NumpySaver(cfg.outdir + "/latents", cfg.save_latents)
@@ -61,12 +66,13 @@ class VisageGenerator:
         self.camera_default_Saver = TorchSaver(cfg.outdir + "/camera/default", cfg.save_camera_default)
         self.camera_matrices_Saver = TorchSaver(cfg.outdir + "/camera/matrices", cfg.save_camera_matrices)
         self.camera_json_Saver = CameraJSONSaver(cfg.outdir + "/camera", self.render, cfg.save_camera_json)
-        self.batch_index = None
-        self.coords_multiplier = cfg.coords_multiplier
 
     def view(self, cfg: Config, other_objects=None) -> None:
         print("Open Viewer...")
-        Viewer(self, other_objects=other_objects, device=self.device, window_size=cfg.img_resolution, cameras=self.cameras, camera_type=cfg.camera_type)
+        if cfg.view:
+            self.render.loop()
+        else:
+            raise NotImplemented
 
     def get_faces(self):
         return self._faces

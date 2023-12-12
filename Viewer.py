@@ -48,7 +48,6 @@ class Viewer(Renderer):
         self.large_raw_sphere = self.create_sphere(0.003, 30, 30)
         self.small_raw_sphere = self.create_sphere(0.001, 30, 30)
         self.set_visage(self._index)
-        self.loop()
 
     def __del__(self):
         if self._joints_glList is not None:
