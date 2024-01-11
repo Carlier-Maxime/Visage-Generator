@@ -156,17 +156,17 @@ class VisageGenerator:
         for i in trange(len(self._vertices), desc='saving batch', unit='visage', leave=leave_pbar):
             vertices = self._vertices[i].to(self.device)
             lmk = self._lmks[i].to(self.device)
-            camera = self.default_camera if self.cameras is None else self.cameras[self.batch_index * self.batch_size + i]
+            index = self.batch_index * self.batch_size + i
+            camera = self.default_camera if self.cameras is None else self.cameras[index]
             self.render.change_camera(camera)
-            self.render.set_ambient_color(self.ambient_lights[self.batch_index * self.batch_size + i])
+            self.render.set_ambient_color(self.ambient_lights[index])
             if self._textures is None:
                 texture = None
             else:
                 texture = self._textures[i].clone().to(self.device)
                 texture *= 255
                 texture = texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
-            index = self.batch_index * self.batch_size + i
-            basename = format(index, '08d') if self.filenames is None else self.filenames[i]
+            basename = format(index, '08d') if self.filenames is None else self.filenames[index]
             if cfg.random_bg:
                 self.render.random_background()
             markers = util.read_all_index_opti_tri(vertices, self._faces, self.markers)
