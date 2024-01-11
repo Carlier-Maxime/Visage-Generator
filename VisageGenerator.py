@@ -104,6 +104,7 @@ class VisageGenerator:
         keys = ['shape', 'expression', 'pose', 'texture', 'neck_pose', 'eye_pose', 'cameras', 'ambient']
         self.filenames = []
         for root, _, filenames in os.walk(cfg.input_folder):
+            filenames.sort()
             for filename in filenames:
                 file = os.path.join(root, filename)
                 if filename.endswith('.npy'):
