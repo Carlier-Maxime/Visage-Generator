@@ -68,6 +68,7 @@ class VisageGenerator:
         self.camera_default_Saver = TorchSaver(cfg.outdir + "/camera/default", cfg.save_camera_default)
         self.camera_matrices_Saver = TorchSaver(cfg.outdir + "/camera/matrices", cfg.save_camera_matrices)
         self.camera_json_Saver = CameraJSONSaver(cfg.outdir + "/camera", self.render, cfg.save_camera_json)
+        self.density_cube_Saver = DensityCubeSaver(cfg.outdir + "/density_cube", cfg.save_density_cube)
 
     def view(self, cfg: Config, other_objects=None) -> None:
         print("Open Viewer...")
@@ -182,6 +183,7 @@ class VisageGenerator:
             self.camera_default_Saver(index, basename + '.pt', camera)
             self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera().get_matrix() if self.camera_matrices_Saver.enable else None)
             self.camera_json_Saver(index, basename, camera)
+            self.density_cube_Saver(index, basename + '.mrc', vertices, self._faces, size=cfg.density_cube_size)
             self.render.void_events()
 
     def save_all(self, cfg: Config):
@@ -230,11 +232,8 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--not-use-face-contour', 'use_face_contour', type=bool, default=True, is_flag=True, help='not use face contour for generate visage')
 @click.option('--not-use-3D-translation', 'use_3D_translation', type=bool, default=True, is_flag=True, help='not use 3D translation for generate visage')
 # Saving
-@click.option('--outdir', type=str, default='output', help='path directory for output')
-@click.option('--lmk2D-format', 'lmk2D_format', type=str, default='npy', help='format used for save lmk2d. (npy and pts is supported)')
 @click.option('--save-obj', type=bool, default=False, help='enable save into file obj', is_flag=True)
 @click.option('--save-png', type=bool, default=False, help='enable save into file png', is_flag=True)
-@click.option('--random-bg', type=bool, default=False, help='enable random background color for renderer', is_flag=True)
 @click.option('--save-latents', type=bool, default=False, help='enable save latents into file npy', is_flag=True)
 @click.option('--save-lmks3D-npy', 'save_lmks3D_npy', type=bool, default=False, help='enable save landmarks 3D into file npy', is_flag=True)
 @click.option('--save-lmks3D-png', 'save_lmks3D_png', type=bool, default=False, help='enable save landmarks 3D with visage into file png', is_flag=True)
@@ -242,14 +241,20 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--save-markers-png', type=bool, default=False, help='enable save markers into png file', is_flag=True)
 @click.option('--save-markers-npy', type=bool, default=False, help='enable save markers into npy file', is_flag=True)
 @click.option('--save-depth', type=bool, default=False, help='enable save depth into png file', is_flag=True)
-@click.option('--img-resolution', type=str, metavar=int, default=[512, 512], help='resolution of image', callback=click_callback_str2list)
-@click.option('--show-window', type=bool, default=False, help='show window during save png (enable if images is the screenshot or full black)', is_flag=True)
-@click.option('--depth-in-alpha', 'depth_in_alpha', type=bool, default=False, help='save depth to channel alpha', is_flag=True)
-@click.option('--not-vertical-flip', 'vertical_flip', type=bool, default=True, help='disable vertical flip for saving image', is_flag=True)
-@click.option('--not-pts-in-alpha', 'pts_in_alpha', type=bool, default=True, help='not save landmarks/markers png version to channel alpha', is_flag=True)
 @click.option('--save-camera-default', type=bool, default=False, help='save camera in default format', is_flag=True)
 @click.option('--save-camera-matrices', type=bool, default=False, help='save camera in matrices format', is_flag=True)
 @click.option('--save-camera-json', type=bool, default=False, help='save camera in json format', is_flag=True)
+@click.option('--save-density-cube', type=bool, default=False, help='save density cube into mrc file', is_flag=True)
+# Saving parameter
+@click.option('--outdir', type=str, default='output', help='path directory for output')
+@click.option('--lmk2D-format', 'lmk2D_format', type=str, default='npy', help='format used for save lmk2d. (npy and pts is supported)')
+@click.option('--random-bg', type=bool, default=False, help='enable random background color for renderer', is_flag=True)
+@click.option('--img-resolution', type=str, metavar=int, default=[512, 512], help='resolution of image', callback=click_callback_str2list)
+@click.option('--depth-in-alpha', 'depth_in_alpha', type=bool, default=False, help='save depth to channel alpha', is_flag=True)
+@click.option('--show-window', type=bool, default=False, help='show window during save png (enable if images is the screenshot or full black)', is_flag=True)
+@click.option('--not-vertical-flip', 'vertical_flip', type=bool, default=True, help='disable vertical flip for saving image', is_flag=True)
+@click.option('--not-pts-in-alpha', 'pts_in_alpha', type=bool, default=True, help='not save landmarks/markers png version to channel alpha', is_flag=True)
+@click.option('--density-cube-size', type=int, default=64, help='size of density cube')
 # Path
 @click.option('--flame-model-path', type=str, default='./model/flame2023.pkl', help='path for access flame model')
 @click.option('--static-landmark-embedding-path', type=str, default='./model/flame_static_embedding.pkl', help='path for static landmark embedding file')

@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 import torch
+import mrcfile
 from typing import Any
 
 from renderer import Renderer
@@ -134,3 +135,22 @@ class CameraJSONSaver(Saver):
     def __del__(self):
         if not self.__close:
             self.close()
+
+
+class DensityCubeSaver(Saver):
+    def __init__(self, location, enable: bool = True) -> None:
+        super().__init__(location, enable)
+
+    def _saving(self, path, vertices, faces, size: int = 64, v_interval: int = 0, *args: Any, **kwargs: Any) -> Any:
+        vertices -= vertices.min()
+        if v_interval == 0: v_interval = vertices.max()
+        vertices *= size / v_interval
+        mesh = vertices[faces]
+        centers = mesh.mean(dim=1).to(torch.float16)
+        x = y = z = torch.arange(size, dtype=torch.int16, device=mesh.device)
+        cube = torch.stack(torch.meshgrid(x, y, z), dim=3)
+        # tri_nearest = mesh[torch.norm(centers[:, None, :].sub(cube.view(1, -1, 3)), dim=2).min(dim=0).indices].view(size, size, size, 3, 3)
+        cube = torch.norm(centers[:, None, :].sub(cube.view(1, -1, 3)), dim=2).min(dim=0).values.view(size, size, size)
+        cube = cube.mul(-1).add(cube.max())
+        with mrcfile.new_mmap(path, overwrite=True, shape=cube.shape, mrc_mode=2) as mrc:
+            mrc.data[:] = cube.cpu().numpy()
