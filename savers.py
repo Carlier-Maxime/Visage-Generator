@@ -140,6 +140,7 @@ class CameraJSONSaver(Saver):
 class DensityCubeSaver(Saver):
     def __init__(self, location, enable: bool = True) -> None:
         super().__init__(location, enable)
+        self.epsilon = 1e-8
 
     def _saving(self, path, vertices, faces, size: int = 64, v_interval: int = 0, *args: Any, **kwargs: Any) -> Any:
         vertices -= vertices.min()
@@ -148,9 +149,21 @@ class DensityCubeSaver(Saver):
         mesh = vertices[faces]
         centers = mesh.mean(dim=1).to(torch.float16)
         x = y = z = torch.arange(size, dtype=torch.int16, device=mesh.device)
-        cube = torch.stack(torch.meshgrid(x, y, z), dim=3)
-        # tri_nearest = mesh[torch.norm(centers[:, None, :].sub(cube.view(1, -1, 3)), dim=2).min(dim=0).indices].view(size, size, size, 3, 3)
-        cube = torch.norm(centers[:, None, :].sub(cube.view(1, -1, 3)), dim=2).min(dim=0).values.view(size, size, size)
-        cube = cube.mul(-1).add(cube.max())
+        cube_indices = torch.stack(torch.meshgrid(x, y, z), dim=3).view(-1, 3)
+        tri_nearest = mesh[torch.norm(centers[:, None, :].sub(cube_indices[None]), dim=2).min(dim=0).indices]
+        tri_vecs = torch.stack([tri_nearest[:, (i + 1) % 3].sub(tri_nearest[:, i]) for i in range(3)])
+        pts_vecs = cube_indices[:, None, :].sub(tri_nearest).permute(1, 0, 2)
+        normal = torch.cross(tri_vecs[0], tri_vecs[1])
+        normal = normal.divide(torch.norm(normal, dim=0))
+        dist_to_plane = normal.mul(tri_nearest[:, 0].sub(cube_indices).mul(normal).sum(dim=-1).divide(normal.square().sum(dim=-1))[:, None]).norm(dim=-1)
+        cube_in_volume_tri = torch.cross(tri_vecs, pts_vecs, dim=-1).mul(normal).sum(dim=-1).ge(-self.epsilon).all(dim=0)
+        cube = torch.zeros((size ** 3), device=mesh.device)
+        cube[cube_in_volume_tri] = dist_to_plane[cube_in_volume_tri]
+        segment_factor = cube_indices[None].sub(tri_nearest.permute(1, 0, 2)[[1, 2, 0]]).mul(tri_vecs).sum(dim=-1).divide(tri_vecs.mul(tri_vecs).sum(dim=-1)).clamp(0, 1)
+        closest_point = tri_nearest.permute(1, 0, 2)[[1, 2, 0]].add(segment_factor[:, :, None].mul(tri_vecs))
+        dist_to_segment = torch.norm(cube_indices.sub(closest_point), dim=-1).abs().min(dim=0).values
+        cube[~cube_in_volume_tri] = dist_to_segment[~cube_in_volume_tri]
+        cube = cube.view(size, size, size).mul(-1).add(cube.max()).divide(size)
+        # cube = torch.pow(torch.e, cube.mul(torch.e)).sub(1).divide(torch.e**torch.e-1)
         with mrcfile.new_mmap(path, overwrite=True, shape=cube.shape, mrc_mode=2) as mrc:
             mrc.data[:] = cube.cpu().numpy()
