@@ -183,7 +183,7 @@ class VisageGenerator:
             self.camera_default_Saver(index, basename + '.pt', camera)
             self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera().get_matrix() if self.camera_matrices_Saver.enable else None)
             self.camera_json_Saver(index, basename, camera)
-            self.density_cube_Saver(index, basename + '.mrc', vertices, self._faces, size=cfg.density_cube_size)
+            self.density_cube_Saver(index, basename + '.mrc', vertices, self._faces, size=cfg.density_cube_size, v_interval=cfg.density_vertices_interval, pts_batch_size=cfg.density_pts_batch_size)
             self.render.void_events()
 
     def save_all(self, cfg: Config):
@@ -255,6 +255,8 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--not-vertical-flip', 'vertical_flip', type=bool, default=True, help='disable vertical flip for saving image', is_flag=True)
 @click.option('--not-pts-in-alpha', 'pts_in_alpha', type=bool, default=True, help='not save landmarks/markers png version to channel alpha', is_flag=True)
 @click.option('--density-cube-size', type=int, default=64, help='size of density cube')
+@click.option('--density-vertices-interval', type=int, default=0, help='interval of vertices used for scaled vertices to density cube size. if 0 then vertices.max() is used')
+@click.option('--density-pts-batch-size', type=int, default=10000, help='number of points process simultaneously for get triangle nearest in density cube process')
 # Path
 @click.option('--flame-model-path', type=str, default='./model/flame2023.pkl', help='path for access flame model')
 @click.option('--static-landmark-embedding-path', type=str, default='./model/flame_static_embedding.pkl', help='path for static landmark embedding file')

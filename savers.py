@@ -142,15 +142,20 @@ class DensityCubeSaver(Saver):
         super().__init__(location, enable)
         self.epsilon = 1e-8
 
-    def _saving(self, path, vertices, faces, size: int = 64, v_interval: int = 0, *args: Any, **kwargs: Any) -> Any:
+    @staticmethod
+    def get_tri_nearest(mesh, pts, pts_batch_size: int = 10000):
+        from tqdm import trange
+        centers = mesh.mean(dim=1).to(torch.float16)
+        return torch.concat([mesh[torch.norm(centers[:, None, :].sub(pts[limit-pts_batch_size:limit][None]), dim=2).min(dim=0).indices] for limit in trange(pts_batch_size, pts.shape[0] + pts_batch_size, pts_batch_size)])
+
+    def _saving(self, path, vertices, faces, size: int = 64, v_interval: int = 0, pts_batch_size: int = 10000, *args: Any, **kwargs: Any) -> Any:
         vertices -= vertices.min()
         if v_interval == 0: v_interval = vertices.max()
         vertices *= size / v_interval
         mesh = vertices[faces]
-        centers = mesh.mean(dim=1).to(torch.float16)
         x = y = z = torch.arange(size, dtype=torch.int16, device=mesh.device)
         cube_indices = torch.stack(torch.meshgrid(x, y, z), dim=3).view(-1, 3)
-        tri_nearest = mesh[torch.norm(centers[:, None, :].sub(cube_indices[None]), dim=2).min(dim=0).indices]
+        tri_nearest = self.get_tri_nearest(mesh, cube_indices)
         tri_vecs = torch.stack([tri_nearest[:, (i + 1) % 3].sub(tri_nearest[:, i]) for i in range(3)])
         pts_vecs = cube_indices[:, None, :].sub(tri_nearest).permute(1, 0, 2)
         normal = torch.cross(tri_vecs[0], tri_vecs[1])
