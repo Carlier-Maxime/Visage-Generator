@@ -146,7 +146,10 @@ class DensityCubeSaver(Saver):
     def get_tri_nearest(mesh, pts, pts_batch_size: int = 10000):
         from tqdm import trange
         centers = mesh.mean(dim=1).to(torch.float16)
-        return torch.concat([mesh[torch.norm(centers[:, None, :].sub(pts[limit-pts_batch_size:limit][None]), dim=2).min(dim=0).indices] for limit in trange(pts_batch_size, pts.shape[0] + pts_batch_size, pts_batch_size)])
+        tri_nearest = torch.empty((pts.shape[0], 3, 3), dtype=torch.float, device=mesh.device)
+        for limit in trange(pts_batch_size, pts.shape[0] + pts_batch_size, pts_batch_size, desc='Density Cube : Search nearest triangle', unit='batch', leave=False):
+            tri_nearest[limit-pts_batch_size:limit] = mesh[torch.norm(centers[:, None, :].sub(pts[limit-pts_batch_size:limit][None]), dim=2).min(dim=0).indices]
+        return tri_nearest
 
     def _saving(self, path, vertices, faces, size: int = 64, v_interval: int = 0, pts_batch_size: int = 10000, *args: Any, **kwargs: Any) -> Any:
         vertices -= vertices.min()
