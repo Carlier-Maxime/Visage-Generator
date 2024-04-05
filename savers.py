@@ -176,9 +176,9 @@ class DensityCubeSaver(Saver):
         return (u >= -self.epsilon) & (v >= -self.epsilon) & (u + v <= 1+self.epsilon)
 
     def _saving(self, path, vertices, faces, v_interval: int = 0, pts_batch_size: int = 10000, *args: Any, **kwargs: Any) -> Any:
-        vertices -= vertices.min()
-        if v_interval == 0: v_interval = vertices.max()
-        vertices *= self.size / v_interval
+        if v_interval == 0: v_interval = max(vertices.min().abs(), vertices.max())
+        vertices *= (self.size//2) / v_interval
+        vertices += self.size//2
         mesh = vertices[faces]
         tri_nearest = self.get_tri_nearest(mesh, self.cube_indices)
         tri_vecs = torch.stack([tri_nearest[:, (i + 1) % 3].sub(tri_nearest[:, i]) for i in range(3)])

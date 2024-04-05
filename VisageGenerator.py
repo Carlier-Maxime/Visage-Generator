@@ -255,7 +255,7 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--not-vertical-flip', 'vertical_flip', type=bool, default=True, help='disable vertical flip for saving image', is_flag=True)
 @click.option('--not-pts-in-alpha', 'pts_in_alpha', type=bool, default=True, help='not save landmarks/markers png version to channel alpha', is_flag=True)
 @click.option('--density-cube-size', type=int, default=64, help='size of density cube')
-@click.option('--density-vertices-interval', type=int, default=0, help='interval of vertices used for scaled vertices to density cube size. if 0 then vertices.max() is used')
+@click.option('--density-vertices-interval', type=float, default=0, help='interval of vertices used for scaled vertices to density cube size. if 0 then vertices.max() is used')
 @click.option('--density-pts-batch-size', type=int, default=10000, help='number of points process simultaneously for get triangle nearest in density cube process')
 @click.option('--density-method-pts-in-tri', type=click.Choice(("barycentric", "normal"), False), default='barycentric', help='method used for check if voxel inside triangle')
 # Path
