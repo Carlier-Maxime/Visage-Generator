@@ -183,7 +183,7 @@ class VisageGenerator:
             self.camera_default_Saver(index, basename + '.pt', camera)
             self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera().get_matrix() if self.camera_matrices_Saver.enable else None)
             self.camera_json_Saver(index, basename, camera)
-            self.density_cube_Saver(index, basename + '.mrc', vertices, self._faces, v_interval=cfg.density_vertices_interval, pts_batch_size=cfg.density_pts_batch_size)
+            self.density_cube_Saver(index, basename + '.mrc', vertices, self._faces, v_interval=cfg.density_vertices_interval, pts_batch_size=cfg.density_pts_batch_size, epsilon_scale=cfg.density_epsilon_scale)
             self.render.void_events()
 
     def save_all(self, cfg: Config):
@@ -258,6 +258,7 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--density-vertices-interval', type=float, default=0, help='interval of vertices used for scaled vertices to density cube size. if 0 then vertices.max() is used')
 @click.option('--density-pts-batch-size', type=int, default=10000, help='number of points process simultaneously for get triangle nearest in density cube process')
 @click.option('--density-method-pts-in-tri', type=click.Choice(("barycentric", "normal"), False), default='barycentric', help='method used for check if voxel inside triangle')
+@click.option('--density-epsilon-scale', type=click.FloatRange(0, 1), default=0.005, help='epsilon scale used for calcul epsilon used in method voxel inside triangle. (epsilon = cube_size * epsilon_scale)')
 # Path
 @click.option('--flame-model-path', type=str, default='./model/flame2023.pkl', help='path for access flame model')
 @click.option('--static-landmark-embedding-path', type=str, default='./model/flame_static_embedding.pkl', help='path for static landmark embedding file')

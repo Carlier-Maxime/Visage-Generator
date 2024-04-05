@@ -138,9 +138,9 @@ class CameraJSONSaver(Saver):
 
 
 class DensityCubeSaver(Saver):
-    def __init__(self, location, size, device, enable: bool = True, method_pts_in_tri: str = 'barycentric') -> None:
+    def __init__(self, location, size, device, enable: bool = True, method_pts_in_tri: str = 'barycentric', epsilon_scale: float = 0.005) -> None:
         super().__init__(location, enable)
-        self.epsilon = size * 5e-3
+        self.epsilon = size * epsilon_scale
         self.point_in_triangle_method = self.point_in_triangle_barycentric if method_pts_in_tri == 'barycentric' else self.point_in_triangle_normal
         x = y = z = torch.arange(size, dtype=torch.int16, device=device)
         self.cube_indices = torch.stack(torch.meshgrid(x, y, z), dim=3).view(-1, 3)
