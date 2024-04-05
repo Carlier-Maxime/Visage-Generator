@@ -138,10 +138,13 @@ class CameraJSONSaver(Saver):
 
 
 class DensityCubeSaver(Saver):
-    def __init__(self, location, enable: bool = True, method_pts_in_tri: str = 'barycentric') -> None:
+    def __init__(self, location, size, device, enable: bool = True, method_pts_in_tri: str = 'barycentric') -> None:
         super().__init__(location, enable)
-        self.epsilon = 1
+        self.epsilon = size * 5e-3
         self.point_in_triangle_method = self.point_in_triangle_barycentric if method_pts_in_tri == 'barycentric' else self.point_in_triangle_normal
+        x = y = z = torch.arange(size, dtype=torch.int16, device=device)
+        self.cube_indices = torch.stack(torch.meshgrid(x, y, z), dim=3).view(-1, 3)
+        self.size = size
 
     @staticmethod
     def get_tri_nearest(mesh, pts, pts_batch_size: int = 10000):
@@ -172,26 +175,24 @@ class DensityCubeSaver(Saver):
         v = (dot00 * dot12 - dot01 * dot02) * inv_denom
         return (u >= -self.epsilon) & (v >= -self.epsilon) & (u + v <= 1+self.epsilon)
 
-    def _saving(self, path, vertices, faces, size: int = 64, v_interval: int = 0, pts_batch_size: int = 10000, *args: Any, **kwargs: Any) -> Any:
+    def _saving(self, path, vertices, faces, v_interval: int = 0, pts_batch_size: int = 10000, *args: Any, **kwargs: Any) -> Any:
         vertices -= vertices.min()
         if v_interval == 0: v_interval = vertices.max()
-        vertices *= size / v_interval
+        vertices *= self.size / v_interval
         mesh = vertices[faces]
-        x = y = z = torch.arange(size, dtype=torch.int16, device=mesh.device)
-        cube_indices = torch.stack(torch.meshgrid(x, y, z), dim=3).view(-1, 3)
-        tri_nearest = self.get_tri_nearest(mesh, cube_indices)
+        tri_nearest = self.get_tri_nearest(mesh, self.cube_indices)
         tri_vecs = torch.stack([tri_nearest[:, (i + 1) % 3].sub(tri_nearest[:, i]) for i in range(3)])
         normal = torch.cross(tri_vecs[0], tri_vecs[1])
         normal = normal.divide(torch.norm(normal, dim=0))
-        dist_to_plane = normal.mul(tri_nearest[:, 0].sub(cube_indices).mul(normal).sum(dim=-1).divide(normal.square().sum(dim=-1))[:, None]).norm(dim=-1)
-        cube_in_volume_tri = self.point_in_triangle_method(cube_indices, tri_nearest, tri_vecs, normal)
-        cube = torch.zeros((size ** 3), device=mesh.device)
+        dist_to_plane = normal.mul(tri_nearest[:, 0].sub(self.cube_indices).mul(normal).sum(dim=-1).divide(normal.square().sum(dim=-1))[:, None]).norm(dim=-1)
+        cube_in_volume_tri = self.point_in_triangle_method(self.cube_indices, tri_nearest, tri_vecs, normal)
+        cube = torch.zeros((self.size ** 3), device=mesh.device)
         cube[cube_in_volume_tri] = dist_to_plane[cube_in_volume_tri]
-        segment_factor = cube_indices[None].sub(tri_nearest.permute(1, 0, 2)[[1, 2, 0]]).mul(tri_vecs).sum(dim=-1).divide(tri_vecs.mul(tri_vecs).sum(dim=-1)).clamp(0, 1)
+        segment_factor = self.cube_indices[None].sub(tri_nearest.permute(1, 0, 2)[[1, 2, 0]]).mul(tri_vecs).sum(dim=-1).divide(tri_vecs.mul(tri_vecs).sum(dim=-1)).clamp(0, 1)
         closest_point = tri_nearest.permute(1, 0, 2)[[1, 2, 0]].add(segment_factor[:, :, None].mul(tri_vecs))
-        dist_to_segment = torch.norm(cube_indices.sub(closest_point), dim=-1).abs().min(dim=0).values
+        dist_to_segment = torch.norm(self.cube_indices.sub(closest_point), dim=-1).abs().min(dim=0).values
         cube[~cube_in_volume_tri] = dist_to_segment[~cube_in_volume_tri]
-        cube = cube.view(size, size, size).mul(-1).add(cube.max()).divide(size)
+        cube = cube.view(self.size, self.size, self.size).mul(-1).add(cube.max()).divide(self.size)
         # cube = torch.pow(torch.e, cube.mul(torch.e)).sub(1).divide(torch.e**torch.e-1)
         with mrcfile.new_mmap(path, overwrite=True, shape=cube.shape, mrc_mode=2) as mrc:
             mrc.data[:] = cube.cpu().numpy()

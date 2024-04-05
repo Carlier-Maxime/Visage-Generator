@@ -68,7 +68,7 @@ class VisageGenerator:
         self.camera_default_Saver = TorchSaver(cfg.outdir + "/camera/default", cfg.save_camera_default)
         self.camera_matrices_Saver = TorchSaver(cfg.outdir + "/camera/matrices", cfg.save_camera_matrices)
         self.camera_json_Saver = CameraJSONSaver(cfg.outdir + "/camera", self.render, cfg.save_camera_json)
-        self.density_cube_Saver = DensityCubeSaver(cfg.outdir + "/density_cube", cfg.save_density_cube, method_pts_in_tri=cfg.density_method_pts_in_tri)
+        self.density_cube_Saver = DensityCubeSaver(cfg.outdir + "/density_cube", cfg.density_cube_size, cfg.device, cfg.save_density_cube, method_pts_in_tri=cfg.density_method_pts_in_tri)
 
     def view(self, cfg: Config, other_objects=None) -> None:
         print("Open Viewer...")
@@ -183,7 +183,7 @@ class VisageGenerator:
             self.camera_default_Saver(index, basename + '.pt', camera)
             self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera().get_matrix() if self.camera_matrices_Saver.enable else None)
             self.camera_json_Saver(index, basename, camera)
-            self.density_cube_Saver(index, basename + '.mrc', vertices, self._faces, size=cfg.density_cube_size, v_interval=cfg.density_vertices_interval, pts_batch_size=cfg.density_pts_batch_size)
+            self.density_cube_Saver(index, basename + '.mrc', vertices, self._faces, v_interval=cfg.density_vertices_interval, pts_batch_size=cfg.density_pts_batch_size)
             self.render.void_events()
 
     def save_all(self, cfg: Config):
