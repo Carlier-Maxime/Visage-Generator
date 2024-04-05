@@ -143,7 +143,7 @@ class DensityCubeSaver(Saver):
         self.epsilon = size * epsilon_scale
         self.point_in_triangle_method = self.point_in_triangle_barycentric if method_pts_in_tri == 'barycentric' else self.point_in_triangle_normal
         x = y = z = torch.arange(size, dtype=torch.int16, device=device)
-        self.cube_indices = torch.stack(torch.meshgrid(x, y, z), dim=3).view(-1, 3)
+        self.cube_indices = torch.stack(torch.meshgrid(x, y, z, indexing='ij'), dim=3).view(-1, 3)
         self.size = size
 
     @staticmethod
