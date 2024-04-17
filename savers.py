@@ -138,13 +138,16 @@ class CameraJSONSaver(Saver):
 
 
 class DensityCubeSaver(Saver):
-    def __init__(self, location, size, device, enable: bool = True, method_pts_in_tri: str = 'barycentric', epsilon_scale: float = 0.005) -> None:
+    def __init__(self, location, size, device, enable: bool = True, method_pts_in_tri: str = 'barycentric', epsilon_scale: float = 0.005, voxel_bits: int = 8, quantile: float = 0.9) -> None:
+        assert voxel_bits in [8, 16, 32]
         super().__init__(location, enable)
         self.epsilon = size * epsilon_scale
         self.point_in_triangle_method = self.point_in_triangle_barycentric if method_pts_in_tri == 'barycentric' else self.point_in_triangle_normal
         x = y = z = torch.arange(size, dtype=torch.int16, device=device)
         self.cube_indices = torch.stack(torch.meshgrid(x, y, z, indexing='ij'), dim=3).view(-1, 3)
         self.size = size
+        self.voxel_bits = voxel_bits
+        self.quantile = quantile
 
     @staticmethod
     def get_tri_nearest(mesh, pts, pts_batch_size: int = 10000):
@@ -193,6 +196,22 @@ class DensityCubeSaver(Saver):
         dist_to_segment = torch.norm(self.cube_indices.sub(closest_point), dim=-1).abs().min(dim=0).values
         cube[~cube_in_volume_tri] = dist_to_segment[~cube_in_volume_tri]
         cube = cube.view(self.size, self.size, self.size).mul(-1).add(cube.max()).divide(self.size)
+        _min = cube.quantile(self.quantile)
+        mask = cube < _min
+        cube = cube.sub(_min).divide(cube.max().sub(_min))
+        cube[mask] = 0
         # cube = torch.pow(torch.e, cube.mul(torch.e)).sub(1).divide(torch.e**torch.e-1)
-        with mrcfile.new_mmap(path, overwrite=True, shape=cube.shape, mrc_mode=2) as mrc:
+        if self.voxel_bits == 32:
+            cube = cube.to(torch.float32)
+            mode = 2
+        elif self.voxel_bits == 16:
+            limit = 2**16
+            cube = cube.mul(limit-1).sub(limit//2).to(torch.int16)
+            mode = 1
+        elif self.voxel_bits == 8:
+            cube = cube.mul(255).sub(128).to(torch.int8)
+            mode = 0
+        else:
+            raise NotImplementedError
+        with mrcfile.new_mmap(path, overwrite=True, shape=cube.shape, mrc_mode=mode) as mrc:
             mrc.data[:] = cube.cpu().numpy()
