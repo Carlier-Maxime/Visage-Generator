@@ -138,8 +138,10 @@ class CameraJSONSaver(Saver):
 
 
 class DensityCubeSaver(Saver):
-    def __init__(self, location, size, device, enable: bool = True, method_pts_in_tri: str = 'barycentric', epsilon_scale: float = 0.005, voxel_bits: int = 8, quantile: float = 0.9) -> None:
+    def __init__(self, location, size, device, enable: bool = True, method_pts_in_tri: str = 'barycentric', epsilon_scale: float = 0.005, voxel_bits: int = 8, quantile: float = 0.9, cube_format: str = 'cube') -> None:
         assert voxel_bits in [8, 16, 32]
+        assert cube_format in ['cube', 'mrc']
+        if cube_format == 'cube': assert size**3 % 8 == 0
         super().__init__(location, enable)
         self.epsilon = size * epsilon_scale
         self.point_in_triangle_method = self.point_in_triangle_barycentric if method_pts_in_tri == 'barycentric' else self.point_in_triangle_normal
@@ -148,6 +150,8 @@ class DensityCubeSaver(Saver):
         self.size = size
         self.voxel_bits = voxel_bits
         self.quantile = quantile
+        self.cube_format = cube_format
+        self.shifts = torch.arange(7, -1, -1).to(device)
 
     @staticmethod
     def get_tri_nearest(mesh, pts, pts_batch_size: int = 10000):
@@ -213,5 +217,8 @@ class DensityCubeSaver(Saver):
             mode = 0
         else:
             raise NotImplementedError
-        with mrcfile.new_mmap(path, overwrite=True, shape=cube.shape, mrc_mode=mode) as mrc:
-            mrc.data[:] = cube.cpu().numpy()
+        path += '.'+self.cube_format
+        if self.cube_format == 'mrc':
+            with mrcfile.new_mmap(path, overwrite=True, shape=cube.shape, mrc_mode=mode) as mrc:
+                mrc.data[:] = cube.cpu().numpy()
+        elif self.cube_format == 'cube': torch.save({'size': self.size, 'fill': 0, 'mask': (cube.gt(0).view(-1, 8) << self.shifts).sum(dim=-1).to(torch.uint8), 'values': cube[cube > 0]}, path)

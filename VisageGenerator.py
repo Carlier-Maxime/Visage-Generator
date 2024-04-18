@@ -68,7 +68,7 @@ class VisageGenerator:
         self.camera_default_Saver = TorchSaver(cfg.outdir + "/camera/default", cfg.save_camera_default)
         self.camera_matrices_Saver = TorchSaver(cfg.outdir + "/camera/matrices", cfg.save_camera_matrices)
         self.camera_json_Saver = CameraJSONSaver(cfg.outdir + "/camera", self.render, cfg.save_camera_json)
-        self.density_cube_Saver = DensityCubeSaver(cfg.outdir + "/density_cube", cfg.density_cube_size, cfg.device, cfg.save_density_cube, method_pts_in_tri=cfg.density_method_pts_in_tri)
+        self.density_cube_Saver = DensityCubeSaver(cfg.outdir + "/density_cube", cfg.density_cube_size, cfg.device, cfg.save_density_cube, method_pts_in_tri=cfg.density_method_pts_in_tri, cube_format=cfg.density_cube_format)
 
     def view(self, cfg: Config, other_objects=None) -> None:
         print("Open Viewer...")
@@ -183,7 +183,7 @@ class VisageGenerator:
             self.camera_default_Saver(index, basename + '.pt', camera)
             self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera().get_matrix() if self.camera_matrices_Saver.enable else None)
             self.camera_json_Saver(index, basename, camera)
-            self.density_cube_Saver(index, basename + '.mrc', vertices, self._faces, v_interval=cfg.density_vertices_interval, pts_batch_size=cfg.density_pts_batch_size, epsilon_scale=cfg.density_epsilon_scale)
+            self.density_cube_Saver(index, basename, vertices, self._faces, v_interval=cfg.density_vertices_interval, pts_batch_size=cfg.density_pts_batch_size, epsilon_scale=cfg.density_epsilon_scale)
             self.render.void_events()
 
     def save_all(self, cfg: Config):
@@ -211,7 +211,7 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 # Generator parameter
 @click.option('--input-folder', type=str, default=None, help='input folder for load parameter')
 @click.option('--zeros-params', type=bool, default=False, help='zeros for all params not loaded', is_flag=True)
-@click.option('--shape-params', type=str, metavar=float, default=[300, -2, 2], help='Shape parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==300', callback=click_callback_str2list)
+@click.option('--shape-params', type=str, metavar=float, default=[300, -20, 20], help='Shape parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==300', callback=click_callback_str2list)
 @click.option('--expression-params', type=str, metavar=float, default=[100, -2, 2], help='Expression parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==100', callback=click_callback_str2list)
 @click.option('--pose-params', type=str, metavar=float, default=[3, 0, 0, 1, 0, 30, 2, -10, 10], help='Pose parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6 (min, max in degree)', callback=click_callback_str2list)
 @click.option('--texture-params', type=str, metavar=float, default=[50, -2, 2], help='Texture parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==50, maximum : 200 (increase memory used)', callback=click_callback_str2list)
@@ -259,6 +259,7 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--density-pts-batch-size', type=int, default=10000, help='number of points process simultaneously for get triangle nearest in density cube process')
 @click.option('--density-method-pts-in-tri', type=click.Choice(("barycentric", "normal"), False), default='barycentric', help='method used for check if voxel inside triangle')
 @click.option('--density-epsilon-scale', type=click.FloatRange(0, 1), default=0.005, help='epsilon scale used for calcul epsilon used in method voxel inside triangle. (epsilon = cube_size * epsilon_scale)')
+@click.option('--density-cube-format', type=click.Choice(['cube', 'mrc'], False), default='cube', help='the format of density cube. (format cube, reduce space used but not loaded by USCF ChimeraX)')
 # Path
 @click.option('--flame-model-path', type=str, default='./model/flame2023.pkl', help='path for access flame model')
 @click.option('--static-landmark-embedding-path', type=str, default='./model/flame_static_embedding.pkl', help='path for static landmark embedding file')
