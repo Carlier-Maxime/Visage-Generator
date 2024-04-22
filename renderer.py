@@ -19,7 +19,7 @@ class Renderer:
         self.uv_coords = render_data['uv_coords'].to(self.device)
         self.uv_faces = render_data['uv_faces'].to(self.device)
         self.order_indices = render_data['order_indices'].to(self.device)
-        self.raw_sphere = self.create_sphere(0.002, 30, 30)
+        self.raw_sphere = self.create_sphere(0.005, 30, 30)
 
         pygame.init()
         self.width = width
@@ -310,6 +310,78 @@ class Renderer:
     def void_events():
         for _ in pygame.event.get():
             pass
+
+
+import torch.nn as nn
+import torch
+
+
+class RendererPytorch(nn.Module):
+    def __init__(self, width: int, height: int, device: torch.device = "cuda", camera: torch.Tensor | None = None):
+        super(RendererPytorch, self).__init__()
+        self.lookAt = self.eyePoint = self.rays = None
+        self._width = width
+        self._height = height
+        self._device = device
+        self.set_camera(camera)
+
+    def set_camera(self, camera: torch.Tensor) -> None:
+        if camera is None:
+            camera = torch.tensor([70., 0., 0., 0., 2.7, 90.0, 90.0], device=self._device)
+        fov, radius, phi, theta = camera[[0, 4, 5, 6]]
+        self.lookAt = camera[1:4]
+        fov = torch.deg2rad(fov)
+        theta = torch.deg2rad(theta)
+        phi = torch.deg2rad(phi)
+        sin_phi = torch.sin(phi)
+        cos_theta = torch.cos(torch.pi - theta)
+        sin_theta = torch.sin(torch.pi - theta)
+        self.eyePoint = torch.tensor([radius * sin_phi * cos_theta, radius * torch.cos(phi), radius * sin_phi * sin_theta], device="cuda")
+        forward_vector = torch.nn.functional.normalize(self.lookAt - self.eyePoint, p=2, dim=0)
+        right_vector = -torch.nn.functional.normalize(torch.cross(torch.tensor([0, 1, 0], dtype=torch.float32, device="cuda"), forward_vector, dim=-1), p=2, dim=0)
+        up_vector = torch.nn.functional.normalize(torch.cross(forward_vector, right_vector, dim=-1), p=2, dim=0)
+        fov_map = torch.linspace(-fov / 2, fov / 2, self._width, device=self._device).repeat(self._height, 1)
+        fov_map = torch.stack((fov_map, fov_map.permute(1, 0))).permute(1, 2, 0)
+        fov_cos = torch.cos(fov_map)
+        fov_sin = torch.sin(fov_map)
+        fov_minus = (1 - fov_cos)
+        vecs = torch.stack((up_vector, right_vector)).permute(1, 0)
+        rots = torch.empty(3, 3, *fov_minus.shape, device=self._device)
+        rots[0, 0] = fov_cos + vecs[0] ** 2 * fov_minus
+        rots[0, 1] = vecs[0] * vecs[1] * fov_minus - vecs[2] * fov_sin
+        rots[0, 2] = vecs[0] * vecs[2] * fov_minus + vecs[1] * fov_sin
+        rots[1, 0] = vecs[1] * vecs[0] * fov_minus + vecs[2] * fov_sin
+        rots[1, 1] = fov_cos + vecs[1] ** 2 * fov_minus
+        rots[1, 2] = vecs[1] * vecs[2] * fov_minus - vecs[0] * fov_sin
+        rots[2, 0] = vecs[2] * vecs[0] * fov_minus - vecs[1] * fov_sin
+        rots[2, 1] = vecs[2] * vecs[1] * fov_minus + vecs[0] * fov_sin
+        rots[2, 2] = fov_cos + vecs[2] ** 2 * fov_minus
+        rots = rots.permute(2, 3, 4, 0, 1)
+        self.rays = torch.matmul(rots[:, :, 0], forward_vector)
+        self.rays = torch.matmul(rots[:, :, 1], self.rays.unsqueeze(-1)).squeeze(-1)
+        self.rays = torch.nn.functional.normalize(self.rays, p=2, dim=-1)
+
+    def render_sphere(self, center, radius):
+        center_dist = (self.eyePoint - center)
+        b = 2 * torch.sum(center_dist * self.rays, dim=-1)
+        c = torch.sum(center_dist ** 2, dim=-1) - radius ** 2
+        delta = b ** 2 - 4 * c
+        t = torch.zeros_like(delta)
+        t[delta < 0] = -1
+        mask = delta == 0
+        t[mask] = -b[mask] / 2
+        mask = delta > 0
+        sqrt_delta = torch.sqrt(delta[mask])
+        t[mask] = (-b[mask] - sqrt_delta) / 2
+        mask2 = t[mask] < 0
+        t[mask][mask2] = (-b[mask][mask2] + sqrt_delta[mask2]) / 2
+        if t.max() > 0:
+            t = (t / t.max()) * 255
+            t[t < 0] = 255
+            t = 255-t
+            cv2.imwrite('render_sphere.png', cv2.cvtColor(t.cpu().numpy().astype(np.uint8), cv2.COLOR_GRAY2BGR))
+        else:
+            cv2.imwrite('render_sphere.png', cv2.cvtColor(torch.eq(t, 0).cpu().numpy().astype(np.uint8) * 255, cv2.COLOR_GRAY2BGR))
 
 
 if __name__ == '__main__':
