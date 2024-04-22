@@ -83,10 +83,9 @@ class Lmks2DSaver(Saver):
         for p in lmks:
             lmks_2d.append(self.render.get_coord_2d(p, vertical_flip=vertical_flip))
         if path.endswith('.npy'):
-            np.save(path, lmks_2d[17:])
+            np.save(path, lmks_2d)
         elif path.endswith('.pts'):
             with open(path, 'w') as f:
-                lmks_2d = lmks_2d[17:]
                 for i in range(len(lmks_2d)):
                     f.write(f'{i + 1} {lmks_2d[i][0]} {lmks_2d[i][1]} False\n')
         else:

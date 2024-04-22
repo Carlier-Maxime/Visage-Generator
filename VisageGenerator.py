@@ -55,7 +55,7 @@ class VisageGenerator:
             self.render = Viewer(self, other_objects=None, device=self.device, window_size=cfg.img_resolution, cameras=self.cameras, camera_type=cfg.camera_type)
         else:
             self.render = Renderer(cfg.img_resolution[0], cfg.img_resolution[1], device=self.device, show=cfg.show_window, camera=self.default_camera, camera_type=cfg.camera_type)
-        self.markers = torch.load("markers.pt").to(cfg.device) if cfg.save_markers_png or cfg.save_markers_npy else None
+        self.markers = torch.load("markers.pt").to(cfg.device) if cfg.save_markers_png or cfg.save_markers_npy or cfg.save_markers2D else None
         self.obj_Saver = ObjSaver(cfg.outdir + "/obj", self.render, cfg.save_obj)
         self.latents_Saver = NumpySaver(cfg.outdir + "/latents", cfg.save_latents)
         self.lmk3D_npy_Saver = NumpySaver(cfg.outdir + "/lmks/3D", cfg.save_lmks3D_npy)
@@ -63,7 +63,8 @@ class VisageGenerator:
         self.visage_png_Saver = VisageImageSaver(cfg.outdir + "/png/default", self.render, cfg.save_png)
         self.lmk3D_png_Saver = VisageImageSaver(cfg.outdir + "/png/lmks", self.render, cfg.save_lmks3D_png)
         self.markers_png_Saver = VisageImageSaver(cfg.outdir + "/png/markers", self.render, cfg.save_markers_png)
-        self.markers_npy_Saver = NumpySaver(cfg.outdir + "/lmks/markers", cfg.save_markers_npy)
+        self.markers_npy_Saver = NumpySaver(cfg.outdir + "/lmks/markers3D", cfg.save_markers_npy)
+        self.markers2D_Saver = Lmks2DSaver(cfg.outdir + "/lmks/markers2D", self.render, cfg.save_markers2D)
         self.depth_png_Saver = VisageImageSaver(cfg.outdir + "/png/depth", self.render, cfg.save_depth)
         self.camera_default_Saver = TorchSaver(cfg.outdir + "/camera/default", cfg.save_camera_default)
         self.camera_matrices_Saver = TorchSaver(cfg.outdir + "/camera/matrices", cfg.save_camera_matrices)
@@ -179,6 +180,7 @@ class VisageGenerator:
             self.lmk3D_png_Saver(index, basename + '.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.pts_in_alpha, vertical_flip=cfg.vertical_flip, depth_in_alpha=cfg.depth_in_alpha)
             self.markers_png_Saver(index, basename + '.png', vertices, texture, pts=markers, ptsInAlpha=cfg.pts_in_alpha, vertical_flip=cfg.vertical_flip, depth_in_alpha=cfg.depth_in_alpha)
             self.markers_npy_Saver(index, basename + '.npy', markers)
+            self.markers2D_Saver(index, basename + '.npy', markers, vertical_flip=cfg.vertical_flip)
             self.depth_png_Saver(index, basename + '.png', vertices, texture, pts=markers, ptsInAlpha=cfg.pts_in_alpha, vertical_flip=cfg.vertical_flip, save_depth=True)
             self.camera_default_Saver(index, basename + '.pt', camera)
             self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera().get_matrix() if self.camera_matrices_Saver.enable else None)
@@ -211,7 +213,7 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 # Generator parameter
 @click.option('--input-folder', type=str, default=None, help='input folder for load parameter')
 @click.option('--zeros-params', type=bool, default=False, help='zeros for all params not loaded', is_flag=True)
-@click.option('--shape-params', type=str, metavar=float, default=[300, -20, 20], help='Shape parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==300', callback=click_callback_str2list)
+@click.option('--shape-params', type=str, metavar=float, default=[300, -2, 2], help='Shape parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==300', callback=click_callback_str2list)
 @click.option('--expression-params', type=str, metavar=float, default=[100, -2, 2], help='Expression parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==100', callback=click_callback_str2list)
 @click.option('--pose-params', type=str, metavar=float, default=[3, 0, 0, 1, 0, 30, 2, -10, 10], help='Pose parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6 (min, max in degree)', callback=click_callback_str2list)
 @click.option('--texture-params', type=str, metavar=float, default=[50, -2, 2], help='Texture parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==50, maximum : 200 (increase memory used)', callback=click_callback_str2list)
@@ -240,6 +242,7 @@ def click_callback_str2list(_: click.Context, param: click.Parameter, value):
 @click.option('--save-lmks2D', 'save_lmks2D', type=bool, default=False, help='enable save landmarks 2D into file npy', is_flag=True)
 @click.option('--save-markers-png', type=bool, default=False, help='enable save markers into png file', is_flag=True)
 @click.option('--save-markers-npy', type=bool, default=False, help='enable save markers into npy file', is_flag=True)
+@click.option('--save-markers2D', 'save_markers2D', type=bool, default=False, help='enable save markers 2D into npy file', is_flag=True)
 @click.option('--save-depth', type=bool, default=False, help='enable save depth into png file', is_flag=True)
 @click.option('--save-camera-default', type=bool, default=False, help='save camera in default format', is_flag=True)
 @click.option('--save-camera-matrices', type=bool, default=False, help='save camera in matrices format', is_flag=True)
