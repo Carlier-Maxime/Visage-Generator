@@ -41,9 +41,13 @@ python VisageGenerator.py
 All parameters and descriptions can be found in [default.yml](configs/default.yml) or in the [link](https://github.com/Carlier-Maxime/Visage-Generator/blob/master/configs/default.yml)
 
 You can define the parameters either by modifying the default values in `configs/default.yml` file
-or by launching the program, for example:
+or use other configuration file:
 ```bash
-python VisageGenerator.py --general-nb_faces=1 --general-view --save-png --save-markers2D-png-enable
+python VisageGenerator.py --cfg=<file_path>
+```
+for example:
+```bash
+python VisageGenerator.py --cfg=configs/save_all.yml
 ```
 
 ***

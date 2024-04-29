@@ -1,0 +1,84 @@
+general:
+  nb_faces: 1000 # number faces generate
+  device: cuda # choice your device for generate face. ("cpu" or "cuda")
+  batch_size: 32 # number of visage generate in the same time
+  texturing: True # use texture
+  view: False # enable view
+
+generator:
+  input_folder: None # input folder for load parameter
+  zeros: False # zeros for all params not loaded
+  shape:
+    params: [300, -2, 2] # Shape parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==300
+    fixed: False # fixed the same shape for all visage generated
+  expression:
+    params: [100, -2, 2] # Expression parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==100
+    fixed: False # fixed the same expression for all visage generated
+  pose:
+    params: [3, 0, 0, 1, 0, 30, 2, -10, 10] # Pose parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6 (min, max in degree)
+    fixed: False # fixed the same pose for all visage generated
+  texture:
+    params: [50, -2, 2] # Texture parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==50, maximum : 200 (increase memory used)
+    fixed: False # fixed the same texture for all visage generated
+  neck:
+    params: [3, -30, 30] # Neck parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==3 (min, max in degree)
+    fixed: False # fixed the same neck for all visage generated
+  eye:
+    params: [6, 0, 0] # Eye parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6
+    fixed: False # fixed the same eye for all visage generated
+  camera:
+    default: [10., 0., 0., -2., 0., 0., 0.] # default camera (type:default) for renderer [fov, tx, ty, tz, rx, ry, rz] (rotation in degree)
+    params: [1, 8, 12, 2, -0.05, 0.05, 1, -2.1, -1.9, 3, -30, 30] # Camera parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==7, (default : [fov, tx, ty, tz, rx, ry, rz], vector : [fov, lookAtX, lookAtY, lookAtZ, radius, phi, theta])
+    fixed: False # fixed the same cameras for all visage generated
+    type: default # camera type used for renderer (change utilisation of camera parameter) [default, vector]
+  ambient:
+    params: [3, 0.75, 1, 1, 0, 1] # Ambient light parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==4, [R,G,B,Intensity]
+    fixed: False # fixed the same ambient light for all visage generated
+  coords_multiplier: 1 # multiply coordinates by the value. (fov must be augmented for not change result in png)
+
+flame:
+  face_contour: True # use face contour for generate visage
+  translation_3D: True # use 3D translation for generate visage
+  model_path: ./model/flame2023.pkl # path for access flame model
+  static_landmark_embedding_path: ./model/flame_static_embedding.pkl # path for static landmark embedding file
+  dynamic_landmark_embedding_path: ./model/flame_dynamic_embedding.npy # path for dynamic landmark embedding file
+
+save:
+  global_:
+    outdir: output # path directory for output
+    img_resolution: [512, 512] # resolution of image
+    random_bg: True # enable random background color for renderer
+    show_window: False # show window during save png (enable if images is the screenshot or full black)
+    vertical_flip: True # vertical flip for saving image
+  obj: True # save into file obj
+  png: True # save into file png
+  latents: True # save latents into file npy
+  depth:
+    enable: True # save depth into png file
+    alpha: False # save depth to channel alpha
+  lmks3D: True # save landmarks 3D into file npy
+  lmks2D:
+    png:
+      enable: True # save landmarks 2D with visage into file png
+      alpha: True # save landmarks 2D to channel alpha
+    npy: True # save landmarks 2D into file npy
+    pts: True # save landmarks 2D into file pts
+  markers3D: True # save markers 3D into npy file
+  markers2D:
+    png:
+      enable: True # save markers 2D into png file
+      alpha: True # save markers 2D to channel alpha
+    npy: True # save markers 2D into npy file
+    pts: True # save markers 2D into pts file
+  camera:
+    default: True # save camera in default format
+    matrices: True # save camera in matrices format
+    json: True # save camera in json format
+  density:
+    enable: True # save density cube into mrc file
+    size: 64 # size of density cube
+    vertices_interval: 0 # interval of vertices used for scaled vertices to density cube size. if 0 then vertices.max() is used
+    pts_batch_size: 10000 # number of points process simultaneously for get triangle nearest in density cube process
+    method_pts_in_tri: barycentric # method used for check if voxel inside triangle ("barycentric", "normal")
+    epsilon_scale: 0.005 # epsilon scale used for calcul epsilon used in method voxel inside triangle. (epsilon = cube_size * epsilon_scale)
+    cube_format: cube # the format of density cube (cube or mrc). (format cube, reduce space used but not loaded by USCF ChimeraX)

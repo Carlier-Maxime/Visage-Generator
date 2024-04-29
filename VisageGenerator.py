@@ -11,8 +11,9 @@ import util
 from FLAME import FLAME
 from Params import *
 from Viewer import Viewer
-from config import Config, click_yaml
+from config import Config
 from savers import *
+import yaml
 
 
 class VisageGenerator:
@@ -199,7 +200,7 @@ class VisageGenerator:
 
 
 @click.command()
-@click_yaml('configs/default.yml')
+@click.option('--cfg', default='configs/default.yml', callback=lambda ctx, param, value: Config(yaml.safe_load(open(value, 'r'))))
 def main(cfg, **_):
     vg = VisageGenerator(cfg)
     vg.save_all(cfg)
