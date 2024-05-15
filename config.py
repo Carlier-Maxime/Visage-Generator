@@ -31,5 +31,13 @@ class Config(dict):
         return value
 
     @staticmethod
+    def __merge_dict(base_dict, dict2):
+        for key, val in dict2.items():
+            base_dict[key] = Config.__merge_dict(base_dict.get(key), val) if isinstance(val, dict) else val
+        return base_dict
+
+    @staticmethod
     def fromYml(path: str):
-        return Config(yaml.safe_load(open(path, 'r')) | yaml.safe_load(open("configs/default.yml", 'r')))
+        default = yaml.safe_load(open("configs/default.yml", 'r'))
+        cfg = yaml.safe_load(open(path, 'r'))
+        return Config(Config.__merge_dict(default, cfg))
