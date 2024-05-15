@@ -13,7 +13,6 @@ from Params import *
 from Viewer import Viewer
 from config import Config
 from savers import *
-import yaml
 
 
 class VisageGenerator:
@@ -97,8 +96,8 @@ class VisageGenerator:
 
     def gen_params(self, cfg: Config):
         print('Generate random parameters')
-        fixed = [cfg.generator.shape.fixed, cfg.generator.expression.fixed, cfg.generator.pose.fixed, cfg.generator.texture.fixed, cfg.generator.neck.fixed, cfg.generator.eye.fixed, cfg.generator.camera.fixed, cfg.generator.ambient.fixed]
-        return [generator.zeros(cfg.general.nb_faces) if cfg.generator.zeros else generator.get(cfg.general.nb_faces, fix) for generator, fix in zip(self.params_generators, fixed)]
+        generators = [cfg.generator.shape, cfg.generator.expression, cfg.generator.pose, cfg.generator.texture, cfg.generator.neck, cfg.generator.eye, cfg.generator.camera, cfg.generator.ambient]
+        return [generator.zeros(cfg.general.nb_faces) if cfg.generator.zeros else generator.get(cfg.general.nb_faces, gen.fixed, keyframes=gen.animation.keyframes if cfg.generator.animated else None) for generator, gen in zip(self.params_generators, generators)]
 
     def load_params(self, cfg: Config):
         if cfg.general.nb_faces == -1:
@@ -200,7 +199,7 @@ class VisageGenerator:
 
 
 @click.command()
-@click.option('--cfg', default='configs/default.yml', callback=lambda ctx, param, value: Config(yaml.safe_load(open(value, 'r'))))
+@click.option('--cfg', default='configs/default.yml', callback=lambda ctx, param, value: Config.fromYml(value))
 def main(cfg, **_):
     vg = VisageGenerator(cfg)
     vg.save_all(cfg)

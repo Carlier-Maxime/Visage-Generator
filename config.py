@@ -1,4 +1,5 @@
 from typing import Any
+import yaml
 
 
 class Config(dict):
@@ -28,3 +29,7 @@ class Config(dict):
         value = value[1:-1].split(",")
         value = [type_element(v) for v in value]
         return value
+
+    @staticmethod
+    def fromYml(path: str):
+        return Config(yaml.safe_load(open(path, 'r')) | yaml.safe_load(open("configs/default.yml", 'r')))

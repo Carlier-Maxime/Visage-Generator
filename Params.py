@@ -86,9 +86,13 @@ class MultiParamsGenerator(BaseParamsGenerator):
             size = [count, self.get_nb_params()]
         return torch.zeros(size, device=self.device)
 
-    def get(self, count: int, same: bool = False) -> torch.Tensor:
-        params = self.generate((1 if same else count, self.get_nb_params()))
-        return params.repeat(count, 1) if same else params
+    def get(self, count: int, same: bool = False, keyframes: int | None = None) -> torch.Tensor:
+        params = self.generate((1 if same else keyframes if keyframes is not None else count, self.get_nb_params()))
+        if keyframes is not None:
+            if same: params = params.repeat(keyframes, 1)
+            params = torch.cat([torch.stack([torch.linspace(start_val, start_end, count // (keyframes-1) + (count % (keyframes-1) if i == 0 else 0), device=params.device) for start_val, start_end in zip(params[i], params[(i + 1) % keyframes])]).permute(1, 0) for i in range(keyframes - 1)])
+        elif same: params = params.repeat(count, 1)
+        return params
 
     def get_nb_params(self) -> int:
         return int(self.nb_params.sum())

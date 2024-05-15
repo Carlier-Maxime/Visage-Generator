@@ -8,32 +8,49 @@ general:
 generator:
   input_folder: None # input folder for load parameter
   zeros: False # zeros for all params not loaded
+  animated: False # animate a visage
   shape:
     params: [300, -2, 2] # Shape parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==300
     fixed: False # fixed the same shape for all visage generated
+    animation:
+      keyframes: 2 # Number of keyframe
   expression:
     params: [100, -2, 2] # Expression parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==100
     fixed: False # fixed the same expression for all visage generated
+    animation:
+      keyframes: 2 # Number of keyframe
   pose:
     params: [3, 0, 0, 1, 0, 30, 2, -10, 10] # Pose parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6 (min, max in degree)
     fixed: False # fixed the same pose for all visage generated
+    animation:
+      keyframes: 2 # Number of keyframe
   texture:
     params: [50, -2, 2] # Texture parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==50, maximum : 200 (increase memory used)
     fixed: False # fixed the same texture for all visage generated
+    animation:
+      keyframes: 2 # Number of keyframe
   neck:
     params: [3, -30, 30] # Neck parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==3 (min, max in degree)
     fixed: False # fixed the same neck for all visage generated
+    animation:
+      keyframes: 2 # Number of keyframe
   eye:
     params: [6, 0, 0] # Eye parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==6
     fixed: False # fixed the same eye for all visage generated
+    animation:
+      keyframes: 2 # Number of keyframe
   camera:
     default: [10., 0., 0., -2., 0., 0., 0.] # default camera (type:default) for renderer [fov, tx, ty, tz, rx, ry, rz] (rotation in degree)
     params: [1, 8, 12, 2, -0.05, 0.05, 1, -2.1, -1.9, 3, -30, 30] # Camera parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. sum(nX)==7, (default : [fov, tx, ty, tz, rx, ry, rz], vector : [fov, lookAtX, lookAtY, lookAtZ, radius, phi, theta])
     fixed: False # fixed the same cameras for all visage generated
     type: default # camera type used for renderer (change utilisation of camera parameter) [default, vector]
+    animation:
+      keyframes: 2 # Number of keyframe
   ambient:
     params: [3, 0.75, 1, 1, 0, 1] # Ambient light parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==4, [R,G,B,Intensity]
     fixed: False # fixed the same ambient light for all visage generated
+    animation:
+      keyframes: 2 # Number of keyframe
   coords_multiplier: 1 # multiply coordinates by the value. (fov must be augmented for not change result in png)
 
 flame:
@@ -51,7 +68,7 @@ save:
     show_window: False # show window during save png (enable if images is the screenshot or full black)
     vertical_flip: True # vertical flip for saving image
   obj: False # save into file obj
-  png: False # save into file png
+  png: True # save into file png
   latents: False # save latents into file npy
   depth:
     enable: False # save depth into png file
