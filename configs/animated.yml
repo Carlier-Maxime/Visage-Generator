@@ -1,0 +1,28 @@
+general:
+  nb_faces: 1000 # number faces generate
+generator:
+  animated: True # animate a visage
+  shape:
+    animation:
+      keyframes: 10 # Number of keyframe
+  expression:
+    animation:
+      keyframes: 100 # Number of keyframe
+  pose:
+    animation:
+      keyframes: 10 # Number of keyframe
+  texture:
+    animation:
+      keyframes: 25 # Number of keyframe
+  neck:
+    animation:
+      keyframes: 20 # Number of keyframe
+  eye:
+    animation:
+      keyframes: 100 # Number of keyframe
+  camera:
+    animation:
+      keyframes: 20 # Number of keyframe
+  ambient:
+    animation:
+      keyframes: 50 # Number of keyframe
