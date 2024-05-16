@@ -1,39 +1,25 @@
 save:
-  global_:
-    outdir: output # path directory for output
-    img_resolution: [512, 512] # resolution of image
-    random_bg: True # enable random background color for renderer
-    show_window: False # show window during save png (enable if images is the screenshot or full black)
-    vertical_flip: True # vertical flip for saving image
-  obj: True # save into file obj
-  png: True # save into file png
-  latents: True # save latents into file npy
+  obj:
+    enable: True # save into file obj
+  png:
+    enable: True # save into file png
+  latents:
+    enable: True # save latents into file npy
   depth:
     enable: True # save depth into png file
-    alpha: False # save depth to channel alpha
-  lmks3D: True # save landmarks 3D into file npy
+  lmks3D:
+    enable: True # save landmarks 3D into file npy
   lmks2D:
-    png:
-      enable: True # save landmarks 2D with visage into file png
-      alpha: True # save landmarks 2D to channel alpha
-    npy: True # save landmarks 2D into file npy
-    pts: True # save landmarks 2D into file pts
-  markers3D: True # save markers 3D into npy file
+    enable: True
+  markers3D:
+    enable: True # save markers 3D into npy file
   markers2D:
-    png:
-      enable: True # save markers 2D into png file
-      alpha: True # save markers 2D to channel alpha
-    npy: True # save markers 2D into npy file
-    pts: True # save markers 2D into pts file
-  camera:
-    default: True # save camera in default format
-    matrices: True # save camera in matrices format
-    json: True # save camera in json format
+    enable: True
+  camera_default:
+    enable: True
+  camera_matrices:
+    enable: True
+  camera_json:
+    enable: True
   density:
-    enable: True # save density cube into mrc file
-    size: 64 # size of density cube
-    vertices_interval: 0 # interval of vertices used for scaled vertices to density cube size. if 0 then vertices.max() is used
-    pts_batch_size: 10000 # number of points process simultaneously for get triangle nearest in density cube process
-    method_pts_in_tri: barycentric # method used for check if voxel inside triangle ("barycentric", "normal")
-    epsilon_scale: 0.005 # epsilon scale used for calcul epsilon used in method voxel inside triangle. (epsilon = cube_size * epsilon_scale)
-    cube_format: cube # the format of density cube (cube or mrc). (format cube, reduce space used but not loaded by USCF ChimeraX)
+    enable: True # save density cube

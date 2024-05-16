@@ -62,40 +62,73 @@ flame:
 
 save:
   global_:
-    outdir: output # path directory for output
+    outdir: 'output' # path directory for output
     img_resolution: [512, 512] # resolution of image
     random_bg: False # enable random background color for renderer
     show_window: False # show window during save png (enable if images is the screenshot or full black)
     vertical_flip: True # vertical flip for saving image
-  obj: False # save into file obj
-  png: True # save into file png
-  latents: False # save latents into file npy
+  obj:
+    target: 'ObjSaver'
+    enable: False # save into file obj
+    location: '/obj'
+  png:
+    target: 'VisageImageSaver'
+    enable: True # save into file png
+    location: '/png/default'
+  latents:
+    target: 'NumpySaver'
+    enable: False # save latents into file npy
+    location: '/latents'
   depth:
+    target: 'VisageImageSaver'
     enable: False # save depth into png file
+    location: '/png/depth'
     alpha: False # save depth to channel alpha
-  lmks3D: False # save landmarks 3D into file npy
+  lmks3D:
+    target: 'NumpySaver'
+    enable: False # save landmarks 3D into file npy
+    location: '/lmks/3D'
   lmks2D:
-    png:
-      enable: False # save landmarks 2D with visage into file png
-      alpha: True # save landmarks 2D to channel alpha
+    target: 'Lmks2DSaver'
+    enable: False
+    location: '/lmks/2D'
     npy: False # save landmarks 2D into file npy
     pts: False # save landmarks 2D into file pts
-  markers3D: False # save markers 3D into npy file
+    png: False # save landmarks 2D with visage into file png
+    use_alpha: True # save landmarks 2D to channel alpha ('png: True' is required)
+  markers3D:
+    target: 'NumpySaver'
+    enable: False # save markers 3D into npy file
+    location: '/markers/3D'
   markers2D:
-    png:
-      enable: False # save markers 2D into png file
-      alpha: True # save markers 2D to channel alpha
+    target: 'Lmks2DSaver'
+    enable: False
+    location: '/markers/2D'
     npy: False # save markers 2D into npy file
     pts: False # save markers 2D into pts file
-  camera:
-    default: False # save camera in default format
-    matrices: False # save camera in matrices format
-    json: False # save camera in json format
+    png: False # save markers 2D into png file
+    use_alpha: True # save markers 2D to channel alpha ('png: True' is required)
+  camera_default:
+    target: 'TorchSaver'
+    enable: False
+    location: '/camera/default'
+  camera_matrices:
+    target: 'TorchSaver'
+    enable: False
+    location: '/camera/matrices'
+  camera_json:
+    target: 'CameraJSONSaver'
+    enable: False
+    location: '/camera'
   density:
-    enable: False # save density cube into mrc file
+    target: 'DensityCubeSaver'
+    enable: False # save density cube
+    location: '/density_cube'
     size: 64 # size of density cube
     vertices_interval: 0 # interval of vertices used for scaled vertices to density cube size. if 0 then vertices.max() is used
     pts_batch_size: 10000 # number of points process simultaneously for get triangle nearest in density cube process
     method_pts_in_tri: barycentric # method used for check if voxel inside triangle ("barycentric", "normal")
     epsilon_scale: 0.005 # epsilon scale used for calcul epsilon used in method voxel inside triangle. (epsilon = cube_size * epsilon_scale)
+    voxel_bits: 8 # Number of bits used for storage voxel
+    quantile: 0.9 # Quantile used for ignored many value
     cube_format: cube # the format of density cube (cube or mrc). (format cube, reduce space used but not loaded by USCF ChimeraX)

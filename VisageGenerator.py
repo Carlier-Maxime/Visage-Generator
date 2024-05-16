@@ -55,22 +55,8 @@ class VisageGenerator:
             self.render = Viewer(self, other_objects=None, device=self.device, window_size=cfg.save.global_.img_resolution, cameras=self.cameras, camera_type=cfg.generator.camera.type)
         else:
             self.render = Renderer(cfg.save.global_.img_resolution[0], cfg.save.global_.img_resolution[1], device=self.device, show=cfg.save.global_.show_window, camera=self.default_camera, camera_type=cfg.generator.camera.type)
-        self.markers = torch.load("markers.pt").to(self.device) if cfg.save.markers2D.png.enable or cfg.save.markers2D.npy or cfg.save.markers2D.pts or cfg.save.markers3D else None
-        outdir = cfg.save.global_.outdir
-        self.obj_Saver = ObjSaver(outdir + "/obj", self.render, cfg.save.obj)
-        self.latents_Saver = NumpySaver(outdir + "/latents", cfg.save.latents)
-        self.lmk3D_npy_Saver = NumpySaver(outdir + "/lmks/3D", cfg.save.lmks3D)
-        self.lmk2D_Saver = Lmks2DSaver(outdir + "/lmks/2D", self.render, cfg.save.lmks2D.npy or cfg.save.lmks2D.pts)
-        self.visage_png_Saver = VisageImageSaver(outdir + "/png/default", self.render, cfg.save.png)
-        self.lmk3D_png_Saver = VisageImageSaver(outdir + "/png/lmks", self.render, cfg.save.lmks2D.png.enable)
-        self.markers_png_Saver = VisageImageSaver(outdir + "/png/markers", self.render, cfg.save.markers2D.png.enable)
-        self.markers_npy_Saver = NumpySaver(outdir + "/lmks/markers3D", cfg.save.markers3D)
-        self.markers2D_Saver = Lmks2DSaver(outdir + "/lmks/markers2D", self.render, cfg.save.markers2D.npy or cfg.save.markers2D.pts)
-        self.depth_png_Saver = VisageImageSaver(outdir + "/png/depth", self.render, cfg.save.depth.enable)
-        self.camera_default_Saver = TorchSaver(outdir + "/camera/default", cfg.save.camera.default)
-        self.camera_matrices_Saver = TorchSaver(outdir + "/camera/matrices", cfg.save.camera.matrices)
-        self.camera_json_Saver = CameraJSONSaver(outdir + "/camera", self.render, cfg.save.camera.json)
-        self.density_cube_Saver = DensityCubeSaver(outdir + "/density_cube", cfg.save.density.size, self.device, cfg.save.density.enable, method_pts_in_tri=cfg.save.density.method_pts_in_tri, cube_format=cfg.save.density.cube_format)
+        self.savers = Saver.load(cfg.save, renderer=self.render, device=self.device)
+        self.markers = torch.load("markers.pt").to(self.device) if cfg.save.markers2D.enable or cfg.save.markers3D.enable else None
 
     def view(self, cfg: Config, other_objects=None) -> None:
         print("Open Viewer...")
@@ -173,20 +159,18 @@ class VisageGenerator:
             if cfg.save.global_.random_bg:
                 self.render.random_background()
             markers = util.read_all_index_opti_tri(vertices, self._faces, self.markers)
-            self.obj_Saver(index, basename + '.obj', vertices, self._faces, texture=texture)
-            self.latents_Saver(index, basename + '.npy', self.get_latents(i))
-            self.lmk3D_npy_Saver(index, basename + '.npy', lmk)
-            self.lmk2D_Saver(index, basename + f'.{"pts" if cfg.save.lmks2D.pts else "npy"}', lmk, vertical_flip=cfg.save.global_.vertical_flip)
-            self.visage_png_Saver(index, basename + '.png', vertices, texture, vertical_flip=cfg.save.global_.vertical_flip, depth_in_alpha=cfg.save.depth.alpha)
-            self.lmk3D_png_Saver(index, basename + '.png', vertices, texture, pts=lmk, ptsInAlpha=cfg.save.lmks2D.png.alpha, vertical_flip=cfg.save.global_.vertical_flip, depth_in_alpha=cfg.save.depth.alpha)
-            self.markers_png_Saver(index, basename + '.png', vertices, texture, pts=markers, ptsInAlpha=cfg.save.markers2D.png.alpha, vertical_flip=cfg.save.global_.vertical_flip, depth_in_alpha=cfg.save.depth.alpha)
-            self.markers_npy_Saver(index, basename + '.npy', markers)
-            self.markers2D_Saver(index, basename + '.npy', markers, vertical_flip=cfg.save.global_.vertical_flip)
-            self.depth_png_Saver(index, basename + '.png', vertices, texture, pts=markers, ptsInAlpha=cfg.save.markers2D.png.alpha, vertical_flip=cfg.save.global_.vertical_flip, save_depth=True)
-            self.camera_default_Saver(index, basename + '.pt', camera)
-            self.camera_matrices_Saver(index, basename + '.pt', self.render.get_camera().get_matrix() if self.camera_matrices_Saver.enable else None)
-            self.camera_json_Saver(index, basename, camera)
-            self.density_cube_Saver(index, basename, vertices, self._faces, v_interval=cfg.save.density.vertices_interval, pts_batch_size=cfg.save.density.pts_batch_size, epsilon_scale=cfg.save.density.epsilon_scale)
+            self.savers.obj(index, basename + '.obj', vertices, self._faces, texture=texture)
+            self.savers.latents(index, basename + '.npy', self.get_latents(i))
+            self.savers.lmks3D(index, basename + '.npy', lmk)
+            self.savers.lmks2D(index, basename, lmk, vertical_flip=cfg.save.global_.vertical_flip, vertices=vertices, texture=texture)
+            self.savers.png(index, basename + '.png', vertices, texture, vertical_flip=cfg.save.global_.vertical_flip, depth_in_alpha=cfg.save.depth.alpha)
+            self.savers.markers3D(index, basename + '.npy', markers)
+            self.savers.markers2D(index, basename, markers, vertical_flip=cfg.save.global_.vertical_flip, vertices=vertices, texture=texture)
+            self.savers.depth(index, basename + '.png', vertices, texture, pts=markers, ptsInAlpha=cfg.save.depth.alpha, vertical_flip=cfg.save.global_.vertical_flip, save_depth=True)
+            self.savers.camera_default(index, basename + '.pt', camera)
+            self.savers.camera_matrices(index, basename + '.pt', self.render.get_camera().get_matrix() if self.savers.camera_matrices.enable else None)
+            self.savers.camera_json(index, basename, camera)
+            self.savers.density(index, basename, vertices, self._faces, v_interval=cfg.save.density.vertices_interval, pts_batch_size=cfg.save.density.pts_batch_size, epsilon_scale=cfg.save.density.epsilon_scale)
             self.render.void_events()
 
     def save_all(self, cfg: Config):
