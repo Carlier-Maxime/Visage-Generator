@@ -90,6 +90,7 @@ class MultiParamsGenerator(BaseParamsGenerator):
         params = self.generate((1 if same else keyframes if keyframes is not None else count, self.get_nb_params()))
         if keyframes is not None:
             if same: params = params.repeat(keyframes, 1)
+            if keyframes == 1: return params.repeat(count, 1)
             start_values = params[:-1]
             end_values = params[1:]
             first = torch.linspace(0, 1, count // (keyframes - 1) + count % (keyframes - 1), device=self.device).view(-1, 1)
