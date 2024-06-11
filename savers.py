@@ -118,8 +118,8 @@ class VisageImageSaver(Saver):
         super().__init__(location, enable)
         self.render = renderer
 
-    def _saving(self, path, vertices, texture, *args: Any, pts=None, pts_in_alpha=True, vertical_flip: bool = True, save_depth: bool = False, depth_in_alpha: bool = False, **kwargs: Any):
-        self.render.save_to_image(path+'.png', vertices, texture, pts=pts, pts_in_alpha=pts_in_alpha, vertical_flip=vertical_flip, save_depth=save_depth, depth_in_alpha=depth_in_alpha)
+    def _saving(self, path, vertices, texture, *args: Any, pts=None, pts_in_alpha=True, save_depth: bool = False, depth_in_alpha: bool = False, **kwargs: Any):
+        self.render.save_to_image(path+'.png', vertices, texture, pts=pts, pts_in_alpha=pts_in_alpha, vertical_flip=Saver.vertical_flip, save_depth=save_depth, depth_in_alpha=depth_in_alpha)
 
 
 class CameraJSONSaver(Saver):
