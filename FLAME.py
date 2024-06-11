@@ -44,12 +44,12 @@ class FLAME(nn.Module):
         super(FLAME, self).__init__()
         print("creating the FLAME Decoder")
         with open(flame_model_path, 'rb') as f:
-            self.flame_model = Struct(**pickle.load(f, encoding='latin1'))
+            flame_model = Struct(**pickle.load(f, encoding='latin1'))
         self.NECK_IDX = 1
         self.batch_size = batch_size
         self.dtype = torch.float32
         self.use_face_contour = use_face_contour
-        self.faces = self.flame_model.f
+        self.faces = flame_model.f
         self.register_buffer('faces_tensor',
                              to_tensor(to_np(self.faces, dtype=np.int64),
                                        dtype=torch.long))
@@ -93,33 +93,33 @@ class FLAME(nn.Module):
 
         # The vertices of the template model
         self.register_buffer('v_template',
-                             to_tensor(to_np(self.flame_model.v_template),
+                             to_tensor(to_np(flame_model.v_template),
                                        dtype=self.dtype))
 
         # The shape components
-        shapedirs = self.flame_model.shapedirs
+        shapedirs = flame_model.shapedirs
         # The shape components
         self.register_buffer(
             'shapedirs',
             to_tensor(to_np(shapedirs), dtype=self.dtype))
 
         j_regressor = to_tensor(to_np(
-            self.flame_model.J_regressor), dtype=self.dtype)
+            flame_model.J_regressor), dtype=self.dtype)
         self.register_buffer('J_regressor', j_regressor)
 
         # Pose blend shape basis
-        num_pose_basis = self.flame_model.posedirs.shape[-1]
-        posedirs = np.reshape(self.flame_model.posedirs, [-1, num_pose_basis]).T
+        num_pose_basis = flame_model.posedirs.shape[-1]
+        posedirs = np.reshape(flame_model.posedirs, [-1, num_pose_basis]).T
         self.register_buffer('posedirs',
                              to_tensor(to_np(posedirs), dtype=self.dtype))
 
         # indices of parents for each joints
-        parents = to_tensor(to_np(self.flame_model.kintree_table[0])).long()
+        parents = to_tensor(to_np(flame_model.kintree_table[0])).long()
         parents[0] = -1
         self.register_buffer('parents', parents)
 
         self.register_buffer('lbs_weights',
-                             to_tensor(to_np(self.flame_model.weights), dtype=self.dtype))
+                             to_tensor(to_np(flame_model.weights), dtype=self.dtype))
 
         # Static and Dynamic Landmark embeddings for FLAME
 
