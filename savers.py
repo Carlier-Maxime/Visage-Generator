@@ -42,7 +42,7 @@ class TorchSaver(Saver):
         super().__init__(location, enable)
 
     def _saving(self, path, data, *args: Any, **kwargs: Any) -> Any:
-        torch.save(data, path, *args, **kwargs)
+        torch.save(data, path+'.pt', *args, **kwargs)
 
 
 class NumpySaver(Saver):
@@ -52,7 +52,7 @@ class NumpySaver(Saver):
     def _saving(self, path, data, *args: Any, **kwargs: Any) -> Any:
         if torch.is_tensor(data):
             data = data.cpu().numpy()
-        np.save(path, data, *args, **kwargs)
+        np.save(path+'.npy', data, *args, **kwargs)
 
 
 class ObjSaver(Saver):
@@ -63,16 +63,15 @@ class ObjSaver(Saver):
         self.uv_faces = self.render.uv_faces.cpu().numpy()
 
     def _saving(self, path: str, vertices, faces: torch.Tensor, *args: Any, texture=None, **kwargs: Any):
-        basename = path.split(".obj")[0]
         faces = faces.cpu().numpy()
         vertices = vertices.cpu().numpy()
         if texture is not None:
-            cv2.imwrite(basename + "_texture.png", texture[:, :, [2, 1, 0]])
-            with open(basename + ".mtl", "w") as f:
-                f.write(f'newmtl material_0\nmap_Kd {basename.split("/")[-1]}_texture.png\n')
-        with open(path, 'w') as f:
+            cv2.imwrite(path + "_texture.png", texture[:, :, [2, 1, 0]])
+            with open(path + ".mtl", "w") as f:
+                f.write(f'newmtl material_0\nmap_Kd {path.split("/")[-1]}_texture.png\n')
+        with open(path+'.obj', 'w') as f:
             if texture is not None:
-                f.write(f'mtllib {basename.split("/")[-1]}.mtl\n')
+                f.write(f'mtllib {path.split("/")[-1]}.mtl\n')
             np.savetxt(f, vertices, fmt='v %.6g %.6g %.6g')
             if texture is None:
                 np.savetxt(f, faces + 1, fmt='f %d %d %d')
@@ -120,7 +119,7 @@ class VisageImageSaver(Saver):
         self.render = renderer
 
     def _saving(self, path, vertices, texture, *args: Any, pts=None, pts_in_alpha=True, vertical_flip: bool = True, save_depth: bool = False, depth_in_alpha: bool = False, **kwargs: Any):
-        self.render.save_to_image(path, vertices, texture, pts=pts, pts_in_alpha=pts_in_alpha, vertical_flip=vertical_flip, save_depth=save_depth, depth_in_alpha=depth_in_alpha)
+        self.render.save_to_image(path+'.png', vertices, texture, pts=pts, pts_in_alpha=pts_in_alpha, vertical_flip=vertical_flip, save_depth=save_depth, depth_in_alpha=depth_in_alpha)
 
 
 class CameraJSONSaver(Saver):
