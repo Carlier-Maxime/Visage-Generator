@@ -42,7 +42,23 @@ class TorchSaver(Saver):
         super().__init__(location, enable)
 
     def _saving(self, path, data, *args: Any, **kwargs: Any) -> Any:
-        torch.save(data, path+'.pt', *args, **kwargs)
+        torch.save(data, path + '.pt', *args, **kwargs)
+
+
+class CameraDefaultSaver(TorchSaver):
+    def __init__(self, location, enable: bool = True, **_: Any) -> None:
+        super().__init__(location, enable)
+
+    def _saving(self, path, camera, *args: Any, **kwargs: Any):
+        super()._saving(path, camera.to_tensor())
+
+
+class CameraMatrixSaver(TorchSaver):
+    def __init__(self, location, enable: bool = True, **_: Any) -> None:
+        super().__init__(location, enable)
+
+    def _saving(self, path, camera, *args: Any, **kwargs: Any):
+        super()._saving(path, camera.get_matrix())
 
 
 class NumpySaver(Saver):
@@ -52,7 +68,31 @@ class NumpySaver(Saver):
     def _saving(self, path, data, *args: Any, **kwargs: Any) -> Any:
         if torch.is_tensor(data):
             data = data.cpu().numpy()
-        np.save(path+'.npy', data, *args, **kwargs)
+        np.save(path + '.npy', data, *args, **kwargs)
+
+
+class Lmks3DSaver(NumpySaver):
+    def __init__(self, location, enable: bool = True, **_: Any) -> None:
+        super().__init__(location, enable)
+
+    def _saving(self, path, lmks, *args: Any, **kwargs: Any):
+        super()._saving(path, lmks)
+
+
+class Markers3DSaver(NumpySaver):
+    def __init__(self, location, enable: bool = True, **_: Any) -> None:
+        super().__init__(location, enable)
+
+    def _saving(self, path, markers, *args: Any, **kwargs: Any):
+        super()._saving(path, markers)
+
+
+class LatentsSaver(NumpySaver):
+    def __init__(self, location, enable: bool = True, **_: Any) -> None:
+        super().__init__(location, enable)
+
+    def _saving(self, path, latents, *args: Any, **kwargs: Any):
+        super()._saving(path, latents)
 
 
 class ObjSaver(Saver):
@@ -69,7 +109,7 @@ class ObjSaver(Saver):
             cv2.imwrite(path + "_texture.png", texture[:, :, [2, 1, 0]])
             with open(path + ".mtl", "w") as f:
                 f.write(f'newmtl material_0\nmap_Kd {path.split("/")[-1]}_texture.png\n')
-        with open(path+'.obj', 'w') as f:
+        with open(path + '.obj', 'w') as f:
             if texture is not None:
                 f.write(f'mtllib {path.split("/")[-1]}.mtl\n')
             np.savetxt(f, vertices, fmt='v %.6g %.6g %.6g')
@@ -103,8 +143,8 @@ class Lmks2DSaver(Saver):
     def __save_png(self, path, vertices, texture, lmks):
         self.render.save_to_image(path, vertices, texture, pts=lmks, pts_in_alpha=self.use_alpha, vertical_flip=Saver.vertical_flip)
 
-    def _saving(self, path: str, lmks, *args: Any, vertical_flip: bool = True, **kwargs: Any):
-        lmks2D = [self.render.get_coord_2d(p, vertical_flip=vertical_flip) for p in lmks]
+    def _saving(self, path: str, lmks, *args: Any, **kwargs: Any):
+        lmks2D = [self.render.get_coord_2d(p, vertical_flip=Saver.vertical_flip) for p in lmks]
         path = path.split('/')
         file = path[-1]
         path = '/'.join(path[:-1])
@@ -113,13 +153,21 @@ class Lmks2DSaver(Saver):
         if self.png: self.__save_png(f'{path}/png/{file}.png', lmks, **kwargs)
 
 
+class Markers2DSaver(Lmks2DSaver):
+    def __init__(self, location, renderer: Renderer, enable: bool = True, npy: bool = True, pts: bool = False, png: bool = False, use_alpha: bool = True, **_: Any) -> None:
+        super().__init__(location, renderer, enable, npy, pts, png, use_alpha, **_)
+
+    def _saving(self, path: str, markers, *args: Any, **kwargs: Any):
+        super()._saving(path, markers, args, kwargs)
+
+
 class VisageImageSaver(Saver):
     def __init__(self, location, renderer: Renderer, enable: bool = True, **_: Any) -> None:
         super().__init__(location, enable)
         self.render = renderer
 
     def _saving(self, path, vertices, texture, *args: Any, pts=None, pts_in_alpha=True, save_depth: bool = False, depth_in_alpha: bool = False, **kwargs: Any):
-        self.render.save_to_image(path+'.png', vertices, texture, pts=pts, pts_in_alpha=pts_in_alpha, vertical_flip=Saver.vertical_flip, save_depth=save_depth, depth_in_alpha=depth_in_alpha)
+        self.render.save_to_image(path + '.png', vertices, texture, pts=pts, pts_in_alpha=pts_in_alpha, vertical_flip=Saver.vertical_flip, save_depth=save_depth, depth_in_alpha=depth_in_alpha)
 
 
 class CameraJSONSaver(Saver):
@@ -142,8 +190,7 @@ class CameraJSONSaver(Saver):
             self._saving(format(index // 1000, "05d") + '/' + filename, *args, **kwargs)
 
     def _saving(self, basename, camera, *args: Any, **kwargs: Any):
-        self.render.change_camera(camera)
-        intrinsic_norm, extrinsic = self.render.get_camera().get_matrix()
+        intrinsic_norm, extrinsic = camera.get_matrix()
         np.savetxt(self.file, torch.cat([extrinsic.flatten(), intrinsic_norm.flatten()]).view(1, -1).cpu().numpy(), '%f', delimiter=',', newline='', header=f'"{basename}": [', footer=f']', comments='')
 
     def close(self):
@@ -158,7 +205,7 @@ class CameraJSONSaver(Saver):
 
 
 class DensityCubeSaver(Saver):
-    def __init__(self, location, size, device, enable: bool = True, method_pts_in_tri: str = 'barycentric', epsilon_scale: float = 0.005, voxel_bits: int = 8, quantile: float = 0.9, cube_format: str = 'cube', **_: Any) -> None:
+    def __init__(self, location, size, device, enable: bool = True, method_pts_in_tri: str = 'barycentric', epsilon_scale: float = 0.005, voxel_bits: int = 8, quantile: float = 0.9, cube_format: str = 'cube', vertices_interval: float = 0, pts_batch_size: int = 10000, **_: Any) -> None:
         assert voxel_bits in [8, 16, 32]
         assert cube_format in ['cube', 'mrc']
         if cube_format == 'cube': assert size ** 3 % 8 == 0
@@ -172,6 +219,8 @@ class DensityCubeSaver(Saver):
         self.quantile = quantile
         self.cube_format = cube_format
         self.shifts = torch.arange(7, -1, -1).to(device)
+        self.v_interval = vertices_interval
+        self.pts_batch_size = pts_batch_size
 
     @staticmethod
     def get_tri_nearest(mesh, pts, pts_batch_size: int = 10000):
@@ -202,12 +251,13 @@ class DensityCubeSaver(Saver):
         v = (dot00 * dot12 - dot01 * dot02) * inv_denom
         return (u >= -self.epsilon) & (v >= -self.epsilon) & (u + v <= 1 + self.epsilon)
 
-    def _saving(self, path, vertices, faces, v_interval: int = 0, pts_batch_size: int = 10000, *args: Any, **kwargs: Any) -> Any:
-        if v_interval == 0: v_interval = max(vertices.min().abs(), vertices.max())
+    def _saving(self, path, vertices, faces, *args: Any, **kwargs: Any) -> Any:
+        if self.v_interval == 0: v_interval = max(vertices.min().abs(), vertices.max())
+        else: v_interval = self.v_interval
         vertices *= (self.size // 2) / v_interval
         vertices += self.size // 2
         mesh = vertices[faces]
-        tri_nearest = self.get_tri_nearest(mesh, self.cube_indices)
+        tri_nearest = self.get_tri_nearest(mesh, self.cube_indices, self.pts_batch_size)
         tri_vecs = torch.stack([tri_nearest[:, (i + 1) % 3].sub(tri_nearest[:, i]) for i in range(3)])
         normal = torch.cross(tri_vecs[0], tri_vecs[1])
         normal = normal.divide(torch.norm(normal, dim=0))

@@ -76,7 +76,7 @@ save:
     enable: True # save into file png
     location: '/png/default'
   latents:
-    target: 'NumpySaver'
+    target: 'LatentsSaver'
     enable: False # save latents into file npy
     location: '/latents'
   depth:
@@ -85,7 +85,7 @@ save:
     location: '/png/depth'
     alpha: False # save depth to channel alpha
   lmks3D:
-    target: 'NumpySaver'
+    target: 'Lmks3DSaver'
     enable: False # save landmarks 3D into file npy
     location: '/lmks/3D'
   lmks2D:
@@ -97,11 +97,11 @@ save:
     png: False # save landmarks 2D with visage into file png
     use_alpha: True # save landmarks 2D to channel alpha ('png: True' is required)
   markers3D:
-    target: 'NumpySaver'
+    target: 'Markers3DSaver'
     enable: False # save markers 3D into npy file
     location: '/markers/3D'
   markers2D:
-    target: 'Lmks2DSaver'
+    target: 'Markers2DSaver'
     enable: False
     location: '/markers/2D'
     npy: False # save markers 2D into npy file
@@ -109,11 +109,11 @@ save:
     png: False # save markers 2D into png file
     use_alpha: True # save markers 2D to channel alpha ('png: True' is required)
   camera_default:
-    target: 'TorchSaver'
+    target: 'CameraDefaultSaver'
     enable: False
     location: '/camera/default'
   camera_matrices:
-    target: 'TorchSaver'
+    target: 'CameraMatrixSaver'
     enable: False
     location: '/camera/matrices'
   camera_json:

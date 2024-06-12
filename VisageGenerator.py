@@ -158,19 +158,8 @@ class VisageGenerator:
             basename = format(index, '08d') if self.filenames is None else self.filenames[index]
             if cfg.save.global_.random_bg:
                 self.render.random_background()
-            markers = util.read_all_index_opti_tri(vertices, self._faces, self.markers)
-            self.savers.obj(index, basename, vertices, self._faces, texture=texture)
-            self.savers.latents(index, basename, self.get_latents(i))
-            self.savers.lmks3D(index, basename, lmk)
-            self.savers.lmks2D(index, basename, lmk, vertices=vertices, texture=texture)
-            self.savers.png(index, basename, vertices, texture, depth_in_alpha=cfg.save.depth.alpha)
-            self.savers.markers3D(index, basename, markers)
-            self.savers.markers2D(index, basename, markers, vertices=vertices, texture=texture)
-            self.savers.depth(index, basename, vertices, texture, pts=markers, ptsInAlpha=cfg.save.depth.alpha, save_depth=True)
-            self.savers.camera_default(index, basename, camera)
-            self.savers.camera_matrices(index, basename, self.render.get_camera().get_matrix() if self.savers.camera_matrices.enable else None)
-            self.savers.camera_json(index, basename, camera)
-            self.savers.density(index, basename, vertices, self._faces, v_interval=cfg.save.density.vertices_interval, pts_batch_size=cfg.save.density.pts_batch_size, epsilon_scale=cfg.save.density.epsilon_scale)
+            args = Config({"vertices": vertices, "texture": texture, "faces": self._faces, "markers": util.read_all_index_opti_tri(vertices, self._faces, self.markers), "lmks": lmk, "camera": self.render.get_camera(), "latents": self.get_latents(i)})
+            for _, saver in self.savers.items(): saver(index, basename, **args)
             self.render.void_events()
 
     def save_all(self, cfg: Config):

@@ -44,6 +44,10 @@ class BaseCamera:
     def poll_event(self, e):
         pass
 
+    @abc.abstractmethod
+    def to_tensor(self):
+        pass
+
 
 class DefaultCamera(BaseCamera):
 
@@ -127,6 +131,9 @@ class DefaultCamera(BaseCamera):
                 self.fov += 0.1
                 self._update()
 
+    def to_tensor(self):
+        return torch.tensor([self.fov, self.tx, self.ty, self.tz, self.rx, self.ry, self.rz], device=self.fov.device)
+
 
 class VectorCamera(BaseCamera):
     def __init__(self, camera: torch.Tensor, width, height):
@@ -172,6 +179,9 @@ class VectorCamera(BaseCamera):
 
     def __str__(self):
         return f'fov: {self.fov}, lookAt : {self.lookAt}, radius : {self.radius}, phi : {self.phi}, theta : {self.theta}'
+
+    def to_tensor(self):
+        return torch.tensor([self.fov, self.lookAt[0], self.lookAt[1], self.lookAt[2], self.radius, self.phi, self.theta], device=self.fov.device)
 
     def poll_event(self, e):
         if e.type == MOUSEBUTTONDOWN:
