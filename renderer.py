@@ -141,6 +141,14 @@ class Renderer:
             glEnable(GL_TEXTURE_2D)
         glEndList()
 
+    def update_display(self):
+        if self.show:
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, self.frameBuffer)
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
+            glBlitFramebuffer(0, 0, self.width, self.height, 0, 0, self.width, self.height, GL_COLOR_BUFFER_BIT, GL_NEAREST)
+            glBindFramebuffer(GL_FRAMEBUFFER, self.frameBuffer)
+        pygame.display.flip()
+
     def test(self, gl_list):
         glEnable(GL_DEPTH_TEST)
         glMatrixMode(GL_MODELVIEW)
@@ -149,7 +157,9 @@ class Renderer:
             clock.tick(60)
             if not self._poll_events():
                 break
-            self._render(gl_list)
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+            glCallList(gl_list)
+            self.update_display()
         image = np.array(bytearray(glReadPixels(0, 0, self.width, self.height, GL_BGR, GL_UNSIGNED_BYTE))).reshape([self.height, self.width, 3])
         cv2.imwrite('test.jpg', cv2.flip(image, 0))
 
@@ -175,16 +185,6 @@ class Renderer:
     def change_camera(self, camera: torch.Tensor) -> None:
         self.camera.set_camera(camera)
 
-    def _render(self, gl_lists):
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-        glCallLists(gl_lists)
-        if self.show:
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, self.frameBuffer)
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0)
-            glBlitFramebuffer(0, 0, self.width, self.height, 0, 0, self.width, self.height, GL_COLOR_BUFFER_BIT, GL_NEAREST)
-            glBindFramebuffer(GL_FRAMEBUFFER, self.frameBuffer)
-        pygame.display.flip()
-
     def random_background(self):
         glClearColor(*torch.rand(3, device=self.device).tolist(), 1.)
 
@@ -196,44 +196,19 @@ class Renderer:
         glBindTexture(GL_TEXTURE_2D, self.texid)
         return img
 
-    def save_to_image(self, filename, vertices, texture, pts=None, pts_in_alpha: bool = True, vertical_flip: bool = True, save_depth: bool = False, depth_in_alpha: bool = False):
+    def get_image(self, vertices, texture, pts=None, vertical_flip: bool = True, dark_obj: bool = False, return_depth: bool = False):
         self._edit_gl_list(vertices, texture)
-        save_color: bool = not save_depth or depth_in_alpha
-        if pts is not None and save_color:
-            pts_gl_list = self.create_spheres_gl_list(self.raw_sphere, pts)
-            if pts_in_alpha:
-                assert not save_depth or not depth_in_alpha
-                self._render([self.gl_list_visage])
-                img_visage = torch.from_numpy(self.getImageFromTextureColor()).to(self.device)
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
-                glColor(0., 0., 0.)
-                glCallList(self.gl_list_visage)
-                glColor(1., 1., 1.)
-                glCallList(pts_gl_list)
-                pygame.display.flip()
-
-                img_pts = np.zeros((self.height, self.width, 1), dtype=np.uint8)
-                glBindTexture(GL_TEXTURE_2D, self.color_texture)
-                glGetTexImage(GL_TEXTURE_2D, 0, GL_GREEN, GL_UNSIGNED_BYTE, img_pts)
-                img_pts = torch.frombuffer(bytearray(img_pts), dtype=torch.uint8).view(self.height, self.width, -1)
-                glBindTexture(GL_TEXTURE_2D, self.texid)
-
-                green_mask = (img_pts == 255).all(dim=2)
-                new_colors = img_visage[green_mask]
-                new_colors[:, 3] = 0
-                img_visage[green_mask] = new_colors
-                img = img_visage.cpu().numpy()
-            else:
-                self._render([self.gl_list_visage, pts_gl_list])
-                img = self.getImageFromTextureColor()
-            glDeleteLists(pts_gl_list, 1)
-        elif save_color:
-            self._render([self.gl_list_visage])
-            img = self.getImageFromTextureColor()
-        else:
-            self._render([self.gl_list_visage])
-            img = None
-        if save_depth or depth_in_alpha:
+        pts_gl_list = None if pts is None else self.create_spheres_gl_list(self.raw_sphere, pts)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+        if dark_obj:
+            glColor(0., 0., 0.)
+            glCallList(self.gl_list_visage)
+            glColor(1., 1., 1.)
+            if pts is not None: glCallList(pts_gl_list)
+        else: glCallLists([self.gl_list_visage] if pts is None else [self.gl_list_visage, pts_gl_list])
+        self.update_display()
+        img = self.getImageFromTextureColor()
+        if return_depth:
             depth_values = np.zeros((self.height, self.width), dtype=np.float32)
             glBindTexture(GL_TEXTURE_2D, self.depth_texture)
             glGetTexImage(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, GL_FLOAT, depth_values)
@@ -242,15 +217,9 @@ class Renderer:
             tmp = depth_image[mask]
             depth_min, depth_max = tmp.min(), tmp.max()
             depth_image[mask] = ((tmp - depth_min) / (depth_max - depth_min)) * (1. - 0.2)
-            depth_image = (depth_image - 1) * -1
-            depth_image = (depth_image * 255.).to(torch.uint8).cpu().numpy()
-            if depth_in_alpha:
-                assert not pts_in_alpha or pts is None
-                assert img is not None
-                img[:, :, 3] = depth_image
-            else:
-                img = depth_image
-        cv2.imwrite(filename, cv2.flip(img, 0) if vertical_flip else img)
+            depth_image = depth_image.sub(1).mul(-255).to(torch.uint8).cpu().numpy()
+            return img, depth_image # TODO flip
+        return img # TODO flip
 
     def create_sphere(self, radius, slices, stacks):
         theta = torch.linspace(0, torch.pi, stacks + 1, device=self.device).repeat(slices + 1).reshape(stacks + 1, slices + 1).permute(1, 0)[None]

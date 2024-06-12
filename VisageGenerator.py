@@ -4,6 +4,7 @@ Copyright (c) 2023, Carlier Maxime
 All rights reserved.
 """
 
+import cv2
 import click
 from tqdm import trange, tqdm
 
@@ -149,16 +150,15 @@ class VisageGenerator:
             camera = self.default_camera if self.cameras is None else self.cameras[index]
             self.render.change_camera(camera)
             self.render.set_ambient_color(self.ambient_lights[index])
-            if self._textures is None:
-                texture = None
-            else:
-                texture = self._textures[i].clone().to(self.device)
-                texture *= 255
-                texture = texture.detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
+            texture = None if self._textures is None else self._textures[i].clone().to(self.device).mul(255).detach().permute(1, 2, 0).clamp(0, 255).to(torch.uint8).cpu().numpy()
             basename = format(index, '08d') if self.filenames is None else self.filenames[index]
             if cfg.save.global_.random_bg:
                 self.render.random_background()
-            args = Config({"vertices": vertices, "texture": texture, "faces": self._faces, "markers": util.read_all_index_opti_tri(vertices, self._faces, self.markers), "lmks": lmk, "camera": self.render.get_camera(), "latents": self.get_latents(i)})
+            markers = util.read_all_index_opti_tri(vertices, self._faces, self.markers)
+            face_img, depth_img = self.render.get_image(vertices, texture, vertical_flip=Saver.vertical_flip, return_depth=True)
+            lmks_img = self.render.get_image(vertices, texture, pts=lmk, vertical_flip=Saver.vertical_flip, dark_obj=True)
+            markers_img = self.render.get_image(vertices, texture, pts=markers, vertical_flip=Saver.vertical_flip, dark_obj=True)
+            args = Config({"vertices": vertices, "texture": texture, "faces": self._faces, "markers": markers, "lmks": lmk, "camera": self.render.get_camera(), "latents": self.get_latents(i), "face_img": face_img, 'depth_img': depth_img, "lmks_img": lmks_img, "markers_img": markers_img})
             for _, saver in self.savers.items(): saver(index, basename, **args)
             self.render.void_events()
 

@@ -140,34 +140,54 @@ class Lmks2DSaver(Saver):
             for i in range(len(lmks2D)):
                 f.write(f'{i + 1} {lmks2D[i][0]} {lmks2D[i][1]} False\n')
 
-    def __save_png(self, path, vertices, texture, lmks):
-        self.render.save_to_image(path, vertices, texture, pts=lmks, pts_in_alpha=self.use_alpha, vertical_flip=Saver.vertical_flip)
+    def __save_png(self, path, lmks_img=None, face_img=None, **kwargs: Any):
+        cv2.imwrite(path, lmks_img)  # TODO use alpha
 
-    def _saving(self, path: str, lmks, *args: Any, **kwargs: Any):
+    def _saving(self, path: str, lmks, lmks_img=None, face_img=None, *args: Any, **kwargs: Any):
         lmks2D = [self.render.get_coord_2d(p, vertical_flip=Saver.vertical_flip) for p in lmks]
         path = path.split('/')
         file = path[-1]
         path = '/'.join(path[:-1])
+        os.makedirs(f'{path}/npy', exist_ok=True)
+        os.makedirs(f'{path}/pts', exist_ok=True)
+        os.makedirs(f'{path}/png', exist_ok=True)
         if self.npy: self.__save_npy(f'{path}/npy/{file}.npy', lmks2D)
         if self.pts: self.__save_pts(f'{path}/pts/{file}.pts', lmks2D)
-        if self.png: self.__save_png(f'{path}/png/{file}.png', lmks, **kwargs)
+        if self.png: self.__save_png(f'{path}/png/{file}.png', lmks_img, face_img, **kwargs)
 
 
 class Markers2DSaver(Lmks2DSaver):
     def __init__(self, location, renderer: Renderer, enable: bool = True, npy: bool = True, pts: bool = False, png: bool = False, use_alpha: bool = True, **_: Any) -> None:
         super().__init__(location, renderer, enable, npy, pts, png, use_alpha, **_)
 
-    def _saving(self, path: str, markers, *args: Any, **kwargs: Any):
-        super()._saving(path, markers, args, kwargs)
+    def _saving(self, path: str, markers, markers_img=None, face_img=None, *args: Any, **kwargs: Any):
+        super()._saving(path, markers, markers_img, face_img, args, kwargs)
 
 
-class VisageImageSaver(Saver):
+class ImageSaver(Saver):
     def __init__(self, location, renderer: Renderer, enable: bool = True, **_: Any) -> None:
         super().__init__(location, enable)
         self.render = renderer
 
-    def _saving(self, path, vertices, texture, *args: Any, pts=None, pts_in_alpha=True, save_depth: bool = False, depth_in_alpha: bool = False, **kwargs: Any):
-        self.render.save_to_image(path + '.png', vertices, texture, pts=pts, pts_in_alpha=pts_in_alpha, vertical_flip=Saver.vertical_flip, save_depth=save_depth, depth_in_alpha=depth_in_alpha)
+    def _saving(self, path, image, *args: Any, **kwargs: Any):
+        cv2.imwrite(path+'.png', image)
+
+
+class FaceSaver(ImageSaver):
+    def __init__(self, location, renderer: Renderer, enable: bool = True, **_: Any) -> None:
+        super().__init__(location, renderer, enable)
+
+    def _saving(self, path, face_img, *args: Any, **kwargs: Any):
+        super()._saving(path, face_img)
+
+
+class DepthSaver(ImageSaver):
+    def __init__(self, location, renderer: Renderer, enable: bool = True, alpha: bool = False, **_: Any) -> None:
+        super().__init__(location, renderer, enable)
+        self.alpha = alpha
+
+    def _saving(self, path, depth_img, face_img=None, *args: Any, **kwargs: Any):
+        super()._saving(path, depth_img)  # TODO Alpha
 
 
 class CameraJSONSaver(Saver):
