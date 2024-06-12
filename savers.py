@@ -327,3 +327,22 @@ class DensityCubeSaver(Saver):
                 mrc.data[:] = cube.cpu().numpy()
         elif self.cube_format == 'cube':
             torch.save({'size': self.size, 'fill': 0, 'mask': (cube.gt(0).view(-1, 8) << self.shifts).sum(dim=-1).to(torch.uint8), 'values': cube[cube > 0]}, path)
+
+
+class VideoSaver(Saver):
+    def __init__(self, location, enable: bool = True, fps: int = 24, **_: Any) -> None:
+        super().__init__(location, enable)
+        self.out = None
+        self.fps = 24
+
+    def __call__(self, index, filename, face_img, *args: Any, **kwargs: Any) -> Any:
+        if self.enable:
+            os.makedirs(self.location, exist_ok=True)
+            if self.out is None:
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Codec pour mp4
+                self.out = cv2.VideoWriter(f'{self.location}/video.mp4', fourcc, self.fps, (face_img.shape[0], face_img.shape[1]))
+            self.out.write(face_img[:, :, :3])
+
+    def __del__(self):
+        if self.out is not None:
+            self.out.release()

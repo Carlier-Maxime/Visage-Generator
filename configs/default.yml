@@ -75,6 +75,11 @@ save:
     target: 'FaceSaver'
     enable: True # save into file png
     location: '/png/default'
+  video:
+    target: 'VideoSaver'
+    enable: False
+    location: '/mp4'
+    fps: 24
   latents:
     target: 'LatentsSaver'
     enable: False # save latents into file npy

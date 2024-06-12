@@ -3,6 +3,8 @@ save:
     enable: True # save into file obj
   png:
     enable: True # save into file png
+  video:
+    enable: True
   latents:
     enable: True # save latents into file npy
   depth:
