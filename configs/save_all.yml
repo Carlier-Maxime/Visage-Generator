@@ -11,10 +11,16 @@ save:
     enable: True # save landmarks 3D into file npy
   lmks2D:
     enable: True
+    npy: True
+    pts: True
+    png: True
   markers3D:
     enable: True # save markers 3D into npy file
   markers2D:
     enable: True
+    npy: True
+    pts: True
+    png: True
   camera_default:
     enable: True
   camera_matrices:
