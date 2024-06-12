@@ -94,7 +94,8 @@ save:
     location: '/lmks/2D'
     npy: False # save landmarks 2D into file npy
     pts: False # save landmarks 2D into file pts
-    png: False # save landmarks 2D with visage into file png
+    png: False # save landmarks 2D into file png
+    with_visage: False
     use_alpha: True # save landmarks 2D to channel alpha ('png: True' is required)
   markers3D:
     target: 'Markers3DSaver'
@@ -107,6 +108,7 @@ save:
     npy: False # save markers 2D into npy file
     pts: False # save markers 2D into pts file
     png: False # save markers 2D into png file
+    with_visage: False
     use_alpha: True # save markers 2D to channel alpha ('png: True' is required)
   camera_default:
     target: 'CameraDefaultSaver'

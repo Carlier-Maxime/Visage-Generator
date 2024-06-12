@@ -122,13 +122,14 @@ class ObjSaver(Saver):
 
 
 class Lmks2DSaver(Saver):
-    def __init__(self, location, renderer: Renderer, enable: bool = True, npy: bool = True, pts: bool = False, png: bool = False, use_alpha: bool = True, **_: Any) -> None:
+    def __init__(self, location, renderer: Renderer, enable: bool = True, npy: bool = True, pts: bool = False, png: bool = False, use_alpha: bool = True, with_visage: bool = False, **_: Any) -> None:
         super().__init__(location, enable)
         self.render = renderer
         self.npy = npy
         self.pts = pts
         self.png = png
         self.use_alpha = use_alpha
+        self.with_visage = with_visage
 
     @staticmethod
     def __save_npy(path, lmks2D):
@@ -140,9 +141,13 @@ class Lmks2DSaver(Saver):
             for i in range(len(lmks2D)):
                 f.write(f'{i + 1} {lmks2D[i][0]} {lmks2D[i][1]} False\n')
 
-    def __save_png(self, path, lmks_img=None, face_img=None, **kwargs: Any):
+    def __save_png(self, path, lmks_img, face_img=None, **kwargs: Any):
         if self.use_alpha:
             face_img[:, :, 3] = lmks_img[:, :, 0]
+            cv2.imwrite(path, face_img)
+        elif self.with_visage:
+            mask = (lmks_img != 0)[:, :, 1]
+            face_img[mask] = lmks_img[mask]
             cv2.imwrite(path, face_img)
         else: cv2.imwrite(path, lmks_img)
 
@@ -160,8 +165,8 @@ class Lmks2DSaver(Saver):
 
 
 class Markers2DSaver(Lmks2DSaver):
-    def __init__(self, location, renderer: Renderer, enable: bool = True, npy: bool = True, pts: bool = False, png: bool = False, use_alpha: bool = True, **_: Any) -> None:
-        super().__init__(location, renderer, enable, npy, pts, png, use_alpha, **_)
+    def __init__(self, location, renderer: Renderer, enable: bool = True, npy: bool = True, pts: bool = False, png: bool = False, use_alpha: bool = True, with_visage: bool = False, **_: Any) -> None:
+        super().__init__(location, renderer, enable, npy, pts, png, use_alpha, with_visage, **_)
 
     def _saving(self, path: str, markers, markers_img=None, face_img=None, *args: Any, **kwargs: Any):
         super()._saving(path, markers, markers_img, face_img, args, kwargs)

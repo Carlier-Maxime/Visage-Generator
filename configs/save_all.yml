@@ -14,6 +14,8 @@ save:
     npy: True
     pts: True
     png: True
+    with_visage: True
+    use_alpha: False
   markers3D:
     enable: True # save markers 3D into npy file
   markers2D:
@@ -21,6 +23,7 @@ save:
     npy: True
     pts: True
     png: True
+    with_visage: False
   camera_default:
     enable: True
   camera_matrices:
