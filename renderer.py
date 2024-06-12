@@ -208,6 +208,7 @@ class Renderer:
         else: glCallLists([self.gl_list_visage] if pts is None else [self.gl_list_visage, pts_gl_list])
         self.update_display()
         img = self.getImageFromTextureColor()
+        if vertical_flip: img = img[np.arange(img.shape[1]-1, -1, -1), :, :]
         if return_depth:
             depth_values = np.zeros((self.height, self.width), dtype=np.float32)
             glBindTexture(GL_TEXTURE_2D, self.depth_texture)
@@ -218,8 +219,8 @@ class Renderer:
             depth_min, depth_max = tmp.min(), tmp.max()
             depth_image[mask] = ((tmp - depth_min) / (depth_max - depth_min)) * (1. - 0.2)
             depth_image = depth_image.sub(1).mul(-255).to(torch.uint8).cpu().numpy()
-            return img, depth_image # TODO flip
-        return img # TODO flip
+            return img, (depth_image[np.arange(img.shape[1]-1, -1, -1), :] if vertical_flip else depth_image)
+        return img
 
     def create_sphere(self, radius, slices, stacks):
         theta = torch.linspace(0, torch.pi, stacks + 1, device=self.device).repeat(slices + 1).reshape(stacks + 1, slices + 1).permute(1, 0)[None]
