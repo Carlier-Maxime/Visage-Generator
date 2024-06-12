@@ -19,7 +19,7 @@ class Renderer:
         self.uv_coords = render_data['uv_coords'].to(self.device)
         self.uv_faces = render_data['uv_faces'].to(self.device)
         self.order_indices = render_data['order_indices'].to(self.device)
-        self.raw_sphere = self.create_sphere(0.005, 30, 30)
+        self.raw_sphere = self.create_sphere(0.0025, 30, 30)
 
         pygame.init()
         self.width = width
