@@ -141,7 +141,10 @@ class Lmks2DSaver(Saver):
                 f.write(f'{i + 1} {lmks2D[i][0]} {lmks2D[i][1]} False\n')
 
     def __save_png(self, path, lmks_img=None, face_img=None, **kwargs: Any):
-        cv2.imwrite(path, lmks_img)  # TODO use alpha
+        if self.use_alpha:
+            face_img[:, :, 3] = lmks_img[:, :, 0]
+            cv2.imwrite(path, face_img)
+        else: cv2.imwrite(path, lmks_img)
 
     def _saving(self, path: str, lmks, lmks_img=None, face_img=None, *args: Any, **kwargs: Any):
         lmks2D = [self.render.get_coord_2d(p, vertical_flip=Saver.vertical_flip) for p in lmks]
@@ -187,7 +190,10 @@ class DepthSaver(ImageSaver):
         self.alpha = alpha
 
     def _saving(self, path, depth_img, face_img=None, *args: Any, **kwargs: Any):
-        super()._saving(path, depth_img)  # TODO Alpha
+        if self.alpha:
+            face_img[:, :, 3] = depth_img[:, :, 0]
+            super()._saving(path, face_img)
+        else: super()._saving(path, depth_img)
 
 
 class CameraJSONSaver(Saver):
