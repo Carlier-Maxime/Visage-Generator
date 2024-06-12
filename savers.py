@@ -143,9 +143,11 @@ class Lmks2DSaver(Saver):
 
     def __save_png(self, path, lmks_img, face_img=None, **kwargs: Any):
         if self.use_alpha:
-            face_img[:, :, 3] = lmks_img[:, :, 0]
+            face_img = np.copy(face_img)
+            face_img[:, :, 3] = lmks_img[:, :, 1] * -1 + 255
             cv2.imwrite(path, face_img)
         elif self.with_visage:
+            face_img = np.copy(face_img)
             mask = (lmks_img != 0)[:, :, 1]
             face_img[mask] = lmks_img[mask]
             cv2.imwrite(path, face_img)
@@ -196,6 +198,7 @@ class DepthSaver(ImageSaver):
 
     def _saving(self, path, depth_img, face_img=None, *args: Any, **kwargs: Any):
         if self.alpha:
+            face_img = np.copy(face_img)
             face_img[:, :, 3] = depth_img[:, :, 0]
             super()._saving(path, face_img)
         else: super()._saving(path, depth_img)
