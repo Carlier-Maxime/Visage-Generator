@@ -26,3 +26,7 @@ generator:
   ambient:
     animation:
       keyframes: 50 # Number of keyframe
+save:
+  video:
+    enable: True
+    fps: 60
