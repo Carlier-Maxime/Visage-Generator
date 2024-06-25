@@ -1,4 +1,6 @@
 save:
+  global_:
+    outdir: 'output/save_all' # path directory for output
   obj:
     enable: True # save into file obj
   png:

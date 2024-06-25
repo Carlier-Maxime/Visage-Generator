@@ -31,6 +31,8 @@ generator:
     animation:
       keyframes: 10 # Number of keyframe
 save:
+  global_:
+    outdir: 'output/portrait4d' # path directory for output
   png:
     enable: True # save into file png
   seg:

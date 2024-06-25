@@ -29,6 +29,8 @@ generator:
     animation:
       keyframes: 50 # Number of keyframe
 save:
+  global_:
+    outdir: 'output/animated' # path directory for output
   video:
     enable: True
     fps: 60

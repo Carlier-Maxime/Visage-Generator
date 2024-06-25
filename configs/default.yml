@@ -64,7 +64,7 @@ flame:
 
 save:
   global_:
-    outdir: 'output' # path directory for output
+    outdir: 'output/default' # path directory for output
     img_resolution: [512, 512] # resolution of image
     random_bg: False # enable random background color for renderer
     show_window: False # show window during save png (enable if images is the screenshot or full black)
