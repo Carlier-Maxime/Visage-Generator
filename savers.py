@@ -158,12 +158,15 @@ class Lmks2DSaver(Saver):
         path = path.split('/')
         file = path[-1]
         path = '/'.join(path[:-1])
-        os.makedirs(f'{path}/npy', exist_ok=True)
-        os.makedirs(f'{path}/pts', exist_ok=True)
-        os.makedirs(f'{path}/png', exist_ok=True)
-        if self.npy: self.__save_npy(f'{path}/npy/{file}.npy', lmks2D)
-        if self.pts: self.__save_pts(f'{path}/pts/{file}.pts', lmks2D)
-        if self.png: self.__save_png(f'{path}/png/{file}.png', lmks_img, face_img, **kwargs)
+        if self.npy:
+            os.makedirs(f'{path}/npy', exist_ok=True)
+            self.__save_npy(f'{path}/npy/{file}.npy', lmks2D)
+        if self.pts:
+            os.makedirs(f'{path}/pts', exist_ok=True)
+            self.__save_pts(f'{path}/pts/{file}.pts', lmks2D)
+        if self.png:
+            os.makedirs(f'{path}/png', exist_ok=True)
+            self.__save_png(f'{path}/png/{file}.png', lmks_img, face_img, **kwargs)
 
 
 class Markers2DSaver(Lmks2DSaver):
