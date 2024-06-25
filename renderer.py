@@ -207,6 +207,7 @@ class Renderer:
             glColor(1., 1., 1.)
             if pts is not None: glCallList(pts_gl_list)
         else: glCallLists([self.gl_list_visage] if pts is None else [self.gl_list_visage, pts_gl_list])
+        if pts_gl_list is not None: glDeleteLists(pts_gl_list, 1)
         self.update_display()
         img = self.getImageFromTextureColor()
         if vertical_flip: img = img[np.arange(img.shape[1]-1, -1, -1), :, :]
