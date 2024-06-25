@@ -17,10 +17,10 @@ class Saver:
         self.location = Saver.outdir + location
         self.enable = enable
 
-    def __call__(self, index, filename, *args: Any, **kwargs: Any) -> Any:
+    def __call__(self, sub_folder, filename, *args: Any, **kwargs: Any) -> Any:
         if not self.enable:
             return
-        self.sub_folder = format(index // 1000, "05d")
+        self.sub_folder = sub_folder
         path = f'{self.location}/{self.sub_folder}'
         os.makedirs(path, exist_ok=True)
         self._saving(path + f'/{filename}', *args, **kwargs)
@@ -220,7 +220,7 @@ class CameraJSONSaver(Saver):
         self.first = True
         self.__close = False
 
-    def __call__(self, index, filename, *args: Any, **kwargs: Any) -> Any:
+    def __call__(self, sub_folder, filename, *args: Any, **kwargs: Any) -> Any:
         if self.enable:
             if self.first:
                 os.makedirs(self.location, exist_ok=True)
@@ -229,7 +229,7 @@ class CameraJSONSaver(Saver):
                 self.first = False
             else:
                 self.file.write(',\n')
-            self._saving(format(index // 1000, "05d") + '/' + filename, *args, **kwargs)
+            self._saving(sub_folder + '/' + filename, *args, **kwargs)
 
     def _saving(self, basename, camera, *args: Any, **kwargs: Any):
         intrinsic_norm, extrinsic = camera.get_matrix()
@@ -343,7 +343,7 @@ class VideoSaver(Saver):
         self.out = None
         self.fps = 24
 
-    def __call__(self, index, filename, face_img, *args: Any, **kwargs: Any) -> Any:
+    def __call__(self, sub_folder, filename, face_img, *args: Any, **kwargs: Any) -> Any:
         if self.enable:
             os.makedirs(self.location, exist_ok=True)
             if self.out is None:

@@ -18,6 +18,7 @@ from savers import *
 
 class VisageGenerator:
     def __init__(self, cfg: Config):
+        self.face_index = None
         self._latents = None
         self._lmks = None
         self._vertices = None
@@ -162,14 +163,15 @@ class VisageGenerator:
             lmks_img = self.render.get_image(vertices, texture, pts=lmk, vertical_flip=Saver.vertical_flip, dark_obj=True)
             markers_img = self.render.get_image(vertices, texture, pts=markers, vertical_flip=Saver.vertical_flip, dark_obj=True)
             args = Config({"vertices": vertices, "texture": texture, "faces": self._faces, "markers": markers, "lmks": lmk, "camera": self.render.get_camera(), "latents": self.get_latents(i), "face_img": face_img, 'seg_img': seg_img, 'depth_img': depth_img, "lmks_img": lmks_img, "markers_img": markers_img})
-            for _, saver in self.savers.items(): saver(index, basename, **args)
+            for _, saver in self.savers.items(): saver(format(index // 1000, "05d") if self.face_index is None else format(self.face_index, "05d"), basename, **args)
             self.render.void_events()
 
     def save_all(self, cfg: Config):
         counts = cfg.generator.animated.nb_frames if cfg.generator.animated.enable else cfg.general.nb_faces
         nb_repeat = cfg.general.nb_faces if cfg.generator.animated.enable else 1
         pbar = tqdm(total=counts * nb_repeat, desc='saving all visages', unit='visage')
-        for _ in range(nb_repeat):
+        for face in range(nb_repeat):
+            self.face_index = face if nb_repeat > 1 else None
             self.gen_params(cfg)
             for i in range(counts // self.batch_size + (1 if counts % self.batch_size > 0 else 0)):
                 self.generate_batch(i)
