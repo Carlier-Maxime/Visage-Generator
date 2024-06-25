@@ -1,7 +1,9 @@
 general:
-  nb_faces: 1000 # number faces generate
+  nb_faces: 1 # number faces generate
 generator:
-  animated: True # animate a visage
+  animated:
+    enable: True # animate a visage
+    nb_frames: 1000
   shape:
     animation:
       keyframes: 10 # Number of keyframe

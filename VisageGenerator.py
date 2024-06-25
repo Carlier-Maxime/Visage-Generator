@@ -35,9 +35,7 @@ class VisageGenerator:
         ]
         self.batch_size = cfg.general.batch_size
         self.filenames = None
-        self.shape_params, self.expression_params, self.pose_params, self.texture_params, self.neck_pose, self.eye_pose, self.cameras, self.ambient_lights = self.gen_params(cfg) if cfg.generator.input_folder is None else self.load_params(cfg)
-        self.ambient_lights = self.ambient_lights[:, :3] * self.ambient_lights[:, 3].view(-1, 1)
-        self._faces = torch.tensor(self.flame_layer.faces.astype('int32'), device=self.device)
+        self.shape_params = self.expression_params = self.pose_params = self.texture_params = self.neck_pose = self.eye_pose = self.cameras = self.ambient_lights = self._faces = None
         self._textures = None
         if cfg.general.texturing:
             print("Loading Texture... ", end="", flush=True)
@@ -82,11 +80,15 @@ class VisageGenerator:
         return self.shape_params.shape[0]
 
     def gen_params(self, cfg: Config):
-        print('Generate random parameters')
-        generators = [cfg.generator.shape, cfg.generator.expression, cfg.generator.pose, cfg.generator.texture, cfg.generator.neck, cfg.generator.eye, cfg.generator.camera, cfg.generator.ambient]
-        return [generator.zeros(cfg.general.nb_faces) if cfg.generator.zeros else generator.get(cfg.general.nb_faces, gen.fixed, keyframes=gen.animation.keyframes if cfg.generator.animated else None) for generator, gen in zip(self.params_generators, generators)]
+        self.shape_params, self.expression_params, self.pose_params, self.texture_params, self.neck_pose, self.eye_pose, self.cameras, self.ambient_lights = self.__gen_params(cfg) if cfg.generator.input_folder is None else self.__load_params(cfg)
+        self.ambient_lights = self.ambient_lights[:, :3] * self.ambient_lights[:, 3].view(-1, 1)
+        self._faces = torch.tensor(self.flame_layer.faces.astype('int32'), device=self.device)
 
-    def load_params(self, cfg: Config):
+    def __gen_params(self, cfg: Config):
+        generators = [cfg.generator.shape, cfg.generator.expression, cfg.generator.pose, cfg.generator.texture, cfg.generator.neck, cfg.generator.eye, cfg.generator.camera, cfg.generator.ambient]
+        return [generator.zeros(cfg.general.nb_faces) if cfg.generator.zeros else generator.get(cfg.generator.animated.nb_frames if cfg.generator.animated.enable else cfg.general.nb_faces, gen.fixed, keyframes=gen.animation.keyframes if cfg.generator.animated.enable else None) for generator, gen in zip(self.params_generators, generators)]
+
+    def __load_params(self, cfg: Config):
         if cfg.general.nb_faces == -1:
             cfg.general.nb_faces = sum(len(files) for _, _, files in os.walk(cfg.save.input_folder))
         pbar = trange(cfg.general.nb_faces, desc='load params', unit='visage')
@@ -164,11 +166,15 @@ class VisageGenerator:
             self.render.void_events()
 
     def save_all(self, cfg: Config):
-        pbar = tqdm(total=cfg.general.nb_faces, desc='saving all visages', unit='visage')
-        for i in range(cfg.general.nb_faces // self.batch_size + (1 if cfg.general.nb_faces % self.batch_size > 0 else 0)):
-            self.generate_batch(i)
-            self.save_batch(cfg, leave_pbar=False)
-            pbar.update(self._vertices.shape[0])
+        counts = cfg.generator.animated.nb_frames if cfg.generator.animated.enable else cfg.general.nb_faces
+        nb_repeat = cfg.general.nb_faces if cfg.generator.animated.enable else 1
+        pbar = tqdm(total=counts * nb_repeat, desc='saving all visages', unit='visage')
+        for _ in range(nb_repeat):
+            self.gen_params(cfg)
+            for i in range(counts // self.batch_size + (1 if counts % self.batch_size > 0 else 0)):
+                self.generate_batch(i)
+                self.save_batch(cfg, leave_pbar=False)
+                pbar.update(self._vertices.shape[0])
         pbar.close()
 
 

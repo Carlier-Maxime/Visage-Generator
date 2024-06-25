@@ -8,7 +8,9 @@ general:
 generator:
   input_folder: None # input folder for load parameter
   zeros: False # zeros for all params not loaded
-  animated: False # animate a visage
+  animated:
+    enable: False # animate a visage
+    nb_frames: 100
   shape:
     params: [300, -2, 2] # Shape parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==300
     fixed: False # fixed the same shape for all visage generated

@@ -1,38 +1,39 @@
 general:
   nb_faces: 1000 # number faces generate
+  batch_size: 100 # number of visage generate in the same time
 generator:
-  animated: True # animate a visage
+  animated:
+    enable: True # animate a visage
+    nb_frames: 100
   shape:
     animation:
       keyframes: 1 # Number of keyframe
   expression:
     animation:
-      keyframes: 200 # Number of keyframe
+      keyframes: 20 # Number of keyframe
   pose:
     animation:
-      keyframes: 150 # Number of keyframe
+      keyframes: 15 # Number of keyframe
   texture:
     animation:
       keyframes: 1 # Number of keyframe
   neck:
     animation:
-      keyframes: 200 # Number of keyframe
+      keyframes: 20 # Number of keyframe
   eye:
     animation:
-      keyframes: 100 # Number of keyframe
+      keyframes: 10 # Number of keyframe
   camera:
     animation:
-      keyframes: 75 # Number of keyframe
+      keyframes: 8 # Number of keyframe
   ambient:
     params: [3, 0.8, 1, 1, 0.4, 1] # Ambient light parameter intervals. Format: [n1,min1,max1,n2,min2,max2,...]. default : sum(nX)==4, [R,G,B,Intensity]
     animation:
-      keyframes: 100 # Number of keyframe
+      keyframes: 10 # Number of keyframe
 save:
   png:
     enable: True # save into file png
   seg:
-    enable: True
-  video:
     enable: True
   latents:
     enable: True # save latents into file npy
