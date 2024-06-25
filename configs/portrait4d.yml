@@ -35,9 +35,18 @@ save:
     outdir: 'output/portrait4d' # path directory for output
   png:
     enable: True # save into file png
+    location: '/align_images'
   seg:
     enable: True
+    location: '/segs'
   latents:
     enable: True # save latents into file npy
+    location: '/flame_optim_params'
   markers3D:
     enable: True # save markers 3D into npy file
+    location: '/markers3D'
+  lmks2D:
+    target: 'Lmks2DSaver'
+    enable: True
+    location: '/3dldmks_align'
+    npy: True # save landmarks 2D into file npy
