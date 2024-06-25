@@ -3,6 +3,8 @@ save:
     enable: True # save into file obj
   png:
     enable: True # save into file png
+  seg:
+    enable: True
   video:
     enable: True
   latents:

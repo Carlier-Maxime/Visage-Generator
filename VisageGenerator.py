@@ -156,9 +156,10 @@ class VisageGenerator:
                 self.render.random_background()
             markers = util.read_all_index_opti_tri(vertices, self._faces, self.markers)
             face_img, depth_img = self.render.get_image(vertices, texture, vertical_flip=Saver.vertical_flip, return_depth=True)
+            seg_img = self.render.get_image(vertices, None, vertical_flip=Saver.vertical_flip)
             lmks_img = self.render.get_image(vertices, texture, pts=lmk, vertical_flip=Saver.vertical_flip, dark_obj=True)
             markers_img = self.render.get_image(vertices, texture, pts=markers, vertical_flip=Saver.vertical_flip, dark_obj=True)
-            args = Config({"vertices": vertices, "texture": texture, "faces": self._faces, "markers": markers, "lmks": lmk, "camera": self.render.get_camera(), "latents": self.get_latents(i), "face_img": face_img, 'depth_img': depth_img, "lmks_img": lmks_img, "markers_img": markers_img})
+            args = Config({"vertices": vertices, "texture": texture, "faces": self._faces, "markers": markers, "lmks": lmk, "camera": self.render.get_camera(), "latents": self.get_latents(i), "face_img": face_img, 'seg_img': seg_img, 'depth_img': depth_img, "lmks_img": lmks_img, "markers_img": markers_img})
             for _, saver in self.savers.items(): saver(index, basename, **args)
             self.render.void_events()
 

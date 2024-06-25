@@ -204,6 +204,14 @@ class DepthSaver(ImageSaver):
         else: super()._saving(path, depth_img)
 
 
+class SegSaver(ImageSaver):
+    def __init__(self, location, renderer: Renderer, enable: bool = True, **_: Any) -> None:
+        super().__init__(location, renderer, enable)
+
+    def _saving(self, path, seg_img, *args: Any, **kwargs: Any):
+        super()._saving(path, seg_img)
+
+
 class CameraJSONSaver(Saver):
     def __init__(self, location, renderer: Renderer, enable: bool = True, **_: Any) -> None:
         super().__init__(location, enable)

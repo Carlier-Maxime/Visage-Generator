@@ -75,6 +75,10 @@ save:
     target: 'FaceSaver'
     enable: True # save into file png
     location: '/png/default'
+  seg:
+    target: 'SegSaver'
+    enable: False # save segmentation into file png
+    location: '/png/seg'
   video:
     target: 'VideoSaver'
     enable: False

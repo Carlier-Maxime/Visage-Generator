@@ -136,6 +136,7 @@ class Renderer:
             glTexCoordPointer(2, GL_FLOAT, 0, None)
         else:
             glDisable(GL_TEXTURE_2D)
+            glColor(255, 255, 255)
         glDrawElements(GL_TRIANGLES, self.uv_faces.numel(), GL_UNSIGNED_INT, None)
         if texture is None:
             glEnable(GL_TEXTURE_2D)
