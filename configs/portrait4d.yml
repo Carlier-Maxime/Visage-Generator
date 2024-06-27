@@ -50,3 +50,6 @@ save:
     enable: True
     location: '/3dldmks_align'
     npy: True # save landmarks 2D into file npy
+  camera_matrices:
+    enable: True
+    location: '/camera'
