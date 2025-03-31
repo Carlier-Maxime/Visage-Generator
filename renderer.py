@@ -7,6 +7,13 @@ from Camera import *
 
 class Renderer:
     def __init__(self, width: int, height: int, device: torch.device, show: bool = True, camera: torch.Tensor | None = None, camera_type: str = 'default'):
+        pygame.init()
+        pygame.display.set_icon(pygame.image.load('logo.png'))
+        pygame.display.set_mode([width, height], pygame.constants.OPENGL | pygame.constants.DOUBLEBUF | (pygame.SHOWN if show else pygame.HIDDEN))
+
+        framebuffer = glGenFramebuffers(1)
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer)
+
         self.show = show
         if camera is None:
             camera = torch.tensor([10, 0, 0, -2, 0, 0, 0], device=device, dtype=torch.float32)
@@ -21,14 +28,8 @@ class Renderer:
         self.order_indices = render_data['order_indices'].to(self.device)
         self.raw_sphere = self.create_sphere(0.0025, 30, 30)
 
-        pygame.init()
         self.width = width
         self.height = height
-        pygame.display.set_icon(pygame.image.load('logo.png'))
-        pygame.display.set_mode([width, height], pygame.constants.OPENGL | pygame.constants.DOUBLEBUF | (pygame.SHOWN if show else pygame.HIDDEN))
-
-        framebuffer = glGenFramebuffers(1)
-        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer)
 
         self.depth_texture = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.depth_texture)
